@@ -1,0 +1,26 @@
+{
+  "name": "nutri-nexus/mvc-app",
+  "description": "Nutri Nexus - Premium Supplements Store",
+  "type": "project",
+  "require": {
+    "php": ">=7.4",
+    "phpmailer/phpmailer": "^6.8",
+    "vlucas/phpdotenv": "^5.5",
+    "guzzlehttp/guzzle": "^7.9",
+    "khalti/php-sdk": "^1.1",
+    "phpfastcache/phpfastcache": "^9.2",
+    "symfony/cache": "^7.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Nutri Nexus Team",
+      "email": "info@nutrinexus.com"
+    }
+  ],
+  "minimum-stability": "stable"
+}
