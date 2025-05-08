@@ -17,6 +17,7 @@ use App\Models\KhaltiPayment;
 use App\Models\ReferralEarning;
 use App\Models\Transaction;
 use App\Models\Notification;
+use App\Models\Setting;
 use App\Config\Khalti;
 
 /**
@@ -37,6 +38,7 @@ class CheckoutController extends Controller
     private $referralEarningModel;
     private $transactionModel;
     private $notificationModel;
+    private $settingModel;
     private $khaltiConfig;
 
     public function __construct()
@@ -54,6 +56,7 @@ class CheckoutController extends Controller
         $this->referralEarningModel = new ReferralEarning();
         $this->transactionModel = new Transaction();
         $this->notificationModel = new Notification();
+        $this->settingModel = new Setting();
         $this->khaltiConfig = new Khalti();
     }
 
@@ -194,9 +197,9 @@ class CheckoutController extends Controller
                 'address' => $address['address_line1'] . ', ' . $address['city'] . ', ' . $address['state'] . ', ' . $address['country']
             ];
             
-            // If Cash on Delivery, set status to 'pending'
+            // If Cash on Delivery, set status to 'paid' directly
             if ($this->post('payment_method_id') == 1) { // COD (ID 1)
-                $orderData['status'] = 'pending';
+                $orderData['status'] = 'paid';
             }
             
             // If Khalti payment, redirect to Khalti payment page
@@ -268,7 +271,7 @@ class CheckoutController extends Controller
             
             // Process referral earnings if order is paid
             if ($orderData['status'] === 'paid') {
-                $this->processReferralEarnings($orderId);
+                $this->orderModel->processReferralEarnings($orderId);
             }
             
             // Clear cart
@@ -451,7 +454,7 @@ class CheckoutController extends Controller
                     ]);
                     
                     // Process referral earnings
-                    $this->processReferralEarnings($orderId);
+                    $this->orderModel->processReferralEarnings($orderId);
                     
                     // Update Khalti payment record
                     $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -495,7 +498,7 @@ class CheckoutController extends Controller
                     ]);
                     
                     // Process referral earnings
-                    $this->processReferralEarnings($orderId);
+                    $this->orderModel->processReferralEarnings($orderId);
                     
                     // Update Khalti payment record
                     $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -578,7 +581,7 @@ class CheckoutController extends Controller
                 ]);
                 
                 // Process referral earnings
-                $this->processReferralEarnings($orderId);
+                $this->orderModel->processReferralEarnings($orderId);
                 
                 // Update Khalti payment record
                 $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -630,146 +633,6 @@ class CheckoutController extends Controller
         
         // Redirect to order details
         $this->redirect('orders/view/' . $orderId);
-    }
-
-    /**
-     * Process referral earnings for an order
-     *
-     * @param int $orderId
-     * @return void
-     */
-    private function processReferralEarnings($orderId)
-    {
-        // Get order details
-        $order = $this->orderModel->getOrderById($orderId);
-        if (!$order) {
-            error_log('Process referral earnings: Order not found - ID: ' . $orderId);
-            return;
-        }
-        
-        // Only process for paid orders
-        if ($order['status'] !== 'paid') {
-            error_log('Process referral earnings: Order not paid - ID: ' . $orderId . ', Status: ' . $order['status']);
-            return;
-        }
-
-        // Get user who placed the order
-        $user = $this->userModel->find($order['user_id']);
-        if (!$user) {
-            error_log('Process referral earnings: User not found - ID: ' . $order['user_id']);
-            return;
-        }
-        
-        // Check if user was referred by someone
-        if (empty($user['referred_by'])) {
-            error_log('Process referral earnings: User has no referrer - User ID: ' . $user['id']);
-            return;
-        }
-        
-        $referrerId = $user['referred_by'];
-        
-        // Check if referrer exists
-        $referrer = $this->userModel->find($referrerId);
-        if (!$referrer) {
-            error_log('Process referral earnings: Referrer not found - ID: ' . $referrerId);
-            return;
-        }
-
-        // Check if referral earning already exists for this order
-        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
-        if ($existingEarning) {
-            error_log('Process referral earnings: Earning already exists - Order ID: ' . $orderId);
-            return;
-        }
-
-        // Calculate commission (5% of total_amount, excluding delivery fee)
-        $commission = ($order['total_amount'] - $order['delivery_fee']) * 0.05;
-        
-        // Round to 2 decimal places
-        $commission = round($commission, 2);
-        
-        if ($commission <= 0) {
-            error_log('Process referral earnings: Commission is zero or negative - Order ID: ' . $orderId);
-            return;
-        }
-
-        // Start transaction
-        $this->referralEarningModel->beginTransaction();
-        
-        try {
-            // Create referral earning record
-            $earningData = [
-                'user_id' => $referrerId,
-                'order_id' => $orderId,
-                'amount' => $commission,
-                'status' => 'pending',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $earningId = $this->referralEarningModel->create($earningData);
-            
-            if (!$earningId) {
-                throw new \Exception('Failed to create referral earning record');
-            }
-            
-            // Update referrer's balance
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = $currentEarnings + $commission;
-            
-            $result = $this->userModel->update($referrerId, [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception('Failed to update referrer balance');
-            }
-            
-            // Record transaction
-            $transactionData = [
-                'user_id' => $referrerId,
-                'amount' => $commission,
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'reference_type' => 'referral_earning',
-                'description' => 'Referral commission from order #' . $orderId,
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $this->transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                throw new \Exception('Failed to create transaction record');
-            }
-            
-            // Create notification for referrer
-            $notificationData = [
-                'user_id' => $referrerId,
-                'title' => 'New Referral Commission',
-                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $this->notificationModel->create($notificationData);
-            
-            // Commit transaction
-            $this->referralEarningModel->commit();
-            
-            // Log success
-            error_log('Referral earnings processed successfully - Order ID: ' . $orderId . ', Referrer ID: ' . $referrerId . ', Amount: ' . $commission);
-            
-        } catch (\Exception $e) {
-            // Rollback transaction
-            $this->referralEarningModel->rollback();
-            
-            // Log error
-            error_log('Error processing referral earnings: ' . $e->getMessage());
-        }
     }
 
     /**

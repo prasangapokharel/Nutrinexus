@@ -53,6 +53,14 @@
                 </div>
                 
                 <div>
+                    <label for="sale_price" class="block text-sm font-medium text-gray-700 mb-1">Sale Price (₹) (Optional)</label>
+                    <input type="number" name="sale_price" id="sale_price" step="0.01" min="0" 
+                           value="<?= isset($data['sale_price']) ? htmlspecialchars($data['sale_price']) : '' ?>" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">Leave empty if not on sale</p>
+                </div>
+                
+                <div>
                     <label for="stock_quantity" class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
                     <input type="number" name="stock_quantity" id="stock_quantity" min="0" 
                            value="<?= isset($data['stock_quantity']) ? htmlspecialchars($data['stock_quantity']) : '' ?>" 

@@ -1,6 +1,14 @@
 <?php ob_start(); ?>
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Manage Referrals</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">Manage Referrals</h1>
+        <div>
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#fixReferralsModal">
+                <i class="fas fa-wrench me-1"></i> Fix Missing Referrals
+            </button>
+        </div>
+    </div>
+    
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="<?= \App\Core\View::url('admin') ?>">Dashboard</a></li>
         <li class="breadcrumb-item active">Referrals</li>
@@ -102,7 +110,70 @@
             <?php endif; ?>
         </div>
     </div>
+    
+    <!-- Fix Referrals Modal -->
+    <div class="modal fade" id="fixReferralsModal" tabindex="-1" aria-labelledby="fixReferralsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fixReferralsModalLabel">Fix Missing Referral Commissions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will process all paid orders that don't have referral earnings yet.</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> This process will:
+                        <ul>
+                            <li>Find all paid orders without referral earnings</li>
+                            <li>Check if the order was placed by a referred user</li>
+                            <li>Calculate and add the 5% commission</li>
+                            <li>Update the referrer's balance</li>
+                        </ul>
+                    </div>
+                    
+                    <form id="fixAllReferralsForm" action="<?= \App\Core\View::url('admin/processMissingReferrals') ?>" method="post">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                Process All Missing Referrals
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <h6>Fix Referrals for Specific User</h6>
+                    <form id="fixUserReferralsForm" action="<?= \App\Core\View::url('admin/processMissingReferrals') ?>" method="post">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">Select User</label>
+                            <select name="user_id" id="user_id" class="form-select" required>
+                                <option value="">Select User</option>
+                                <?php 
+                                $userModel = new \App\Models\User();
+                                $users = $userModel->all();
+                                foreach ($users as $user): 
+                                ?>
+                                    <option value="<?= $user['id'] ?>">
+                                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?> (<?= htmlspecialchars($user['email']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Process User's Referrals
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <?php $content = ob_get_clean(); ?>
 
 <?php include dirname(dirname(__FILE__)) . '/layouts/admin.php'; ?>
+<script src="https://cdn.tailwindcss.com"></script>

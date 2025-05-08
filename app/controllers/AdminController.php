@@ -10,6 +10,8 @@ use App\Models\Payment;
 use App\Models\OrderItem;
 use App\Models\ReferralEarning;
 use App\Models\Withdrawal;
+use App\Models\Transaction;
+use App\Models\Notification;
 
 class AdminController extends Controller
 {
@@ -21,6 +23,8 @@ class AdminController extends Controller
     private $orderItemModel;
     private $referralEarningModel;
     private $withdrawalModel;
+    private $transactionModel;
+    private $notificationModel;
 
     public function __construct()
     {
@@ -33,6 +37,8 @@ class AdminController extends Controller
         $this->orderItemModel = new OrderItem();
         $this->referralEarningModel = new ReferralEarning();
         $this->withdrawalModel = new Withdrawal();
+        $this->transactionModel = new Transaction();
+        $this->notificationModel = new Notification();
         
         // Check if user is admin
         $this->requireAdmin();
@@ -90,8 +96,15 @@ class AdminController extends Controller
                 'sale_price' => !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null,
                 'category' => trim($_POST['category'] ?? ''),
                 'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
-                'image' => $_FILES['image']['name'] ?? null
+                'image' => null // Initialize as null, will be set below
             ];
+            
+            // Handle image from file upload or URL
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $data['image'] = $_FILES['image']['name'];
+            } elseif (!empty($_POST['image_url'])) {
+                $data['image'] = $_POST['image_url'];
+            }
             
             // Validate data
             $errors = [];
@@ -112,6 +125,10 @@ class AdminController extends Controller
                 $errors['sale_price'] = 'Sale price must be greater than zero';
             }
             
+            if (empty($data['image'])) {
+                $errors['image'] = 'Product image is required (upload or URL)';
+            }
+            
             if (empty($errors)) {
                 // Add product
                 $productId = $this->productModel->create($data);
@@ -122,7 +139,7 @@ class AdminController extends Controller
                         $uploadDir = 'uploads/images/';
                         $uploadPath = $uploadDir . basename($_FILES['image']['name']);
                         if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
-                            $this->productModel->update($productId, ['image' => basename($_FILES['image']['name'])]);
+                            // Image already set in data, no need to update
                         }
                     }
                     
@@ -170,8 +187,15 @@ class AdminController extends Controller
                 'sale_price' => !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null,
                 'category' => trim($_POST['category'] ?? ''),
                 'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
-                'image' => $_FILES['image']['name'] ?? $product['image']
+                'image' => $product['image'] // Default to existing image
             ];
+            
+            // Handle image from file upload or URL
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $data['image'] = $_FILES['image']['name'];
+            } elseif (!empty($_POST['image_url'])) {
+                $data['image'] = $_POST['image_url'];
+            }
             
             // Validate data
             $errors = [];
@@ -202,7 +226,7 @@ class AdminController extends Controller
                         $uploadDir = 'uploads/images/';
                         $uploadPath = $uploadDir . basename($_FILES['image']['name']);
                         if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
-                            $this->productModel->update($id, ['image' => basename($_FILES['image']['name'])]);
+                            // Image already set in data, no need to update
                         }
                     }
                     
@@ -279,7 +303,6 @@ class AdminController extends Controller
             $this->redirect('admin/orders');
         }
         
-        // FIXED: Changed from getItemsByOrderId to getByOrderId
         $orderItems = $this->orderItemModel->getByOrderId($id);
         
         $this->view('admin/orders/view', [
@@ -318,8 +341,6 @@ class AdminController extends Controller
             // Also update payment status if payment model exists
             if (method_exists($this->paymentModel, 'updateStatusByOrderId')) {
                 $this->paymentModel->updateStatusByOrderId($id, $status);
-            }  {
-                $this->paymentModel->updateStatusByOrderId($id, $status);
             }
             
             $this->setFlash('success', 'Order status updated successfully');
@@ -328,46 +349,6 @@ class AdminController extends Controller
         }
         
         $this->redirect('admin/orders');
-    }
-
-    /**
-     * Process referral commission when order is paid
-     */
-    private function processReferralCommission($order)
-    {
-        // Get the user who placed the order
-        $user = $this->userModel->find($order['user_id']);
-        
-        // Check if user was referred by someone
-        if ($user && !empty($user['referred_by'])) {
-            $referrerId = $user['referred_by'];
-            $referrer = $this->userModel->find($referrerId);
-            
-            if ($referrer) {
-                // Calculate commission (10% of order total)
-                $commission = $order['total_amount'] * 0.10;
-                
-                // Check if commission already exists for this order
-                $existingCommission = $this->referralEarningModel->findByOrderId($order['id']);
-                
-                if (!$existingCommission) {
-                    // Create referral earning record
-                    $earningData = [
-                        'user_id' => $referrerId,
-                        'order_id' => $order['id'],
-                        'amount' => $commission,
-                        'status' => 'pending'
-                    ];
-                    
-                    $earningId = $this->referralEarningModel->create($earningData);
-                    
-                    if ($earningId) {
-                        // Update referrer's balance
-                        $this->userModel->addReferralEarnings($referrerId, $commission);
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -449,6 +430,28 @@ class AdminController extends Controller
             'referralEarnings' => $referralEarnings,
             'title' => 'Manage Referrals'
         ]);
+    }
+
+    /**
+     * Process missing referrals
+     */
+    public function processMissingReferrals()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : null;
+            
+            if ($userId) {
+                // Fix referrals for a specific user
+                $stats = $this->orderModel->fixReferralsForUser($userId);
+                $this->setFlash('success', "Fixed referrals for user ID $userId. Processed: {$stats['processed']}, Skipped: {$stats['skipped']}, Failed: {$stats['failed']}");
+            } else {
+                // Fix all missing referrals
+                $stats = $this->orderModel->processAllPendingReferrals();
+                $this->setFlash('success', "Fixed all missing referrals. Processed: {$stats['processed']}, Skipped: {$stats['skipped']}, Failed: {$stats['failed']}");
+            }
+            
+            $this->redirect('admin/referrals');
+        }
     }
 
     /**

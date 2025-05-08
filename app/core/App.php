@@ -126,6 +126,7 @@ class App
         // Admin Referral Management routes
         $this->router->get('admin/referrals', 'AdminController@referrals');
         $this->router->post('admin/updateReferralStatus/{id}', 'AdminController@updateReferralStatus');
+        $this->router->post('admin/processMissingReferrals', 'AdminController@processMissingReferrals');
         $this->router->get('admin/withdrawals', 'AdminController@withdrawals');
         $this->router->post('admin/updateWithdrawalStatus/{id}', 'AdminController@updateWithdrawalStatus');
     }

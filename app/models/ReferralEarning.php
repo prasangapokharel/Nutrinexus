@@ -109,4 +109,43 @@ class ReferralEarning extends Model
                 LIMIT ?";
         return $this->db->query($sql)->bind([$limit])->all();
     }
+    
+    /**
+     * Get referral earnings by status
+     *
+     * @param string $status
+     * @param int $limit
+     * @return array
+     */
+    public function getEarningsByStatus($status, $limit = 50)
+    {
+        $sql = "SELECT re.*, o.invoice, o.total_amount, u.first_name, u.last_name, u.email as referrer_email
+                FROM {$this->table} re
+                JOIN orders o ON re.order_id = o.id
+                JOIN users u ON re.user_id = u.id
+                WHERE re.status = ?
+                ORDER BY re.created_at DESC
+                LIMIT ?";
+        return $this->db->query($sql)->bind([$status, $limit])->all();
+    }
+    
+    /**
+     * Update multiple earnings status
+     *
+     * @param array $ids
+     * @param string $status
+     * @return bool
+     */
+    public function updateMultipleStatus($ids, $status)
+    {
+        if (empty($ids)) {
+            return false;
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params = array_merge([$status], $ids);
+        
+        $sql = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)";
+        return $this->db->query($sql)->bind($params)->execute();
+    }
 }

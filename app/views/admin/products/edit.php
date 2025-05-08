@@ -53,9 +53,9 @@
                 </div>
                 
                 <div>
-                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
-                    <input type="number" name="quantity" id="quantity" min="0" 
-                           value="<?= isset($data['quantity']) ? htmlspecialchars($data['quantity']) : htmlspecialchars($product['quantity']) ?>" 
+                    <label for="stock_quantity" class="block text-sm font-medium text-gray-700 mb-1">Stock stock_quantity</label>
+                    <input type="number" name="stock_quantity" id="stock_quantity" min="0" 
+                           value="<?= isset($data['stock_quantity']) ? htmlspecialchars($data['stock_quantity']) : htmlspecialchars($product['stock_quantity']) ?>" 
                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
                 </div>
                 

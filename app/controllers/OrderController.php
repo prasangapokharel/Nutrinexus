@@ -134,20 +134,10 @@ class OrderController extends Controller
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Start transaction
-            $this->orderModel->beginTransaction();
+            // Update order status using the model method that handles referrals
+            $result = $this->orderModel->updateStatusAndProcessReferral($orderId, 'cancelled');
             
-            try {
-                // Update order status
-                $result = $this->orderModel->update($orderId, [
-                    'status' => 'cancelled',
-                    'updated_at' => date('Y-m-d H:i:s')
-                ]);
-                
-                if (!$result) {
-                    throw new \Exception('Failed to update order status');
-                }
-                
+            if ($result) {
                 // Get order items
                 $orderItems = $this->orderItemModel->getByOrderId($orderId);
                 
@@ -160,27 +150,12 @@ class OrderController extends Controller
                     }
                 }
                 
-                // Reverse referral earnings if order was paid
-                if ($order['status'] === 'paid') {
-                    $this->reverseReferralEarnings($orderId);
-                }
-                
                 // Clear related caches
                 $this->clearOrderCaches($userId, $orderId);
                 
-                // Commit transaction
-                $this->orderModel->commit();
-                
                 $this->setFlash('success', 'Order cancelled successfully');
-                
-            } catch (\Exception $e) {
-                // Rollback transaction
-                $this->orderModel->rollback();
-                
-                // Log error
-                error_log('Order cancellation error: ' . $e->getMessage());
-                
-                $this->setFlash('error', 'Failed to cancel order: ' . $e->getMessage());
+            } else {
+                $this->setFlash('error', 'Failed to cancel order');
             }
             
             $this->redirect('orders');
@@ -276,277 +251,21 @@ class OrderController extends Controller
             $this->redirect('admin/orders');
         }
         
-        // Start transaction
-        $this->orderModel->beginTransaction();
+        // Update order status using the model method that handles referrals
+        $result = $this->orderModel->updateStatusAndProcessReferral($orderId, $status);
         
-        try {
-            // Update order status
-            $result = $this->orderModel->update($orderId, [
-                'status' => $status,
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception('Failed to update order status');
-            }
-            
-            // Process referral earnings if status changed to paid
-            if ($status === 'paid' && $order['status'] !== 'paid') {
-                $this->processReferralEarnings($orderId);
-            }
-            
-            // Reverse referral earnings if status changed from paid to cancelled
-            if ($status === 'cancelled' && $order['status'] === 'paid') {
-                $this->reverseReferralEarnings($orderId);
-            }
-            
+        if ($result) {
             // Clear all related caches
             if ($order) {
                 $this->clearOrderCaches($order['user_id'], $orderId);
             }
             
-            // Commit transaction
-            $this->orderModel->commit();
-            
             $this->setFlash('success', 'Order status updated successfully');
-            
-        } catch (\Exception $e) {
-            // Rollback transaction
-            $this->orderModel->rollback();
-            
-            // Log error
-            error_log('Order status update error: ' . $e->getMessage());
-            
-            $this->setFlash('error', 'Failed to update order status: ' . $e->getMessage());
+        } else {
+            $this->setFlash('error', 'Failed to update order status');
         }
         
         $this->redirect('admin/orders/view/' . $orderId);
-    }
-
-    /**
-     * Process referral earnings for an order
-     *
-     * @param int $orderId
-     * @return void
-     */
-    private function processReferralEarnings($orderId)
-    {
-        // Get order details
-        $order = $this->orderModel->getOrderById($orderId);
-        if (!$order) {
-            error_log('Process referral earnings: Order not found - ID: ' . $orderId);
-            return;
-        }
-        
-        // Log order details after retrieving the order
-        error_log("Processing referral earnings for Order ID: {$orderId}, Status: {$order['status']}, Amount: {$order['total_amount']}");
-        
-        // Only process for paid orders
-        if ($order['status'] !== 'paid') {
-            error_log('Process referral earnings: Order not paid - ID: ' . $orderId . ', Status: ' . $order['status']);
-            return;
-        }
-
-        // Get user who placed the order
-        $user = $this->userModel->find($order['user_id']);
-        if (!$user) {
-            error_log('Process referral earnings: User not found - ID: ' . $order['user_id']);
-            return;
-        }
-        
-        // Check if user was referred by someone
-        if (empty($user['referred_by'])) {
-            error_log('Process referral earnings: User has no referrer - User ID: ' . $user['id']);
-            return;
-        }
-        
-        $referrerId = $user['referred_by'];
-        
-        // Check if referrer exists
-        $referrer = $this->userModel->find($referrerId);
-        if (!$referrer) {
-            error_log('Process referral earnings: Referrer not found - ID: ' . $referrerId);
-            return;
-        }
-
-        // Check if referral earning already exists for this order
-        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
-        if ($existingEarning) {
-            error_log('Process referral earnings: Earning already exists - Order ID: ' . $orderId);
-            return;
-        }
-
-        // Calculate commission (5% of total_amount, excluding delivery fee)
-        $commission = ($order['total_amount'] - $order['delivery_fee']) * 0.05;
-        
-        // Round to 2 decimal places
-        $commission = round($commission, 2);
-        
-        if ($commission <= 0) {
-            error_log('Process referral earnings: Commission is zero or negative - Order ID: ' . $orderId);
-            return;
-        }
-
-        try {
-            // Create referral earning record
-            $earningData = [
-                'user_id' => $referrerId,
-                'order_id' => $orderId,
-                'amount' => $commission,
-                'status' => 'pending',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $earningId = $this->referralEarningModel->create($earningData);
-            
-            if (!$earningId) {
-                throw new \Exception('Failed to create referral earning record');
-            }
-            
-            // Update referrer's balance
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = $currentEarnings + $commission;
-
-            $result = $this->userModel->update($referrerId, [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-
-            if (!$result) {
-                throw new \Exception('Failed to update referrer balance');
-            }
-
-            // Log the update for debugging
-            error_log("Updated referrer ID: {$referrerId} earnings from {$currentEarnings} to {$newEarnings}");
-            
-            // Record transaction
-            $transactionData = [
-                'user_id' => $referrerId,
-                'amount' => $commission,
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'reference_type' => 'referral_earning',
-                'description' => 'Referral commission from order #' . $orderId,
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $this->transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                throw new \Exception('Failed to create transaction record');
-            }
-            
-            // Create notification for referrer
-            $notificationData = [
-                'user_id' => $referrerId,
-                'title' => 'New Referral Commission',
-                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $this->notificationModel->create($notificationData);
-            
-            // Log success
-            error_log('Referral earnings processed successfully - Order ID: ' . $orderId . ', Referrer ID: ' . $referrerId . ', Amount: ' . $commission);
-            
-        } catch (\Exception $e) {
-            // Log error
-            error_log('Error processing referral earnings: ' . $e->getMessage());
-            throw $e; // Re-throw to be caught by the calling method's transaction
-        }
-    }
-
-    /**
-     * Reverse referral earnings for a cancelled order
-     *
-     * @param int $orderId
-     * @return void
-     */
-    private function reverseReferralEarnings($orderId)
-    {
-        $referralEarning = $this->referralEarningModel->findByOrderId($orderId);
-        
-        if (!$referralEarning || $referralEarning['status'] === 'cancelled') {
-            error_log('Reverse referral earnings: No active earning found - Order ID: ' . $orderId);
-            return;
-        }
-        
-        try {
-            // Update earning status to cancelled
-            $result = $this->referralEarningModel->update($referralEarning['id'], [
-                'status' => 'cancelled',
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception('Failed to update referral earning status');
-            }
-            
-            // Get referrer
-            $referrerId = $referralEarning['user_id'];
-            $referrer = $this->userModel->find($referrerId);
-            
-            if (!$referrer) {
-                throw new \Exception('Referrer not found');
-            }
-            
-            // Deduct amount from referrer's balance
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = max(0, $currentEarnings - $referralEarning['amount']);
-            
-            $result = $this->userModel->update($referrerId, [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception('Failed to update referrer balance');
-            }
-            
-            // Record transaction
-            $transactionData = [
-                'user_id' => $referrerId,
-                'amount' => -$referralEarning['amount'], // Negative amount for deduction
-                'type' => 'referral_cancelled',
-                'reference_id' => $referralEarning['id'],
-                'reference_type' => 'referral_earning',
-                'description' => 'Referral commission reversed due to order cancellation',
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $this->transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                throw new \Exception('Failed to create transaction record');
-            }
-            
-            // Create notification
-            $notificationData = [
-                'user_id' => $referrerId,
-                'title' => 'Referral Commission Cancelled',
-                'message' => '₹' . number_format($referralEarning['amount'], 2) . ' commission has been reversed due to order cancellation.',
-                'type' => 'referral_cancelled',
-                'reference_id' => $referralEarning['id'],
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $this->notificationModel->create($notificationData);
-            
-            // Log success
-            error_log('Referral earnings reversed successfully - Order ID: ' . $orderId . ', Referrer ID: ' . $referrerId . ', Amount: ' . $referralEarning['amount']);
-            
-        } catch (\Exception $e) {
-            // Log error
-            error_log('Error reversing referral earnings: ' . $e->getMessage());
-            throw $e; // Re-throw to be caught by the calling method's transaction
-        }
     }
 
     /**
