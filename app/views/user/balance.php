@@ -12,25 +12,25 @@
         <?php endif; ?>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Available Balance</h2>
                 <div class="text-3xl font-bold text-primary">₹<?= number_format($balance['available_balance'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Amount available for withdrawal</p>
                 
                 <div class="mt-6">
-                    <a href="<?= \App\Core\View::url('user/withdraw') ?>" class="inline-block px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors">
+                    <a href="<?= \App\Core\View::url('user/withdraw') ?>" class="inline-block px-4 py-2 bg-primary text-white rounded-none hover:bg-primary-dark transition-colors">
                         Withdraw Funds
                     </a>
                 </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Total Earnings</h2>
                 <div class="text-3xl font-bold text-green-600">₹<?= number_format($balance['total_earnings'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Total earnings from referrals</p>
                 
                 <div class="mt-6">
-                    <a href="<?= \App\Core\View::url('user/invite') ?>" class="inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                    <a href="<?= \App\Core\View::url('user/invite') ?>" class="inline-block px-4 py-2 bg-green-600 text-white rounded-none hover:bg-green-700 transition-colors">
                         Invite Friends
                     </a>
                 </div>
@@ -38,20 +38,20 @@
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Pending Withdrawals</h2>
                 <div class="text-3xl font-bold text-yellow-600">₹<?= number_format($balance['pending_withdrawals'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Amount currently being processed</p>
             </div>
             
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Total Withdrawn</h2>
                 <div class="text-3xl font-bold text-blue-600">₹<?= number_format($balance['total_withdrawn'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Total amount withdrawn to date</p>
             </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="bg-white rounded-none shadow-md overflow-hidden mb-8">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Recent Transactions</h2>
                 <a href="<?= \App\Core\View::url('user/transactions') ?>" class="text-primary hover:text-primary-dark text-sm">
@@ -109,7 +109,7 @@
             <?php endif; ?>
         </div>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-white rounded-none shadow-md overflow-hidden">
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-semibold text-gray-900">Earnings History</h2>
             </div>
@@ -118,7 +118,7 @@
                 <div class="p-6 text-center">
                     <p class="text-gray-600">You don't have any earnings yet.</p>
                     <div class="mt-4">
-                        <a href="<?= \App\Core\View::url('user/invite') ?>" class="inline-block px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors">
+                        <a href="<?= \App\Core\View::url('user/invite') ?>" class="inline-block px-4 py-2 bg-primary text-white rounded-none hover:bg-primary-dark transition-colors">
                             Start Earning Now
                         </a>
                     </div>

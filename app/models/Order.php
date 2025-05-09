@@ -8,6 +8,9 @@ class Order extends Model
     protected $table = 'orders';
     protected $primaryKey = 'id';
     
+    // Flag to track transaction state
+    private $transactionActive = false;
+    
     /**
      * Generate a unique invoice number
      *
@@ -132,6 +135,87 @@ class Order extends Model
         $sql = "SELECT SUM(total_amount) as total FROM {$this->table} WHERE status = 'paid'";
         $result = $this->db->query($sql)->single();
         return $result ? (float)$result['total'] : 0;
+    }
+    
+    /**
+     * Check if there's an active transaction
+     * 
+     * @return bool
+     */
+    public function inTransaction()
+    {
+        // Use our internal flag to track transaction state
+        return $this->transactionActive;
+    }
+    
+    /**
+     * Begin a transaction safely
+     * 
+     * @return bool
+     */
+    public function beginTransaction()
+    {
+        // If we already have an active transaction, roll it back
+        if ($this->transactionActive) {
+            error_log('Attempted to start a transaction while one is already active. Rolling back existing transaction.');
+            $this->rollback();
+        }
+        
+        // Start a new transaction
+        $result = $this->db->beginTransaction();
+        
+        // Set our transaction flag
+        if ($result) {
+            $this->transactionActive = true;
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Commit a transaction
+     * 
+     * @return bool
+     */
+    public function commit()
+    {
+        // Only commit if we have an active transaction
+        if (!$this->transactionActive) {
+            error_log('Attempted to commit when no transaction is active.');
+            return false;
+        }
+        
+        $result = $this->db->commit();
+        
+        // Reset our transaction flag
+        if ($result) {
+            $this->transactionActive = false;
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Rollback a transaction
+     * 
+     * @return bool
+     */
+    public function rollback()
+    {
+        // Only rollback if we have an active transaction
+        if (!$this->transactionActive) {
+            error_log('Attempted to rollback when no transaction is active.');
+            return false;
+        }
+        
+        $result = $this->db->rollback();
+        
+        // Reset our transaction flag
+        if ($result) {
+            $this->transactionActive = false;
+        }
+        
+        return $result;
     }
     
     /**

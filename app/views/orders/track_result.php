@@ -9,7 +9,7 @@
         
         <h1 class="text-3xl font-bold text-gray-900 mb-8">Order Tracking</h1>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="bg-white rounded-none shadow-md overflow-hidden mb-8">
             <div class="p-6 border-b border-gray-200">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between">
                     <div>
@@ -137,7 +137,7 @@
             </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-white rounded-none shadow-md overflow-hidden">
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-semibold text-gray-900">Order Items</h2>
             </div>

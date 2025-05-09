@@ -1,4 +1,4 @@
-<footer class="font-sans tracking-wide  text-white px-10 pt-12 pb-6 mt-12">
+<footer class="font-header tracking-wide  text-white px-10 pt-12 pb-6 mt-12">
         <div class="flex flex-wrap justify-between gap-10">
             <div class="max-w-md">
                 <a href='<?= URLROOT ?>'>

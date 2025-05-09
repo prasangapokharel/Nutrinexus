@@ -73,7 +73,7 @@
                 <?php foreach ($orderItems as $index => $item): ?>
                     <div class="flex justify-between items-center p-4 <?= $index !== count($orderItems) - 1 ? 'border-b border-gray-100' : '' ?>">
                         <div class="flex items-center">
-                            <div class="bg-gray-100 rounded-lg p-2 mr-4">
+                            <div class="bg-gray-100 rounded-none p-2 mr-4">
                                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                                 </svg>
@@ -104,14 +104,14 @@
 
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mt-8">
-            <a href="<?= \App\Core\View::url('orders/track') ?>" class="bg-[#0a3167] text-white font-semibold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
+            <a href="<?= \App\Core\View::url('orders/track') ?>" class="bg-[#0a3167] text-white font-semibold py-3 px-6 rounded-none transition duration-300 flex items-center justify-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"></path>
                     <path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"></path>
                 </svg>
                 Track Your Order
             </a>
-            <a href="<?= \App\Core\View::url('shop') ?>" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
+            <a href="<?= \App\Core\View::url('shop') ?>" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold py-3 px-6 rounded-none transition duration-300 flex items-center justify-center">
                 Continue Shopping
                 <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>

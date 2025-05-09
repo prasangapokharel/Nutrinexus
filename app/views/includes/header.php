@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($data['title']) ? $data['title'] . ' - ' : '' ?>Nutri Nexas</title>
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="<?= URLROOT ?>/css/tailwind.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="<?= URLROOT ?>/css/icon.allmin.css" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
@@ -19,19 +20,29 @@
                             DEFAULT: '#C5A572',
                             dark: '#B89355'
                         }
+                    },
+                    fontFamily: {
+                        'heading': ['Playfair Display', 'serif'],
+                        'body': ['Montserrat', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
     <style>
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
         body {
             
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 100;
-            font-size: small;
+            font-family: 'Montserrat', 'sans-serif';
+          
+        }
+        header{
+            font-family: 'Playfair Display', 'serif';
+
+        }
+        footer{
+            font-family: 'Playfair Display', 'serif';
+
         }
     </style>
 </head>

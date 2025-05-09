@@ -1,17 +1,16 @@
 <?php
 namespace App\Controllers;
-
 use App\Core\Controller;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\PaymentMethod;
-use App\Models\Payment;
 use App\Models\OrderItem;
 use App\Models\ReferralEarning;
 use App\Models\Withdrawal;
 use App\Models\Transaction;
 use App\Models\Notification;
+use App\Models\Setting;
 
 class AdminController extends Controller
 {
@@ -19,12 +18,12 @@ class AdminController extends Controller
     private $orderModel;
     private $userModel;
     private $paymentMethodModel;
-    private $paymentModel;
     private $orderItemModel;
     private $referralEarningModel;
     private $withdrawalModel;
     private $transactionModel;
     private $notificationModel;
+    private $settingModel;
 
     public function __construct()
     {
@@ -33,12 +32,12 @@ class AdminController extends Controller
         $this->orderModel = new Order();
         $this->userModel = new User();
         $this->paymentMethodModel = new PaymentMethod();
-        $this->paymentModel = new Payment();
         $this->orderItemModel = new OrderItem();
         $this->referralEarningModel = new ReferralEarning();
         $this->withdrawalModel = new Withdrawal();
         $this->transactionModel = new Transaction();
         $this->notificationModel = new Notification();
+        $this->settingModel = new Setting();
         
         // Check if user is admin
         $this->requireAdmin();
@@ -304,10 +303,20 @@ class AdminController extends Controller
         }
         
         $orderItems = $this->orderItemModel->getByOrderId($id);
+        $paymentMethod = null;
+        
+        // Get payment method name if available
+        if (isset($order['payment_method_id']) && $order['payment_method_id']) {
+            $paymentMethodData = $this->paymentMethodModel->find($order['payment_method_id']);
+            if ($paymentMethodData) {
+                $paymentMethod = $paymentMethodData['name'];
+            }
+        }
         
         $this->view('admin/orders/view', [
             'order' => $order,
             'orderItems' => $orderItems,
+            'paymentMethod' => $paymentMethod,
             'title' => 'Order Details'
         ]);
     }
@@ -323,7 +332,7 @@ class AdminController extends Controller
         
         $status = $_POST['status'] ?? '';
         
-        if (!in_array($status, ['paid', 'unpaid', 'cancelled'])) {
+        if (!in_array($status, ['paid', 'processing', 'unpaid', 'cancelled', 'shipped', 'delivered'])) {
             $this->setFlash('error', 'Invalid status');
             $this->redirect('admin/orders');
         }
@@ -334,18 +343,100 @@ class AdminController extends Controller
             $this->redirect('admin/orders');
         }
         
-        // Use the new method that handles referral processing
-        $result = $this->orderModel->updateStatusAndProcessReferral($id, $status);
+        // Get the old status before updating
+        $oldStatus = $order['status'];
         
-        if ($result) {
-            // Also update payment status if payment model exists
-            if (method_exists($this->paymentModel, 'updateStatusByOrderId')) {
-                $this->paymentModel->updateStatusByOrderId($id, $status);
+        // Start transaction
+        $this->orderModel->beginTransaction();
+        
+        try {
+            // Update order status
+            $result = $this->orderModel->update($id, [
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            if (!$result) {
+                throw new \Exception('Failed to update order status');
             }
             
+            // Process referral earnings if status changed to paid
+            if ($status === 'paid' && $oldStatus !== 'paid') {
+                // Create an instance of CheckoutController to use its processReferralEarnings method
+                $checkoutController = new \App\Controllers\CheckoutController();
+                $referralProcessed = $checkoutController->processReferralEarnings($id);
+                
+                if ($referralProcessed) {
+                    error_log("Referral commission processed for order ID: $id");
+                } else {
+                    error_log("No referral commission processed for order ID: $id");
+                }
+            }
+            
+            // If status changed from paid to cancelled, reverse referral earnings
+            if ($status === 'cancelled' && $oldStatus === 'paid') {
+                // Reverse referral earnings if they exist
+                $referralEarning = $this->referralEarningModel->findByOrderId($id);
+                
+                if ($referralEarning) {
+                    // Update earning status to cancelled
+                    $this->referralEarningModel->update($referralEarning['id'], [
+                        'status' => 'cancelled',
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    // Deduct amount from referrer's balance
+                    $referrer = $this->userModel->find($referralEarning['user_id']);
+                    
+                    if ($referrer) {
+                        $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
+                        $newEarnings = max(0, $currentEarnings - $referralEarning['amount']);
+                        
+                        $this->userModel->update($referralEarning['user_id'], [
+                            'referral_earnings' => $newEarnings,
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+                        
+                        // Record transaction
+                        $this->transactionModel->create([
+                            'user_id' => $referralEarning['user_id'],
+                            'amount' => -$referralEarning['amount'], // Negative amount for deduction
+                            'type' => 'referral_cancelled',
+                            'reference_id' => $referralEarning['id'],
+                            'reference_type' => 'referral_earning',
+                            'description' => 'Referral commission reversed due to order cancellation',
+                            'balance_after' => $newEarnings,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        
+                        // Create notification
+                        $this->notificationModel->create([
+                            'user_id' => $referralEarning['user_id'],
+                            'title' => 'Referral Commission Cancelled',
+                            'message' => '₹' . number_format($referralEarning['amount'], 2) . ' commission has been reversed due to order cancellation.',
+                            'type' => 'referral_cancelled',
+                            'reference_id' => $referralEarning['id'],
+                            'is_read' => 0,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
+            }
+            
+            // Commit transaction
+            $this->orderModel->commit();
+            
             $this->setFlash('success', 'Order status updated successfully');
-        } else {
-            $this->setFlash('error', 'Failed to update order status');
+            
+        } catch (\Exception $e) {
+            // Rollback transaction
+            $this->orderModel->rollback();
+            
+            // Log error
+            error_log('Order status update error: ' . $e->getMessage());
+            
+            // Set flash message
+            $this->setFlash('error', 'Failed to update order status: ' . $e->getMessage());
         }
         
         $this->redirect('admin/orders');
@@ -575,5 +666,50 @@ class AdminController extends Controller
         }
         
         $this->redirect('admin/withdrawals');
+    }
+
+    /**
+     * Referral settings
+     */
+    public function referralSettings()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $commissionRate = isset($_POST['commission_rate']) ? (float)$_POST['commission_rate'] : 5;
+            $minWithdrawal = isset($_POST['min_withdrawal']) ? (float)$_POST['min_withdrawal'] : 100;
+            $autoApprove = isset($_POST['auto_approve']) ? 'true' : 'false';
+            
+            // Validate
+            if ($commissionRate <= 0 || $commissionRate > 50) {
+                $this->setFlash('error', 'Commission rate must be between 0.1 and 50');
+                $this->redirect('admin/referralSettings');
+                return;
+            }
+            
+            if ($minWithdrawal < 0) {
+                $this->setFlash('error', 'Minimum withdrawal amount cannot be negative');
+                $this->redirect('admin/referralSettings');
+                return;
+            }
+            
+            // Save settings
+            $this->settingModel->set('commission_rate', $commissionRate);
+            $this->settingModel->set('min_withdrawal', $minWithdrawal);
+            $this->settingModel->set('auto_approve', $autoApprove);
+            
+            $this->setFlash('success', 'Referral settings updated successfully');
+            $this->redirect('admin/referralSettings');
+        } else {
+            // Get current settings
+            $commissionRate = $this->settingModel->get('commission_rate', 5);
+            $minWithdrawal = $this->settingModel->get('min_withdrawal', 100);
+            $autoApprove = $this->settingModel->get('auto_approve', 'true');
+            
+            $this->view('admin/referrals/settings', [
+                'commissionRate' => $commissionRate,
+                'minWithdrawal' => $minWithdrawal,
+                'autoApprove' => $autoApprove === 'true',
+                'title' => 'Referral Settings'
+            ]);
+        }
     }
 }

@@ -47,6 +47,18 @@ class User extends Model
     }
     
     /**
+     * Find user by phone number
+     *
+     * @param string $phone
+     * @return array|false
+     */
+    public function findByPhone($phone)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE phone = ?";
+        return $this->db->query($sql)->bind([$phone])->single();
+    }
+    
+    /**
      * Find user by reset token
      *
      * @param string $token
@@ -77,32 +89,49 @@ class User extends Model
     }
     
     /**
-     * Register new user
+     * Register new user with simplified fields
      *
      * @param array $data
      * @return int|bool
      */
     public function register($data)
     {
-        // Hash password
-        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        // Extract first and last name from full name
+        $nameParts = explode(' ', $data['full_name'], 2);
+        $firstName = $nameParts[0];
+        $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
         
-        // Set default role
-        $data['role'] = 'customer';
+        // Generate username from full name
+        $username = $this->generateUsername($data['full_name']);
         
-        // Set default referral earnings
-        $data['referral_earnings'] = 0;
+        // Create user data array
+        $userData = [
+            'username' => $username,
+            'full_name' => $data['full_name'],
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'phone' => $data['phone'],
+            'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+            'role' => 'customer',
+            'referral_earnings' => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
         
-        // Generate referral code if not provided
-        if (!isset($data['referral_code']) || empty($data['referral_code'])) {
-            $data['referral_code'] = $this->generateReferralCode();
+        // Add email if provided
+        if (isset($data['email']) && !empty($data['email'])) {
+            $userData['email'] = $data['email'];
         }
         
-        // Set created_at and updated_at
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = date('Y-m-d H:i:s');
+        // Generate referral code
+        $userData['referral_code'] = $this->generateReferralCode();
         
-        $userId = $this->create($data);
+        // Add referred_by if provided
+        if (isset($data['referred_by']) && !empty($data['referred_by'])) {
+            $userData['referred_by'] = $data['referred_by'];
+        }
+        
+        $userId = $this->create($userData);
         
         // Clear user cache if caching is enabled
         if ($userId && class_exists('App\Helpers\CacheHelper')) {
@@ -111,6 +140,34 @@ class User extends Model
         }
         
         return $userId;
+    }
+    
+    /**
+     * Generate a username from full name
+     *
+     * @param string $fullName
+     * @return string
+     */
+    private function generateUsername($fullName)
+    {
+        // Remove special characters and spaces
+        $username = preg_replace('/[^a-zA-Z0-9]/', '', $fullName);
+        
+        // Convert to lowercase
+        $username = strtolower($username);
+        
+        // Add random numbers to ensure uniqueness
+        $username .= rand(100, 999);
+        
+        // Check if username already exists
+        $existingUser = $this->findByUsername($username);
+        
+        // If username exists, generate a new one
+        if ($existingUser) {
+            return $this->generateUsername($fullName);
+        }
+        
+        return $username;
     }
     
     /**

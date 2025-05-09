@@ -26,16 +26,17 @@ define('SITENAME', 'Nutri Nexus');
 // App Version
 define('APPVERSION', '1.0.0');
 
-
 define('API_KEY', ''); // Replace with your actual
 
-// Email configuration
-define('MAIL_HOST', 'smtp.example.com');
-define('MAIL_PORT', 587);
-define('MAIL_USERNAME', 'your-email@example.com');
-define('MAIL_PASSWORD', 'your-password');
-define('MAIL_FROM_ADDRESS', 'info@example.com');
+// Email configuration (Updated for PHPMailer with Hostinger)
+define('MAIL_HOST', 'smtp.hostinger.com');
+define('MAIL_PORT', 465);
+define('MAIL_USERNAME', 'Nutrinexus@shp.re');
+define('MAIL_PASSWORD', 'Y1]r&ePF~/k');
+define('MAIL_FROM_ADDRESS', 'Nutrinexus@shp.re');
 define('MAIL_FROM_NAME', 'Nutri Nexus');
+define('MAIL_ENCRYPTION', 'ssl'); // SSL encryption for port 465
+define('MAIL_DEBUG', 2); // Set to 2 for detailed debug output, 0 for production
 
 // API Keys for email and newsletter services
 define('EMAIL_API_KEY', 'your-email-api-key-here'); // Replace with your actual email API key (e.g., Mailgun, SendGrid)
@@ -47,7 +48,6 @@ define('CACHE_LIFETIME', 3600); // 1 hour
 
 // API Keys for khalti 
 define('KHALTI_API_KEY', 'live_secret_key_68791341fdd94846a146f0457ff7b455'); // Replace with your actual khalti 
-
 
 // Define ROOT_DIR if not already defined
 if (!defined('ROOT_DIR')) {

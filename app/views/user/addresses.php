@@ -4,7 +4,7 @@
         <h1 class="text-3xl font-bold text-gray-900 mb-8">My Addresses</h1>
         
         <div class="mb-6 flex justify-end">
-            <a href="<?= \App\Core\View::url('user/address') ?>" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors">
+            <a href="<?= \App\Core\View::url('user/address') ?>" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-none hover:bg-primary-dark transition-colors">
                 <i class="fas fa-plus mr-2"></i> Add New Address
             </a>
         </div>

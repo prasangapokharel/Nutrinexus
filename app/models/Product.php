@@ -31,8 +31,8 @@ class Product extends Model
 
         $sql = "INSERT INTO {$this->table} (
             product_name, slug, description, price, sale_price, stock_quantity, 
-            category, image, sales_count, is_featured, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            category, weight, serving, capsule, flavor, image, sales_count, is_featured, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $params = [
             $data['product_name'],
@@ -42,6 +42,10 @@ class Product extends Model
             $data['sale_price'],
             $data['stock_quantity'],
             $data['category'],
+            $data['weight'] ?? null,
+            $data['serving'] ?? null,
+            isset($data['capsule']) ? $data['capsule'] : 0,
+            $data['flavor'] ?? null,
             $data['image'],
             $data['sales_count'],
             $data['is_featured'],
@@ -77,7 +81,11 @@ class Product extends Model
         $fields = [];
         $params = [];
         foreach ($data as $key => $value) {
-            if (in_array($key, ['product_name', 'slug', 'description', 'price', 'sale_price', 'stock_quantity', 'category', 'image', 'is_featured', 'updated_at'])) {
+            if (in_array($key, [
+                'product_name', 'slug', 'description', 'price', 'sale_price', 
+                'stock_quantity', 'category', 'weight', 'serving', 'capsule', 
+                'flavor', 'image', 'is_featured', 'updated_at'
+            ])) {
                 $fields[] = "{$key} = ?";
                 $params[] = $value;
             }

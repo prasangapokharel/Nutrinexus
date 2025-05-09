@@ -1,6 +1,6 @@
 <?php ob_start(); ?>
 <div class="container mx-auto px-6 py-12 max-w-md">
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="bg-white rounded-none shadow-md overflow-hidden">
         <div class="p-6 border-b border-gray-200">
             <h1 class="text-2xl font-bold text-[#0A3167]">Login to Your Account</h1>
             <p class="text-[#082850] mt-2">Welcome back! Please enter your credentials to continue.</p>
@@ -27,14 +27,14 @@
             <div>
                 <label for="email" class="block text-sm font-medium text-[#0A3167] mb-1">Email Address</label>
                 <input type="email" name="email" id="email" value="<?= isset($email) ? htmlspecialchars($email) : '' ?>" 
-                       class="w-full px-4 py-2 border border-[#0A3167] rounded-md focus:ring-2 focus:ring-[#C5A572] focus:border-[#C5A572]" 
+                       class="w-full px-4 py-2 border border-[#0A3167] rounded-none focus:ring-2 focus:ring-[#C5A572] focus:border-[#C5A572]" 
                        required>
             </div>
 
             <div>
                 <label for="password" class="block text-sm font-medium text-[#0A3167] mb-1">Password</label>
                 <input type="password" name="password" id="password" 
-                       class="w-full px-4 py-2 border border-[#0A3167] rounded-md focus:ring-2 focus:ring-[#C5A572] focus:border-[#C5A572]" 
+                       class="w-full px-4 py-2 border border-[#0A3167] rounded-none focus:ring-2 focus:ring-[#C5A572] focus:border-[#C5A572]" 
                        required>
             </div>
 
@@ -48,7 +48,7 @@
                 </a>
             </div>
 
-            <button type="submit" class="w-full bg-[#0A3167] hover:bg-[#082850] text-white font-bold py-3 rounded-md shadow transition duration-200">
+            <button type="submit" class="w-full bg-[#0A3167] hover:bg-[#082850] text-white font-bold py-3 rounded-none shadow transition duration-200">
                 Login
             </button>
 

@@ -17,7 +17,7 @@
         <?php else: ?>
             <?php foreach ($products as $product): ?>
                 <a href="<?= \App\Core\View::url('products/view/' . $product['slug']) ?>" class="product-card w-full">
-                    <div class="bg-white rounded-lg overflow-hidden">
+                    <div class="bg-white rounded-none overflow-hidden">
                         <div class="product-image-container">
                             <img src="<?= htmlspecialchars($product['image'] ?? \App\Core\View::asset('images/products/' . $product['id'] . '.jpg')) ?>" 
                                  alt="Thumbnail" class="product-image">

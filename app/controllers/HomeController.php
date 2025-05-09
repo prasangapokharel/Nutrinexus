@@ -5,6 +5,8 @@ use App\Core\Controller;
 use App\Models\Product;
 use App\Models\OrderItem;
 use App\Helpers\CacheHelper;
+// Use the correct namespace for Spatie\Async\Pool
+use Spatie\Async\Pool;
 
 class HomeController extends Controller
 {
@@ -84,8 +86,9 @@ class HomeController extends Controller
         
         $this->view('home/about', $viewData);
     }
+
     /**
-     * Display about page with caching
+     * Display authenticator page with caching
      */
     public function authenticator()
     {
@@ -141,34 +144,21 @@ class HomeController extends Controller
             }
             
             if (empty($errors)) {
-                // Send email using cURL
-                $emailSent = $this->sendEmailWithCurl($name, $email, $subject, $message);
+                // Store form data in session for potential fallback use
+                $_SESSION['contact_form'] = [
+                    'name' => $name,
+                    'email' => $email,
+                    'subject' => $subject,
+                    'message' => $message
+                ];
                 
-                if ($emailSent) {
-                    $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
-                    $this->redirect('home/contact');
-                } else {
-                    // Fallback to traditional email sending
-                    $headers = "From: $name <$email>\r\n";
-                    $headers .= "Reply-To: $email\r\n";
-                    $headers .= "MIME-Version: 1.0\r\n";
-                    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-                    
-                    $emailBody = "<h2>Contact Form Submission</h2>";
-                    $emailBody .= "<p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>";
-                    $emailBody .= "<p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>";
-                    $emailBody .= "<p><strong>Subject:</strong> " . htmlspecialchars($subject) . "</p>";
-                    $emailBody .= "<p><strong>Message:</strong></p>";
-                    $emailBody .= "<p>" . nl2br(htmlspecialchars($message)) . "</p>";
-                    
-                    // Send email using PHP's mail function as fallback
-                    if (mail(MAIL_FROM_ADDRESS, 'Contact Form: ' . $subject, $emailBody, $headers)) {
-                        $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
-                        $this->redirect('home/contact');
-                    } else {
-                        $errors['general'] = 'Failed to send email. Please try again later.';
-                    }
-                }
+                // Send email asynchronously using Spatie/Async
+                $this->sendEmailAsync($name, $email, $subject, $message);
+                
+                // Set success message and redirect immediately
+                // The email will be sent in the background
+                $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
+                $this->redirect('home/contact');
             }
             
             if (!empty($errors)) {
@@ -202,19 +192,75 @@ class HomeController extends Controller
     }
     
     /**
+     * Send email asynchronously using Spatie/Async with proper error handling
+     * 
+     * @param string $name
+     * @param string $email
+     * @param string $subject
+     * @param string $message
+     * @return void
+     */
+    private function sendEmailAsync($name, $email, $subject, $message)
+    {
+        // First check if the Spatie\Async\Pool class exists
+        if (!class_exists('\\Spatie\\Async\\Pool')) {
+            // Log that we're falling back to synchronous processing
+            error_log('Spatie\\Async\\Pool class not found. Falling back to synchronous email sending.');
+            
+            // Fall back to synchronous email sending
+            $this->sendEmailWithCurl($name, $email, $subject, $message);
+            return;
+        }
+        
+        try {
+            // Create an async pool
+            $pool = Pool::create();
+            
+            // Add the email sending task to the pool
+            $pool->add(function () use ($name, $email, $subject, $message) {
+                return $this->sendEmailWithCurl($name, $email, $subject, $message);
+            })->then(function ($result) {
+                // This runs when the task completes successfully
+                error_log('Email sent successfully: ' . json_encode($result));
+            })->catch(function (\Exception $exception) use ($name, $email, $subject, $message) {
+                // This runs when the task fails
+                error_log('Async email sending error: ' . $exception->getMessage());
+                
+                // Fallback to traditional email sending
+                $this->sendFallbackEmail($name, $email, $subject, $message, $exception->getMessage());
+            });
+            
+            // Start the pool (non-blocking)
+            $pool->wait();
+            
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Failed to create async pool: ' . $e->getMessage());
+            
+            // Fallback to synchronous email sending with cURL
+            $this->sendEmailWithCurl($name, $email, $subject, $message);
+        }
+    }
+    
+    /**
      * Send email using cURL
      * 
      * @param string $name
      * @param string $email
      * @param string $subject
      * @param string $message
-     * @return bool
+     * @return array
      */
     private function sendEmailWithCurl($name, $email, $subject, $message)
     {
         // Check if cURL is available
         if (!function_exists('curl_init')) {
-            return false;
+            // Fallback to traditional email sending
+            $success = $this->sendFallbackEmail($name, $email, $subject, $message, 'cURL not available');
+            return [
+                'success' => $success,
+                'method' => 'fallback'
+            ];
         }
         
         try {
@@ -247,19 +293,94 @@ class HomeController extends Controller
             // Execute the request
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
             
             // Close cURL
             curl_close($ch);
             
-            // Log the response for debugging
-            error_log('Email API Response: ' . $response . ' (HTTP Code: ' . $httpCode . ')');
+            // Check for cURL errors
+            if ($error) {
+                throw new \Exception('cURL error: ' . $error);
+            }
             
-            // Check if the request was successful
-            return ($httpCode >= 200 && $httpCode < 300);
+            // Try to decode the response
+            $responseData = json_decode($response, true) ?: $response;
+            
+            // Log the response for debugging
+            error_log('Email API Response: ' . (is_string($responseData) ? $responseData : json_encode($responseData)) . ' (HTTP Code: ' . $httpCode . ')');
+            
+            // Return the result
+            return [
+                'success' => ($httpCode >= 200 && $httpCode < 300),
+                'status_code' => $httpCode,
+                'response' => $responseData
+            ];
             
         } catch (\Exception $e) {
             // Log the error
             error_log('Email sending error: ' . $e->getMessage());
+            
+            // Fallback to traditional email sending
+            $success = $this->sendFallbackEmail($name, $email, $subject, $message, $e->getMessage());
+            
+            return [
+                'success' => $success,
+                'error' => $e->getMessage(),
+                'method' => 'fallback'
+            ];
+        }
+    }
+    
+    /**
+     * Fallback email sending method using PHP's mail function
+     * 
+     * @param string $name
+     * @param string $email
+     * @param string $subject
+     * @param string $message
+     * @param string $errorMessage
+     * @return bool
+     */
+    private function sendFallbackEmail($name, $email, $subject, $message, $errorMessage = '')
+    {
+        try {
+            // Log that we're using the fallback
+            error_log('Using fallback email method. Original error: ' . $errorMessage);
+            
+            // Use the provided parameters or get from session if not provided
+            $name = $name ?: ($_SESSION['contact_form']['name'] ?? 'Website Visitor');
+            $email = $email ?: ($_SESSION['contact_form']['email'] ?? 'unknown@example.com');
+            $subject = $subject ?: ($_SESSION['contact_form']['subject'] ?? 'Contact Form Submission');
+            $message = $message ?: ($_SESSION['contact_form']['message'] ?? 'No message content available.');
+            
+            // Prepare email headers
+            $headers = "From: $name <$email>\r\n";
+            $headers .= "Reply-To: $email\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+            
+            // Prepare email body
+            $emailBody = "<h2>Contact Form Submission</h2>";
+            $emailBody .= "<p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>";
+            $emailBody .= "<p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>";
+            $emailBody .= "<p><strong>Subject:</strong> " . htmlspecialchars($subject) . "</p>";
+            $emailBody .= "<p><strong>Message:</strong></p>";
+            $emailBody .= "<p>" . nl2br(htmlspecialchars($message)) . "</p>";
+            
+            // Add note about fallback
+            $emailBody .= "<p><em>Note: This email was sent using the fallback method due to an API error.</em></p>";
+            
+            // Send email using PHP's mail function
+            $toAddress = defined('MAIL_FROM_ADDRESS') ? MAIL_FROM_ADDRESS : 'admin@example.com';
+            $result = mail($toAddress, 'Contact Form: ' . $subject, $emailBody, $headers);
+            
+            // Log the result
+            error_log('Fallback email result: ' . ($result ? 'Success' : 'Failed'));
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            error_log('Fallback email error: ' . $e->getMessage());
             return false;
         }
     }
@@ -278,15 +399,12 @@ class HomeController extends Controller
                 return;
             }
             
-            // Example of using cURL to subscribe to a newsletter service
-            $subscribed = $this->subscribeToNewsletter($email);
+            // Subscribe to newsletter asynchronously
+            $this->subscribeToNewsletterAsync($email);
             
-            if ($subscribed) {
-                $this->setFlash('success', 'Thank you for subscribing to our newsletter!');
-            } else {
-                $this->setFlash('error', 'Failed to subscribe. Please try again later.');
-            }
-            
+            // Set success message and redirect immediately
+            // The subscription will be processed in the background
+            $this->setFlash('success', 'Thank you for subscribing to our newsletter!');
             $this->redirect('');
         } else {
             $this->redirect('');
@@ -294,15 +412,69 @@ class HomeController extends Controller
     }
     
     /**
+     * Subscribe to newsletter asynchronously using Spatie/Async with proper error handling
+     * 
+     * @param string $email
+     * @return void
+     */
+    private function subscribeToNewsletterAsync($email)
+    {
+        // First check if the Spatie\Async\Pool class exists
+        if (!class_exists('\\Spatie\\Async\\Pool')) {
+            // Log that we're falling back to synchronous processing
+            error_log('Spatie\\Async\\Pool class not found. Falling back to synchronous newsletter subscription.');
+            
+            // Fall back to synchronous subscription
+            $this->subscribeToNewsletterWithCurl($email);
+            return;
+        }
+        
+        try {
+            // Create an async pool
+            $pool = Pool::create();
+            
+            // Add the subscription task to the pool
+            $pool->add(function () use ($email) {
+                return $this->subscribeToNewsletterWithCurl($email);
+            })->then(function ($result) {
+                // This runs when the task completes successfully
+                error_log('Newsletter subscription successful: ' . json_encode($result));
+            })->catch(function (\Exception $exception) use ($email) {
+                // This runs when the task fails
+                error_log('Async newsletter subscription error: ' . $exception->getMessage());
+                
+                // Store the email for later retry
+                $this->storeFailedSubscription($email, $exception->getMessage());
+            });
+            
+            // Start the pool (non-blocking)
+            $pool->wait();
+            
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Failed to create async pool for newsletter: ' . $e->getMessage());
+            
+            // Fallback to synchronous subscription with cURL
+            $this->subscribeToNewsletterWithCurl($email);
+        }
+    }
+    
+    /**
      * Subscribe to newsletter using cURL
      * 
      * @param string $email
-     * @return bool
+     * @return array
      */
-    private function subscribeToNewsletter($email)
+    private function subscribeToNewsletterWithCurl($email)
     {
+        // Check if cURL is available
         if (!function_exists('curl_init')) {
-            return false;
+            // Store the email for later retry
+            $this->storeFailedSubscription($email, 'cURL not available');
+            return [
+                'success' => false,
+                'error' => 'cURL not available'
+            ];
         }
         
         try {
@@ -327,21 +499,89 @@ class HomeController extends Controller
                 'Authorization: Bearer your-api-key' // Replace with your API key
             ]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification for development
             
             // Execute the request
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
             
             // Close cURL
             curl_close($ch);
             
+            // Check for cURL errors
+            if ($error) {
+                throw new \Exception('cURL error: ' . $error);
+            }
+            
+            // Try to decode the response
+            $responseData = json_decode($response, true) ?: $response;
+            
+            // Log the response for debugging
+            error_log('Newsletter API Response: ' . (is_string($responseData) ? $responseData : json_encode($responseData)) . ' (HTTP Code: ' . $httpCode . ')');
+            
             // Check if the request was successful
-            return ($httpCode >= 200 && $httpCode < 300);
+            $success = ($httpCode >= 200 && $httpCode < 300);
+            
+            if (!$success) {
+                // Store the email for later retry if the request failed
+                $this->storeFailedSubscription($email, 'API returned status code ' . $httpCode);
+            }
+            
+            // Return the result
+            return [
+                'success' => $success,
+                'status_code' => $httpCode,
+                'response' => $responseData
+            ];
             
         } catch (\Exception $e) {
+            // Log the error
             error_log('Newsletter subscription error: ' . $e->getMessage());
-            return false;
+            
+            // Store the email for later retry
+            $this->storeFailedSubscription($email, $e->getMessage());
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Store failed subscription for later retry
+     * 
+     * @param string $email
+     * @param string $errorMessage
+     * @return void
+     */
+    private function storeFailedSubscription($email, $errorMessage)
+    {
+        try {
+            // Create a file to store failed subscriptions if it doesn't exist
+            $failedSubscriptionsFile = 'storage/failed_subscriptions.json';
+            $failedSubscriptions = [];
+            
+            if (file_exists($failedSubscriptionsFile)) {
+                $failedSubscriptions = json_decode(file_get_contents($failedSubscriptionsFile), true) ?? [];
+            }
+            
+            // Add the failed subscription
+            $failedSubscriptions[] = [
+                'email' => $email,
+                'error' => $errorMessage,
+                'timestamp' => time(),
+                'attempts' => 1
+            ];
+            
+            // Save the updated list
+            file_put_contents($failedSubscriptionsFile, json_encode($failedSubscriptions, JSON_PRETTY_PRINT));
+            
+            error_log('Stored failed subscription for later retry: ' . $email);
+            
+        } catch (\Exception $e) {
+            error_log('Failed to store failed subscription: ' . $e->getMessage());
         }
     }
     
@@ -360,6 +600,68 @@ class HomeController extends Controller
         
         $this->cache->clear();
         $this->setFlash('success', 'Cache cleared successfully');
+        $this->redirect('admin/dashboard');
+    }
+    
+    /**
+     * Retry failed newsletter subscriptions
+     * Admin function to retry failed subscriptions
+     */
+    public function retryFailedSubscriptions()
+    {
+        // Only allow admin users to retry failed subscriptions
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+            $this->setFlash('error', 'You do not have permission to perform this action');
+            $this->redirect('');
+            return;
+        }
+        
+        $failedSubscriptionsFile = 'storage/failed_subscriptions.json';
+        
+        if (!file_exists($failedSubscriptionsFile)) {
+            $this->setFlash('info', 'No failed subscriptions to retry');
+            $this->redirect('admin/dashboard');
+            return;
+        }
+        
+        $failedSubscriptions = json_decode(file_get_contents($failedSubscriptionsFile), true) ?? [];
+        
+        if (empty($failedSubscriptions)) {
+            $this->setFlash('info', 'No failed subscriptions to retry');
+            $this->redirect('admin/dashboard');
+            return;
+        }
+        
+        $successCount = 0;
+        $remainingSubscriptions = [];
+        
+        // Process each failed subscription
+        foreach ($failedSubscriptions as $subscription) {
+            $email = $subscription['email'];
+            $attempts = $subscription['attempts'] + 1;
+            
+            // Try to subscribe again
+            $result = $this->subscribeToNewsletterWithCurl($email);
+            
+            if ($result['success']) {
+                // Subscription succeeded
+                $successCount++;
+            } else {
+                // Subscription failed again
+                // Keep it in the list if we haven't tried too many times
+                if ($attempts < 5) {
+                    $subscription['attempts'] = $attempts;
+                    $subscription['timestamp'] = time();
+                    $subscription['error'] = $result['error'] ?? 'Unknown error';
+                    $remainingSubscriptions[] = $subscription;
+                }
+            }
+        }
+        
+        // Save the updated list
+        file_put_contents($failedSubscriptionsFile, json_encode($remainingSubscriptions, JSON_PRETTY_PRINT));
+        
+        $this->setFlash('success', "Retried {$successCount} failed subscriptions. " . count($remainingSubscriptions) . " remaining.");
         $this->redirect('admin/dashboard');
     }
 }

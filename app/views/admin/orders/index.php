@@ -17,6 +17,9 @@
                     <a href="<?= \App\Core\View::url('admin/orders') ?>" class="px-4 py-2 rounded-md <?= !isset($status) ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?> transition-colors">
                         All
                     </a>
+                    <a href="<?= \App\Core\View::url('admin/orders?status=processing') ?>" class="px-4 py-2 rounded-md <?= isset($status) && $status === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?> transition-colors">
+                        Processing
+                    </a>
                     <a href="<?= \App\Core\View::url('admin/orders?status=paid') ?>" class="px-4 py-2 rounded-md <?= isset($status) && $status === 'paid' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?> transition-colors">
                         Paid
                     </a>
@@ -80,7 +83,7 @@
                                     ₹<?= number_format($order['total_amount'], 2) ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <?= htmlspecialchars($order['payment_method']) ?>
+                                    <?= isset($order['payment_method']) ? htmlspecialchars($order['payment_method']) : 'N/A' ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
@@ -89,12 +92,23 @@
                                             case 'paid':
                                                 echo 'bg-green-100 text-green-800';
                                                 break;
+                                            case 'processing':
+                                                echo 'bg-blue-100 text-blue-800';
+                                                break;
                                             case 'unpaid':
                                                 echo 'bg-yellow-100 text-yellow-800';
                                                 break;
                                             case 'cancelled':
                                                 echo 'bg-red-100 text-red-800';
                                                 break;
+                                            case 'shipped':
+                                                echo 'bg-purple-100 text-purple-800';
+                                                break;
+                                            case 'delivered':
+                                                echo 'bg-green-100 text-green-800';
+                                                break;
+                                            default:
+                                                echo 'bg-gray-100 text-gray-800';
                                         }
                                         ?>">
                                         <?= ucfirst($order['status']) ?>
@@ -104,6 +118,14 @@
                                     <a href="<?= \App\Core\View::url('admin/viewOrder/' . $order['id']) ?>" class="text-primary hover:text-primary-dark mr-3">
                                         <i class="fas fa-eye"></i> View
                                     </a>
+                                    <?php if ($order['status'] === 'processing'): ?>
+                                        <a href="#" onclick="updateStatus(<?= $order['id'] ?>, 'paid')" class="text-green-600 hover:text-green-900 mr-3">
+                                            <i class="fas fa-check"></i> Mark Paid
+                                        </a>
+                                        <a href="#" onclick="updateStatus(<?= $order['id'] ?>, 'cancelled')" class="text-red-600 hover:text-red-900">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </a>
+                                    <?php endif; ?>
                                     <?php if ($order['status'] === 'unpaid'): ?>
                                         <a href="#" onclick="updateStatus(<?= $order['id'] ?>, 'paid')" class="text-green-600 hover:text-green-900 mr-3">
                                             <i class="fas fa-check"></i> Mark Paid

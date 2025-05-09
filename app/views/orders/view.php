@@ -7,7 +7,7 @@
         </a>
     </div>
     
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="bg-white rounded-none shadow-md overflow-hidden">
         <div class="p-6 border-b border-gray-200">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between">
                 <div>

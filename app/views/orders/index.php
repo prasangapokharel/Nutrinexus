@@ -10,7 +10,7 @@
     <?php endif; ?>
     
     <?php if (empty($orders)): ?>
-        <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        <div class="bg-white rounded-none shadow-md p-8 text-center">
             <div class="text-gray-500 mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -18,12 +18,12 @@
             </div>
             <h2 class="text-xl font-semibold mb-2">No orders found</h2>
             <p class="text-gray-600 mb-6">You haven't placed any orders yet.</p>
-            <a href="<?= \App\Core\View::url('products') ?>" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+            <a href="<?= \App\Core\View::url('products') ?>" class="inline-block bg-primary text-white px-6 py-2 rounded-none hover:bg-primary-dark transition-colors">
                 Start Shopping
             </a>
         </div>
     <?php else: ?>
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-white rounded-none shadow-md overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">

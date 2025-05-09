@@ -4,161 +4,202 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Session;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\ReferralEarning;
+use App\Models\OrderItem;
 use App\Models\User;
+use App\Models\ReferralEarning;
 use App\Models\Transaction;
 use App\Models\Notification;
-use App\Helpers\CacheHelper;
+use App\Models\Setting;
 
+/**
+ * Order Controller
+ * Handles order management
+ */
 class OrderController extends Controller
 {
+    private $productModel;
     private $orderModel;
     private $orderItemModel;
-    private $productModel;
     private $userModel;
     private $referralEarningModel;
     private $transactionModel;
     private $notificationModel;
-    private $cache;
+    private $settingModel;
 
     public function __construct()
     {
         parent::__construct();
         $this->orderModel = new Order();
         $this->orderItemModel = new OrderItem();
-        $this->productModel = new Product();
         $this->userModel = new User();
         $this->referralEarningModel = new ReferralEarning();
         $this->transactionModel = new Transaction();
         $this->notificationModel = new Notification();
-        
-        // Initialize cache
-        $this->cache = CacheHelper::getInstance();
-        
-        // Check if user is logged in
-        $this->requireLogin();
+        $this->settingModel = new Setting();
     }
 
     /**
      * Display user's orders
+     *
+     * @return void
      */
     public function index()
     {
+        $this->requireLogin();
+        
         $userId = Session::get('user_id');
+        $orders = $this->orderModel->getOrdersByUserId($userId);
         
-        // Generate cache key
-        $cacheKey = $this->cache->generateKey('user_orders', ['user_id' => $userId]);
-        
-        // Try to get from cache
-        $viewData = $this->cache->get($cacheKey);
-        
-        if ($viewData === null) {
-            $orders = $this->orderModel->getOrdersByUserId($userId);
-            
-            $viewData = [
-                'orders' => $orders,
-                'title' => 'My Orders',
-                'cached_at' => date('Y-m-d H:i:s')
-            ];
-            
-            // Store in cache for 15 minutes
-            $this->cache->set($cacheKey, $viewData, 900);
-        }
-        
-        $this->view('orders/index', $viewData);
+        $this->view('orders/index', [
+            'orders' => $orders,
+            'title' => 'My Orders'
+        ]);
     }
 
     /**
-     * Display order details
-     * Renamed from view to viewOrder to avoid conflict with parent class
+     * View order details
+     *
+     * @param int $id
+     * @return void
      */
-    public function viewOrder($orderId = null)
+    public function viewOrder($id = null)
     {
-        if (!$orderId) {
+        $this->requireLogin();
+        
+        if (!$id) {
             $this->redirect('orders');
+            return;
         }
         
         $userId = Session::get('user_id');
+        $order = $this->orderModel->getOrderById($id);
         
-        // Generate cache key
-        $cacheKey = $this->cache->generateKey('order_details', [
-            'user_id' => $userId,
-            'order_id' => $orderId
-        ]);
-        
-        // Try to get from cache
-        $viewData = $this->cache->get($cacheKey);
-        
-        if ($viewData === null) {
-            $order = $this->orderModel->getOrderById($orderId);
-            
-            // Check if order belongs to user
-            if (!$order || ($order['user_id'] ?? 0) != $userId) {
-                $this->redirect('orders');
-            }
-            
-            $orderItems = $this->orderItemModel->getByOrderId($orderId);
-            
-            $viewData = [
-                'order' => $order,
-                'orderItems' => $orderItems,
-                'title' => 'Order Details',
-                'cached_at' => date('Y-m-d H:i:s')
-            ];
-            
-            // Store in cache for 30 minutes
-            $this->cache->set($cacheKey, $viewData, 1800);
+        if (!$order || $order['user_id'] != $userId) {
+            $this->setFlash('error', 'Order not found.');
+            $this->redirect('orders');
+            return;
         }
         
-        $this->view('orders/view', $viewData);
+        $orderItems = $this->orderItemModel->getByOrderId($id);
+        
+        $this->view('orders/view', [
+            'order' => $order,
+            'orderItems' => $orderItems,
+            'title' => 'Order Details'
+        ]);
+    }
+
+    /**
+     * Track order
+     *
+     * @return void
+     */
+    public function track()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $invoice = $this->post('invoice');
+            
+            if (empty($invoice)) {
+                $this->setFlash('error', 'Please enter an order number.');
+                $this->redirect('orders/track');
+                return;
+            }
+            
+            $order = $this->orderModel->getOrderByInvoice($invoice);
+            
+            if (!$order) {
+                $this->setFlash('error', 'Order not found.');
+                $this->redirect('orders/track');
+                return;
+            }
+            
+            $orderItems = $this->orderItemModel->getByOrderId($order['id']);
+            
+            $this->view('orders/track-result', [
+                'order' => $order,
+                'orderItems' => $orderItems,
+                'title' => 'Order Tracking'
+            ]);
+        } else {
+            $this->view('orders/track', [
+                'title' => 'Track Order'
+            ]);
+        }
     }
 
     /**
      * Cancel order
+     *
+     * @param int $id
+     * @return void
      */
-    public function cancel($orderId = null)
+    public function cancel($id = null)
     {
-        if (!$orderId) {
+        $this->requireLogin();
+        
+        if (!$id) {
             $this->redirect('orders');
+            return;
         }
         
         $userId = Session::get('user_id');
-        $order = $this->orderModel->getOrderById($orderId);
+        $order = $this->orderModel->getOrderById($id);
         
-        // Check if order belongs to user and can be cancelled
-        if (!$order || ($order['user_id'] ?? 0) != $userId || $order['status'] !== 'unpaid') {
-            $this->setFlash('error', 'Order cannot be cancelled');
+        if (!$order || $order['user_id'] != $userId) {
+            $this->setFlash('error', 'Order not found.');
             $this->redirect('orders');
+            return;
+        }
+        
+        // Only allow cancellation of pending or unpaid orders
+        if (!in_array($order['status'], ['pending', 'unpaid'])) {
+            $this->setFlash('error', 'This order cannot be cancelled.');
+            $this->redirect('orders/view/' . $id);
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Update order status using the model method that handles referrals
-            $result = $this->orderModel->updateStatusAndProcessReferral($orderId, 'cancelled');
+            // Start transaction
+            $this->orderModel->beginTransaction();
             
-            if ($result) {
-                // Get order items
-                $orderItems = $this->orderItemModel->getByOrderId($orderId);
+            try {
+                // Update order status
+                $result = $this->orderModel->update($id, [
+                    'status' => 'cancelled',
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
                 
-                // Restore product quantities
-                foreach ($orderItems as $item) {
-                    $product = $this->productModel->find($item['product_id']);
-                    if ($product) {
-                        $newQuantity = $product['stock_quantity'] + $item['quantity'];
-                        $this->productModel->updateQuantity($item['product_id'], $newQuantity);
-                    }
+                if (!$result) {
+                    throw new \Exception('Failed to cancel order.');
                 }
                 
-                // Clear related caches
-                $this->clearOrderCaches($userId, $orderId);
+                // Restore product quantities
+                $orderItems = $this->orderItemModel->getByOrderId($id);
                 
-                $this->setFlash('success', 'Order cancelled successfully');
-            } else {
-                $this->setFlash('error', 'Failed to cancel order');
+                foreach ($orderItems as $item) {
+                    $this->productModel->updateQuantity($item['product_id'], $item['stock_quantity']);
+                }
+                
+                // Commit transaction
+                $this->orderModel->commit();
+                
+                $this->setFlash('success', 'Order cancelled successfully.');
+                $this->redirect('orders/view/' . $id);
+                
+            } catch (\Exception $e) {
+                // Rollback transaction
+                $this->orderModel->rollback();
+                
+                // Log error
+                error_log('Order cancellation error: ' . $e->getMessage());
+                
+                // Set flash message
+                $this->setFlash('error', 'Failed to cancel order. Please try again.');
+                
+                // Redirect back to order details
+                $this->redirect('orders/view/' . $id);
             }
-            
-            $this->redirect('orders');
         } else {
             $this->view('orders/cancel', [
                 'order' => $order,
@@ -168,128 +209,370 @@ class OrderController extends Controller
     }
 
     /**
-     * Track order
-     */
-    public function track()
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $invoice = trim($_POST['invoice'] ?? '');
-            
-            if (empty($invoice)) {
-                $this->setFlash('error', 'Please enter an order number');
-                $this->view('orders/track', [
-                    'title' => 'Track Order'
-                ]);
-                return;
-            }
-            
-            // Generate cache key
-            $cacheKey = $this->cache->generateKey('track_order', ['invoice' => $invoice]);
-            
-            // Try to get from cache
-            $viewData = $this->cache->get($cacheKey);
-            
-            if ($viewData === null) {
-                $order = $this->orderModel->getOrderByInvoice($invoice);
-                
-                if (!$order) {
-                    $this->setFlash('error', 'Order not found');
-                    $this->view('orders/track', [
-                        'invoice' => $invoice,
-                        'title' => 'Track Order'
-                    ]);
-                    return;
-                }
-                
-                $orderItems = $this->orderItemModel->getByOrderId($order['id']);
-                
-                $viewData = [
-                    'order' => $order,
-                    'orderItems' => $orderItems,
-                    'title' => 'Order Tracking',
-                    'cached_at' => date('Y-m-d H:i:s')
-                ];
-                
-                // Store in cache for 5 minutes (short time as tracking info changes frequently)
-                $this->cache->set($cacheKey, $viewData, 300);
-            }
-            
-            $this->view('orders/track_result', $viewData);
-        } else {
-            $this->view('orders/track', [
-                'title' => 'Track Order'
-            ]);
-        }
-    }
-
-    /**
      * Update order status (admin only)
-     */
-    public function updateStatus($orderId = null)
-    {
-        // Check if user is admin
-        if (!Session::has('user_id') || Session::get('user_role') !== 'admin') {
-            $this->setFlash('error', 'You do not have permission to perform this action');
-            $this->redirect('admin/login');
-        }
-        
-        if (!$orderId || $_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('admin/orders');
-        }
-        
-        $status = $_POST['status'] ?? '';
-        
-        if (empty($status)) {
-            $this->setFlash('error', 'Status is required');
-            $this->redirect('admin/orders/view/' . $orderId);
-        }
-        
-        // Get current order
-        $order = $this->orderModel->getOrderById($orderId);
-        if (!$order) {
-            $this->setFlash('error', 'Order not found');
-            $this->redirect('admin/orders');
-        }
-        
-        // Update order status using the model method that handles referrals
-        $result = $this->orderModel->updateStatusAndProcessReferral($orderId, $status);
-        
-        if ($result) {
-            // Clear all related caches
-            if ($order) {
-                $this->clearOrderCaches($order['user_id'], $orderId);
-            }
-            
-            $this->setFlash('success', 'Order status updated successfully');
-        } else {
-            $this->setFlash('error', 'Failed to update order status');
-        }
-        
-        $this->redirect('admin/orders/view/' . $orderId);
-    }
-
-    /**
-     * Clear order-related caches
      *
-     * @param int $userId
-     * @param int $orderId
+     * @param int $id
      * @return void
      */
-    private function clearOrderCaches($userId, $orderId)
+    public function updateStatus($id = null)
     {
-        // Clear user's orders list cache
-        $this->cache->delete($this->cache->generateKey('user_orders', ['user_id' => $userId]));
+        $this->requireAdmin();
         
-        // Clear specific order details cache
-        $this->cache->delete($this->cache->generateKey('order_details', [
-            'user_id' => $userId,
-            'order_id' => $orderId
-        ]));
+        if (!$id || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('admin/orders');
+            return;
+        }
         
-        // Clear order tracking cache
+        $status = $this->post('status');
+        
+        if (!in_array($status, ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'unpaid', 'paid'])) {
+            $this->setFlash('error', 'Invalid status.');
+            $this->redirect('admin/orders');
+            return;
+        }
+        
+        // Start transaction
+        $this->orderModel->beginTransaction();
+        
+        try {
+            // Get current order status
+            $order = $this->orderModel->getOrderById($id);
+            
+            if (!$order) {
+                throw new \Exception('Order not found.');
+            }
+            
+            $oldStatus = $order['status'];
+            
+            // Update order status
+            $result = $this->orderModel->update($id, [
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            if (!$result) {
+                throw new \Exception('Failed to update order status.');
+            }
+            
+            // If status changed to paid, process referral earnings
+            if ($status === 'paid' && $oldStatus !== 'paid') {
+                $this->processReferralEarnings($id);
+            }
+            
+            // If status changed from paid to cancelled, reverse referral earnings
+            if ($status === 'cancelled' && $oldStatus === 'paid') {
+                $this->reverseReferralEarnings($id);
+            }
+            
+            // Commit transaction
+            $this->orderModel->commit();
+            
+            $this->setFlash('success', 'Order status updated successfully.');
+            
+        } catch (\Exception $e) {
+            // Rollback transaction
+            $this->orderModel->rollback();
+            
+            // Log error
+            error_log('Order status update error: ' . $e->getMessage());
+            
+            // Set flash message
+            $this->setFlash('error', 'Failed to update order status. ' . $e->getMessage());
+        }
+        
+        $this->redirect('admin/orders');
+    }
+
+    /**
+     * Process referral earnings for an order
+     *
+     * @param int $orderId
+     * @return bool
+     */
+    public function processReferralEarnings($orderId)
+    {
+        // Get order details
         $order = $this->orderModel->getOrderById($orderId);
-        if ($order) {
-            $this->cache->delete($this->cache->generateKey('track_order', ['invoice' => $order['invoice']]));
+        if (!$order) {
+            error_log("Process referral earnings: Order not found - ID: $orderId");
+            return false;
+        }
+        
+        // Only process for paid orders
+        if ($order['status'] !== 'paid') {
+            error_log("Process referral earnings: Order not paid - ID: $orderId, Status: {$order['status']}");
+            return false;
+        }
+        
+        // Get user who placed the order
+        $user = $this->userModel->find($order['user_id']);
+        if (!$user) {
+            error_log("Process referral earnings: User not found - ID: {$order['user_id']}");
+            return false;
+        }
+        
+        // Log user details for debugging
+        error_log("Order placed by User ID: {$user['id']}, Name: {$user['first_name']} {$user['last_name']}, Referred by: " . ($user['referred_by'] ?? 'None'));
+        
+        // Check if user was referred by someone
+        if (empty($user['referred_by'])) {
+            error_log("Process referral earnings: User has no referrer - User ID: {$user['id']}");
+            return false;
+        }
+        
+        $referrerId = $user['referred_by'];
+        
+        // Get referrer details
+        $referrer = $this->userModel->find($referrerId);
+        if (!$referrer) {
+            error_log("Process referral earnings: Referrer not found - ID: $referrerId");
+            return false;
+        }
+        
+        // Log referrer details for debugging
+        error_log("Referrer found - ID: $referrerId, Name: {$referrer['first_name']} {$referrer['last_name']}");
+        
+        // Check if referral earning already exists for this order
+        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
+        if ($existingEarning) {
+            error_log("Process referral earnings: Earning already exists - Order ID: $orderId, Earning ID: {$existingEarning['id']}");
+            return false;
+        }
+        
+        // Get commission rate from settings or use default 5%
+        $commissionRate = 5;
+        if (method_exists($this->settingModel, 'get')) {
+            $commissionRate = $this->settingModel->get('commission_rate', 5);
+        }
+        
+        // Calculate commission (commission_rate% of total_amount, excluding delivery fee)
+        $deliveryFee = isset($order['delivery_fee']) ? (float)$order['delivery_fee'] : 0;
+        $orderTotal = (float)$order['total_amount'];
+        $commission = ($orderTotal - $deliveryFee) * ($commissionRate / 100);
+        
+        // Round to 2 decimal places
+        $commission = round($commission, 2);
+        
+        // Log commission calculation for debugging
+        error_log("Commission calculation: Order Total: $orderTotal, Delivery Fee: $deliveryFee, Commission Rate: $commissionRate%, Final Commission: $commission");
+        
+        if ($commission <= 0) {
+            error_log("Process referral earnings: Commission is zero or negative - Order ID: $orderId");
+            return false;
+        }
+        
+        // Start transaction
+        $this->referralEarningModel->beginTransaction();
+        
+        try {
+            // Create referral earning record with paid status
+            $earningData = [
+                'user_id' => $referrerId,
+                'order_id' => $orderId,
+                'amount' => $commission,
+                'status' => 'paid', // Set to paid immediately
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Log the data being inserted
+            error_log("Inserting referral earning: " . json_encode($earningData));
+            
+            $earningId = $this->referralEarningModel->create($earningData);
+            
+            if (!$earningId) {
+                throw new \Exception("Failed to create referral earning record for order: $orderId");
+            }
+            
+            error_log("Created referral earning record - ID: $earningId");
+            
+            // Update referrer's balance
+            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
+            $newEarnings = $currentEarnings + $commission;
+            
+            // Log the balance update
+            error_log("Updating referrer balance - Current: $currentEarnings, New: $newEarnings");
+            
+            $updateData = [
+                'referral_earnings' => $newEarnings,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $result = $this->userModel->update($referrerId, $updateData);
+            
+            if (!$result) {
+                throw new \Exception("Failed to update referrer balance for user: $referrerId");
+            }
+            
+            error_log("Updated referrer ID: $referrerId earnings from $currentEarnings to $newEarnings");
+            
+            // Record transaction
+            $transactionData = [
+                'user_id' => $referrerId,
+                'amount' => $commission,
+                'type' => 'referral_earning',
+                'reference_id' => $earningId,
+                'reference_type' => 'referral_earning',
+                'description' => "Referral commission from order #{$order['invoice']}",
+                'balance_after' => $newEarnings,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $transactionId = $this->transactionModel->create($transactionData);
+            
+            if (!$transactionId) {
+                error_log("Failed to create transaction record for referral earning: $earningId");
+            } else {
+                error_log("Created transaction record - ID: $transactionId");
+            }
+            
+            // Create notification for referrer
+            $notificationData = [
+                'user_id' => $referrerId,
+                'title' => 'New Referral Commission',
+                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
+                'type' => 'referral_earning',
+                'reference_id' => $earningId,
+                'is_read' => 0,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $notificationId = $this->notificationModel->create($notificationData);
+            
+            if (!$notificationId) {
+                error_log("Failed to create notification for referral earning: $earningId");
+            } else {
+                error_log("Created notification - ID: $notificationId");
+            }
+            
+            // Commit transaction
+            $this->referralEarningModel->commit();
+            
+            error_log("Referral earnings processed successfully - Order ID: $orderId, Referrer ID: $referrerId, Amount: $commission");
+            return true;
+            
+        } catch (\Exception $e) {
+            // Rollback transaction
+            $this->referralEarningModel->rollback();
+            
+            // Log error
+            error_log('Error processing referral earnings: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Reverse referral earnings for a cancelled order
+     *
+     * @param int $orderId
+     * @return bool
+     */
+    public function reverseReferralEarnings($orderId)
+    {
+        $referralEarning = $this->referralEarningModel->findByOrderId($orderId);
+        
+        if (!$referralEarning) {
+            error_log("Reverse referral earnings: No earning found - Order ID: $orderId");
+            return false;
+        }
+        
+        if ($referralEarning['status'] === 'cancelled') {
+            error_log("Reverse referral earnings: Earning already cancelled - Order ID: $orderId");
+            return false;
+        }
+        
+        // Start transaction
+        $this->referralEarningModel->beginTransaction();
+        
+        try {
+            // Update earning status to cancelled
+            $result = $this->referralEarningModel->update($referralEarning['id'], [
+                'status' => 'cancelled',
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            if (!$result) {
+                throw new \Exception("Failed to update referral earning status for ID: {$referralEarning['id']}");
+            }
+            
+            error_log("Updated referral earning status to cancelled - ID: {$referralEarning['id']}");
+            
+            // Only deduct from referrer's balance if the earning was previously paid
+            if ($referralEarning['status'] === 'paid') {
+                // Deduct amount from referrer's balance
+                $referrer = $this->userModel->find($referralEarning['user_id']);
+                
+                if (!$referrer) {
+                    throw new \Exception("Reverse referral earnings: Referrer not found - ID: {$referralEarning['user_id']}");
+                }
+                
+                $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
+                $newEarnings = max(0, $currentEarnings - $referralEarning['amount']);
+                
+                $result = $this->userModel->update($referralEarning['user_id'], [
+                    'referral_earnings' => $newEarnings,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+                
+                if (!$result) {
+                    throw new \Exception("Failed to update referrer balance for user: {$referralEarning['user_id']}");
+                }
+                
+                error_log("Updated referrer ID: {$referralEarning['user_id']} earnings from $currentEarnings to $newEarnings (deduction)");
+                
+                // Record transaction
+                $transactionData = [
+                    'user_id' => $referralEarning['user_id'],
+                    'amount' => -$referralEarning['amount'], // Negative amount for deduction
+                    'type' => 'referral_cancelled',
+                    'reference_id' => $referralEarning['id'],
+                    'reference_type' => 'referral_earning',
+                    'description' => 'Referral commission reversed due to order cancellation',
+                    'balance_after' => $newEarnings,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+                
+                $transactionId = $this->transactionModel->create($transactionData);
+                
+                if (!$transactionId) {
+                    error_log("Failed to create transaction record for reversed referral: {$referralEarning['id']}");
+                } else {
+                    error_log("Created transaction record for reversal - ID: $transactionId");
+                }
+                
+                // Create notification
+                $notificationData = [
+                    'user_id' => $referralEarning['user_id'],
+                    'title' => 'Referral Commission Cancelled',
+                    'message' => '₹' . number_format($referralEarning['amount'], 2) . ' commission has been reversed due to order cancellation.',
+                    'type' => 'referral_cancelled',
+                    'reference_id' => $referralEarning['id'],
+                    'is_read' => 0,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+                
+                $notificationId = $this->notificationModel->create($notificationData);
+                
+                if (!$notificationId) {
+                    error_log("Failed to create notification for reversed referral: {$referralEarning['id']}");
+                } else {
+                    error_log("Created notification for reversal - ID: $notificationId");
+                }
+            }
+            
+            // Commit transaction
+            $this->referralEarningModel->commit();
+            
+            error_log("Referral earnings reversed successfully - Order ID: $orderId, Referrer ID: {$referralEarning['user_id']}, Amount: {$referralEarning['amount']}");
+            return true;
+            
+        } catch (\Exception $e) {
+            // Rollback transaction
+            $this->referralEarningModel->rollback();
+            
+            // Log error
+            error_log('Error reversing referral earnings: ' . $e->getMessage());
+            return false;
         }
     }
 }

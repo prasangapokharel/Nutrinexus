@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 04, 2025 at 02:05 PM
+-- Generation Time: May 09, 2025 at 06:39 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -49,7 +49,8 @@ CREATE TABLE `addresses` (
 
 INSERT INTO `addresses` (`id`, `user_id`, `recipient_name`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `country`, `is_default`, `created_at`, `updated_at`) VALUES
 (1, 3, 'rwerewrew', '3244323432', 'rssfasfs', 'fafasff', 'fafssaf', 'fasff', 'afsfa', 'India', 1, '2025-05-04 06:00:02', '2025-05-04 06:00:02'),
-(2, 4, 'Marsden Franklin', '+1 (412) 114-2873', '46 Fabien Avenue', 'Ut laborum Quia duc', 'Minus nostrum ullam', 'Ut qui nulla officia', 'Velit velit sed qui', 'Reprehenderit archit', 1, '2025-05-04 08:11:36', '2025-05-04 08:11:36');
+(2, 4, 'Marsden Franklin', '+1 (412) 114-2873', '46 Fabien Avenue', 'Ut laborum Quia duc', 'Minus nostrum ullam', 'Ut qui nulla officia', 'Velit velit sed qui', 'Reprehenderit archit', 1, '2025-05-04 08:11:36', '2025-05-04 08:11:36'),
+(3, 5, 'erwerewr', 'rewrewr', 'rewrewr', 'rewrwer', 'ewrwer', 'rwerewr', 'werwer', 'Neyy', 1, '2025-05-09 16:15:45', '2025-05-09 16:15:45');
 
 -- --------------------------------------------------------
 
@@ -126,13 +127,6 @@ CREATE TABLE `khalti_payments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `khalti_payments`
---
-
-INSERT INTO `khalti_payments` (`id`, `user_id`, `order_id`, `amount`, `pidx`, `transaction_id`, `status`, `response_data`, `created_at`, `updated_at`) VALUES
-(1, 4, 10, 2773.00, NULL, NULL, 'pending', NULL, '2025-05-04 10:58:21', '2025-05-04 10:58:21');
-
 -- --------------------------------------------------------
 
 --
@@ -155,7 +149,10 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `reference_id`, `is_read`, `created_at`) VALUES
-(1, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹2,000.00 has been submitted and is being processed.', 'withdrawal_request', 1, 0, '2025-05-04 08:45:25');
+(2, 3, 'New Referral Commission', 'You earned ₹619.50 commission from a referral purchase.', 'referral_earning', 1, 1, '2025-05-07 14:39:07'),
+(3, 3, 'New Referral Commission', 'You earned ₹743.40 commission from a referral purchase.', 'referral_earning', 2, 1, '2025-05-08 05:40:51'),
+(4, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹362.00 has been submitted and is being processed.', 'withdrawal_request', 2, 1, '2025-05-08 06:56:21'),
+(5, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹1,000.00 has been submitted and is being processed.', 'withdrawal_request', 3, 1, '2025-05-09 04:29:08');
 
 -- --------------------------------------------------------
 
@@ -184,10 +181,22 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `invoice`, `user_id`, `customer_name`, `contact_no`, `payment_method_id`, `status`, `address`, `total_amount`, `delivery_fee`, `payment_screenshot`, `created_at`, `updated_at`) VALUES
-(10, 'NN202505046689', 4, 'Marsden Franklin', '+1 (412) 114-2873', 2, 'unpaid', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 2773.00, 0.00, NULL, '2025-05-04 10:58:21', '2025-05-04 10:58:21'),
-(11, 'NN202505049963', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'pending', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 2773.00, 0.00, NULL, '2025-05-04 11:14:47', '2025-05-04 11:14:47'),
-(12, 'NN202505047051', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'pending', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 5546.00, 0.00, NULL, '2025-05-04 11:40:38', '2025-05-04 11:40:38'),
-(13, 'NN202505048491', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'paid', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 5546.00, 0.00, NULL, '2025-05-04 12:01:30', '2025-05-04 12:02:06');
+(19, 'NN202505083038', 3, 'rwerewrew', '3244323432', 1, 'paid', 'rssfasfs, fafssaf, fasff, India', 17346.00, 0.00, NULL, '2025-05-08 05:00:16', '2025-05-08 05:00:16'),
+(27, 'NN202505082554', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'paid', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 14868.00, 0.00, NULL, '2025-05-08 05:49:55', '2025-05-08 05:40:51'),
+(28, 'NN202505082021', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'processing', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', 2478.00, 0.00, NULL, '2025-05-08 05:56:36', '2025-05-08 05:56:36'),
+(29, 'NN202505083406', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 24780.00, 0.00, NULL, '2025-05-08 06:25:47', '2025-05-08 06:25:47'),
+(30, 'NN202505088831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 12390.00, 0.00, NULL, '2025-05-08 06:26:31', '2025-05-08 06:26:31'),
+(31, 'NN202505089371', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 12390.00, 0.00, NULL, '2025-05-08 06:29:27', '2025-05-08 06:29:27'),
+(32, 'NN202505087737', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 42126.00, 0.00, NULL, '2025-05-08 06:55:16', '2025-05-08 06:55:16'),
+(33, 'NN202505084831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 17346.00, 0.00, NULL, '2025-05-08 07:17:47', '2025-05-08 07:17:47'),
+(34, 'NN202505091470', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 12390.00, 0.00, NULL, '2025-05-09 04:28:06', '2025-05-09 04:28:06'),
+(35, 'NN202505099910', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 2478.00, 0.00, NULL, '2025-05-09 05:28:22', '2025-05-09 05:28:22'),
+(36, 'NN202505091269', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 19824.00, 0.00, NULL, '2025-05-09 05:52:44', '2025-05-09 05:52:44'),
+(37, 'NN202505098051', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 4956.00, 0.00, NULL, '2025-05-09 05:55:22', '2025-05-09 05:55:22'),
+(38, 'NN202505093826', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 2478.00, 0.00, NULL, '2025-05-09 05:57:15', '2025-05-09 05:57:15'),
+(39, 'NN202505097713', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 2478.00, 0.00, NULL, '2025-05-09 05:59:46', '2025-05-09 05:59:46'),
+(40, 'NN202505097597', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', 12390.00, 0.00, NULL, '2025-05-09 15:17:09', '2025-05-09 15:17:09'),
+(41, 'NN202505094713', 5, 'erwerewr', 'rewrewr', 1, 'processing', 'rewrewr, ewrwer, rwerewr, Neyy', 13500.14, 0.00, NULL, '2025-05-09 16:16:19', '2025-05-09 16:16:19');
 
 -- --------------------------------------------------------
 
@@ -210,10 +219,26 @@ CREATE TABLE `order_items` (
 --
 
 INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`, `total`, `invoice`) VALUES
-(10, 10, 1, 1, 2350.00, 2350.00, 'NN202505046689'),
-(11, 11, 1, 1, 2350.00, 2350.00, 'NN202505049963'),
-(12, 12, 1, 2, 2350.00, 4700.00, 'NN202505047051'),
-(13, 13, 1, 2, 2350.00, 4700.00, 'NN202505048491');
+(33, 27, 30, 1, 2100.00, 2100.00, 'NN202505082554'),
+(34, 27, 32, 1, 10500.00, 10500.00, 'NN202505082554'),
+(35, 28, 30, 1, 2100.00, 2100.00, 'NN202505082021'),
+(36, 29, 32, 2, 10500.00, 21000.00, 'NN202505083406'),
+(37, 30, 32, 1, 10500.00, 10500.00, 'NN202505088831'),
+(38, 31, 32, 1, 10500.00, 10500.00, 'NN202505089371'),
+(39, 32, 32, 3, 10500.00, 31500.00, 'NN202505087737'),
+(40, 32, 30, 2, 2100.00, 4200.00, 'NN202505087737'),
+(41, 33, 30, 2, 2100.00, 4200.00, 'NN202505084831'),
+(42, 33, 32, 1, 10500.00, 10500.00, 'NN202505084831'),
+(43, 34, 32, 1, 10500.00, 10500.00, 'NN202505091470'),
+(44, 35, 30, 1, 2100.00, 2100.00, 'NN202505099910'),
+(45, 36, 32, 1, 10500.00, 10500.00, 'NN202505091269'),
+(46, 36, 30, 3, 2100.00, 6300.00, 'NN202505091269'),
+(47, 37, 30, 2, 2100.00, 4200.00, 'NN202505098051'),
+(48, 38, 30, 1, 2100.00, 2100.00, 'NN202505093826'),
+(49, 39, 30, 1, 2100.00, 2100.00, 'NN202505097713'),
+(50, 40, 32, 1, 10500.00, 10500.00, 'NN202505097597'),
+(51, 41, 32, 1, 10500.00, 10500.00, 'NN202505094713'),
+(52, 41, 33, 1, 940.80, 940.80, 'NN202505094713');
 
 -- --------------------------------------------------------
 
@@ -256,6 +281,10 @@ CREATE TABLE `products` (
   `sale_price` decimal(10,2) DEFAULT NULL,
   `stock_quantity` int(11) NOT NULL DEFAULT 0,
   `category` varchar(100) DEFAULT NULL,
+  `weight` varchar(50) DEFAULT NULL,
+  `serving` varchar(50) DEFAULT NULL,
+  `capsule` tinyint(1) NOT NULL DEFAULT 0,
+  `flavor` varchar(100) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `sales_count` int(11) NOT NULL DEFAULT 0,
   `is_featured` tinyint(1) NOT NULL DEFAULT 0,
@@ -267,8 +296,13 @@ CREATE TABLE `products` (
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `product_name`, `slug`, `description`, `price`, `sale_price`, `stock_quantity`, `category`, `image`, `sales_count`, `is_featured`, `created_at`, `updated_at`) VALUES
-(1, 'Hk Vital Collagen', 'hk-vital-collagen-68174519037a8', 'Remove acne', 2350.00, NULL, 214, 'Creatine', 'https://img4.hkrtcdn.com/38845/prd_3884453-HK-Vitals-Skin-Radiance-Collagen-Marine-Collagen-200-g-Orange_o.jpg', 0, 0, '2025-05-04 10:29:24', '2025-05-04 12:01:30');
+INSERT INTO `products` (`id`, `product_name`, `slug`, `description`, `price`, `sale_price`, `stock_quantity`, `category`, `weight`, `serving`, `capsule`, `flavor`, `image`, `sales_count`, `is_featured`, `created_at`, `updated_at`) VALUES
+(30, 'Hk Vital Collagen', 'hk-vital-collagen-681d92eaf1099', 'Clinically proven to reduce fine lines and wrinkles by 48% in 8 weeks* \r\n    4X smoother skin in 8 weeks*\r\n    87% users experienced glowing skin in 4 weeks**', 2116.80, NULL, 248, 'Protein', NULL, NULL, 0, NULL, 'https://img4.hkrtcdn.com/38845/prd_3884453-HK-Vitals-Skin-Radiance-Collagen-Marine-Collagen-200-g-Orange_o.jpg', 0, 0, '2025-05-07 13:35:00', '2025-05-09 16:10:46'),
+(32, 'Avvatar Whey Protein | 2 Kg | Malai Kulfi Flavour', 'avvatar-whey-protein-2-kg-malai-kulfi-flavour-681d92f59a6d4', 'Unlock your true potential with Avvatar Whey Protein, a powerhouse packed with an impressive 28 grams of protein per 35 grams of rounded scoop.\r\n\r\nUnique Blend Of Whey Protein Isolate & Concentrate\r\nOur unique blend is carefully formulated to provide fast-absorbing whey protein isolate for rapid muscle recovery, along with the sustained-release benefits of whey protein concentrate for prolonged nourishment. \r\n\r\n100% Natural Flavours\r\nAvvatar Whey Protein is crafted with only the finest natural ingredients and without any artificial colours and fillers. \r\n\r\nMade From 100% Cow Milk \r\nAvvatar Whey protein is made from fresh cow’s milk, 100% Vegetarian, and manufactured with multiple stringent quality tests. \r\n\r\n100% Truly Vegetarian\r\nDistinguishing ourselves from others, we use microbial enzymes instead of non-veg rennet in making our protein powders hence making our protein products vegetarian in the true sense.', 9200.00, NULL, 252, 'Protein', NULL, NULL, 0, NULL, 'https://www.avvatarindia.com/images/product_images/1697552226_FOP.jpg', 0, 0, '2025-05-07 13:53:47', '2025-05-09 16:16:19'),
+(33, 'RiteBite Max Protein Daily Choco Berry Protein Bar 300g', 'ritebite-max-protein-choco-berry-300g-682e7f123456', '100% vegetarian protein bars with 10g protein per bar. Supports energy, fitness, and immunity. Choco berry flavor.', 940.80, NULL, 99, 'Protein', NULL, NULL, 0, NULL, 'https://img.drz.lazcdn.com/g/kf/Sd8d88b74c8f44a5194074ce38800dcbcX.jpg_720x720q80.jpg', 163, 0, '2025-05-09 16:10:46', '2025-05-09 16:16:19'),
+(34, 'ASITIS ATOM Isolate Whey Protein 1kg Chocolate', 'asitis-atom-isolate-whey-protein-1kg-chocolate-682e7f123457', 'Isolate whey protein with 30g protein, 6.1g BCAA, and 13g EAA per serving. Chocolate flavor, supports muscle growth.', 4160.00, NULL, 0, 'Protein', NULL, NULL, 0, NULL, 'https://laz-img-sg.alicdn.com/p/645ba7e8c19b0091d075c5f45c2dce27.jpg', 15, 0, '2025-05-09 16:10:46', '2025-05-09 16:12:54'),
+(35, 'Wellcore Creatine Monohydrate 307g Fruit Fusion', 'wellcore-creatine-monohydrate-307g-fruit-fusion-682e7f123458', 'Lab-tested creatine monohydrate to support athletic performance and power. Fruit fusion flavor.', 2128.00, NULL, 100, 'Creatine', NULL, NULL, 0, NULL, 'https://img.drz.lazcdn.com/g/kf/S3b1324339578494d852861d350077c9eg.jpg_720x720q80.jpg', 20, 0, '2025-05-09 16:10:46', '2025-05-09 16:12:34'),
+(36, 'Wellcore Electrolytes Miami Thunder 200g', 'wellcore-electrolytes-miami-thunder-200g-682e7f123459', 'Sugar-free electrolyte drink powder with 5 vital electrolytes (Na, Mg, Ca, K, PO4). Fat-fuel-powered, keto-friendly, Miami Thunder flavor.', 1239.20, NULL, 100, 'Electrolytes', NULL, NULL, 0, NULL, 'https://img.drz.lazcdn.com/static/np/p/33ceb9a8bc153dff89726a0bd0436a9c.jpg_720x720q80.jpg', 0, 0, '2025-05-09 16:10:46', '2025-05-09 16:11:24');
 
 -- --------------------------------------------------------
 
@@ -286,6 +320,13 @@ CREATE TABLE `referral_earnings` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `referral_earnings`
+--
+
+INSERT INTO `referral_earnings` (`id`, `user_id`, `order_id`, `amount`, `status`, `created_at`, `updated_at`) VALUES
+(2, 3, 27, 743.40, 'paid', '2025-05-08 05:40:51', '2025-05-08 05:40:51');
+
 -- --------------------------------------------------------
 
 --
@@ -301,6 +342,29 @@ CREATE TABLE `reviews` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `settings`
+--
+
+CREATE TABLE `settings` (
+  `id` int(11) NOT NULL,
+  `key` varchar(255) NOT NULL,
+  `value` text NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `settings`
+--
+
+INSERT INTO `settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
+(1, 'commission_rate', '5', '2025-05-08 10:36:07', '2025-05-08 10:36:07'),
+(2, 'min_withdrawal', '100', '2025-05-08 10:36:07', '2025-05-08 10:36:07'),
+(3, 'auto_approve', 'true', '2025-05-08 10:36:07', '2025-05-08 10:36:07');
 
 -- --------------------------------------------------------
 
@@ -325,7 +389,10 @@ CREATE TABLE `transactions` (
 --
 
 INSERT INTO `transactions` (`id`, `user_id`, `amount`, `type`, `reference_id`, `reference_type`, `description`, `balance_after`, `created_at`) VALUES
-(1, 3, -2000.00, 'withdrawal', 1, 'withdrawal', 'Withdrawal request #1', -2000.00, '2025-05-04 08:45:25');
+(2, 3, 619.50, 'referral_earning', 1, 'referral_earning', 'Referral commission from order #NN202505074820', 619.50, '2025-05-07 14:39:07'),
+(3, 3, 743.40, 'referral_earning', 2, 'referral_earning', 'Referral commission from order #NN202505082554', 1362.90, '2025-05-08 05:40:51'),
+(4, 3, -362.00, 'withdrawal', 2, 'withdrawal', 'Withdrawal request #2', 1000.90, '2025-05-08 06:56:21'),
+(5, 3, -1000.00, 'withdrawal', 3, 'withdrawal', 'Withdrawal request #3', 0.90, '2025-05-09 04:29:08');
 
 -- --------------------------------------------------------
 
@@ -359,8 +426,9 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `full_name`, `phone`, `role`, `referral_code`, `referred_by`, `referral_earnings`, `reset_token`, `reset_expires`, `created_at`, `updated_at`, `first_name`, `last_name`) VALUES
 (1, 'admin', 'admin@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin User', '9876543210', 'admin', 'ADMIN123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-05-04 06:30:00', '', ''),
 (2, 'customer', 'customer@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Test Customer', '9876543211', 'customer', 'CUST123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-05-04 06:30:00', '', ''),
-(3, 'Prasanga741', 'prasanga@gmail.com', '$2y$10$sJnyHyPC5urmL.osSNYP8e1ON9OGVxH9oEVwhJqmZOrsdiBa40FVC', NULL, NULL, 'admin', '6816dab3e50ac', NULL, 0.00, NULL, NULL, '2025-05-04 03:10:43', '2025-05-04 08:45:25', 'Prasanga', 'Pokharel'),
-(4, 'umesh741', 'umesh@gmail.com', '$2y$10$y98eHeqK54fKzyQj.lvktOAzmiC.DMfYpdxAD5ASTL0mWjdszJkuS', NULL, NULL, 'customer', '681721245ddb8', 3, 0.00, NULL, NULL, '2025-05-04 08:11:16', '2025-05-04 08:11:16', 'Umesh', 'Pokharel');
+(3, 'Prasanga741', 'prasangaramanpokharel@gmail.com', '$2y$10$sJnyHyPC5urmL.osSNYP8e1ON9OGVxH9oEVwhJqmZOrsdiBa40FVC', NULL, '', 'admin', '6816dab3e50ac', NULL, 0.90, NULL, NULL, '2025-05-04 03:10:43', '2025-05-09 06:02:16', 'Prasanga', 'Pokharel'),
+(4, 'umesh741', 'incpractical@gmail.com', '$2y$10$y98eHeqK54fKzyQj.lvktOAzmiC.DMfYpdxAD5ASTL0mWjdszJkuS', NULL, NULL, 'customer', '681721245ddb8', 3, 0.00, NULL, NULL, '2025-05-04 08:11:16', '2025-05-09 15:40:37', 'Umesh', 'Pokharel'),
+(5, 'jayapokharel659', 'jaya@gmail.com', '$2y$10$aVbO62KAftm9s6wlFZv5jOddwKCQ6GhA5Gu70GCNlhvvlwtqdEk.2', 'Jaya Pokharel', '981138848', 'customer', '1d1cbbe8', NULL, 0.00, NULL, NULL, '2025-05-09 15:40:06', '2025-05-09 15:40:06', 'Jaya', 'Pokharel');
 
 -- --------------------------------------------------------
 
@@ -380,7 +448,8 @@ CREATE TABLE `wishlist` (
 --
 
 INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `created_at`) VALUES
-(10, 3, 1, '2025-05-04 11:20:29');
+(14, 3, 30, '2025-05-09 04:59:16'),
+(15, 5, 33, '2025-05-09 16:20:46');
 
 -- --------------------------------------------------------
 
@@ -405,7 +474,8 @@ CREATE TABLE `withdrawals` (
 --
 
 INSERT INTO `withdrawals` (`id`, `user_id`, `amount`, `payment_method`, `payment_details`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 3, 2000.00, 'paytm', '{\"paytm_number\":\"9811388848\"}', 'completed', '', '2025-05-04 08:45:25', '2025-05-04 08:45:51');
+(2, 3, 362.00, 'upi', '{\"upi_id\":\"Prasanga Raman Pokharel\"}', 'pending', NULL, '2025-05-08 06:56:21', '2025-05-08 06:56:21'),
+(3, 3, 1000.00, 'upi', '{\"upi_id\":\"985454354\"}', 'completed', '', '2025-05-09 04:29:08', '2025-05-09 04:30:11');
 
 --
 -- Indexes for dumped tables
@@ -501,6 +571,13 @@ ALTER TABLE `reviews`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `settings`
+--
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `key` (`key`);
+
+--
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -540,7 +617,7 @@ ALTER TABLE `withdrawals`
 -- AUTO_INCREMENT for table `addresses`
 --
 ALTER TABLE `addresses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `cart`
@@ -570,19 +647,19 @@ ALTER TABLE `khalti_payments`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `payment_methods`
@@ -594,13 +671,13 @@ ALTER TABLE `payment_methods`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `referral_earnings`
 --
 ALTER TABLE `referral_earnings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -609,28 +686,34 @@ ALTER TABLE `reviews`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `settings`
+--
+ALTER TABLE `settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `withdrawals`
 --
 ALTER TABLE `withdrawals`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Constraints for dumped tables

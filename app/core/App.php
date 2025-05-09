@@ -81,7 +81,7 @@ class App
         $this->router->post('checkout/verifyKhalti', 'CheckoutController@verifyKhalti');
         $this->router->get('checkout/khaltiCallback', 'CheckoutController@khaltiCallback');
         $this->router->post('checkout/initiateKhalti/{id}', 'CheckoutController@initiateKhalti');
-        $this->router->get('checkout/success/{id}', 'CheckoutController@success');
+        $this->router->get('checkout/success/{slug}', 'CheckoutController@success');
         
         // Order routes
         $this->router->get('orders', 'OrderController@index');

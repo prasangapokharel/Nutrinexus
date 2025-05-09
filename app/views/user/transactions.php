@@ -3,7 +3,7 @@
     <div class="max-w-4xl mx-auto">
         <h1 class="text-3xl font-bold text-gray-900 mb-8">Transaction History</h1>
         
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-white rounded-none shadow-md overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -66,14 +66,14 @@
                         <div class="flex space-x-2">
                             <?php if ($currentPage > 1): ?>
                                 <a href="<?= \App\Core\View::url('user/transactions?page=' . ($currentPage - 1)) ?>" 
-                                   class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                   class="px-3 py-1 border border-gray-300 rounded-none text-sm font-medium text-gray-700 hover:bg-gray-50">
                                     Previous
                                 </a>
                             <?php endif; ?>
                             
                             <?php if ($currentPage < $totalPages): ?>
                                 <a href="<?= \App\Core\View::url('user/transactions?page=' . ($currentPage + 1)) ?>" 
-                                   class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                   class="px-3 py-1 border border-gray-300 rounded-none text-sm font-medium text-gray-700 hover:bg-gray-50">
                                     Next
                                 </a>
                             <?php endif; ?>
