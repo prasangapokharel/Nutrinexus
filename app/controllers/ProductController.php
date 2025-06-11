@@ -68,6 +68,7 @@ class ProductController extends Controller
             // Cache miss - fetch from database
             $products = $this->productModel->getProducts($limit, $offset);
             $totalProducts = $this->productModel->getProductCount();
+            
             $totalPages = ceil($totalProducts / $limit);
             
             // Check if products are in user's wishlist
@@ -113,7 +114,6 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            
             // Try to find product by slug first
             $product = $this->productModel->findBySlug($slug);
             
@@ -128,12 +128,10 @@ class ProductController extends Controller
                 return;
             }
             
-            // Get reviews
+            // Fetch related data
             $reviews = $this->reviewModel->getByProductId($product['id']);
             $averageRating = $this->reviewModel->getAverageRating($product['id']);
             $reviewCount = $this->reviewModel->getReviewCount($product['id']);
-            
-            // Get related products
             $relatedProducts = $this->getLocalRecommendations($product['id']);
             
             $viewData = [
@@ -151,22 +149,60 @@ class ProductController extends Controller
         }
         
         // Add dynamic data that shouldn't be cached
-        // Check if product is in user's wishlist
-        $inWishlist = false;
-        if (Session::has('user_id')) {
-            $inWishlist = $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']);
-        }
+        $inWishlist = Session::has('user_id') ? $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']) : false;
+        $hasReviewed = Session::has('user_id') ? $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']) : false;
         
-        // Check if user has reviewed this product
-        $hasReviewed = false;
-        if (Session::has('user_id')) {
-            $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']);
-        }
+        // Generate QR code for product sharing
+        $qrCode = $this->generateProductQRCode($viewData['product']['id'], $viewData['product']['slug'] ?? '');
         
         $viewData['inWishlist'] = $inWishlist;
         $viewData['hasReviewed'] = $hasReviewed;
+        $viewData['qrCode'] = $qrCode;
         
         $this->view('products/view', $viewData);
+    }
+
+    /**
+     * Generate QR code for product sharing
+     * 
+     * @param int $productId
+     * @param string $slug
+     * @return string Base64 encoded QR code image
+     */
+    private function generateProductQRCode($productId, $slug = '')
+    {
+        // Check if Bacon QR Code library is available
+        if (!class_exists('BaconQrCode\Writer')) {
+            error_log('BaconQrCode library not found. Please run: composer require bacon/bacon-qr-code');
+            return null;
+        }
+        
+        try {
+            // Generate the product share URL
+            $baseUrl = isset($_SERVER['HTTP_HOST']) ? 
+                ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https://" : "http://") . $_SERVER['HTTP_HOST']) : 
+                'https://example.com';
+            
+            $shareUrl = $baseUrl . \App\Core\View::url('products/view/' . ($slug ?: $productId));
+            
+            // Create QR code using SVG backend for better compatibility
+            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(200),
+                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            );
+            
+            $writer = new \BaconQrCode\Writer($renderer);
+            
+            // Generate QR code as SVG
+            $qrCode = $writer->writeString($shareUrl);
+            
+            // Return the SVG as a base64 encoded string for embedding in HTML
+            return 'data:image/svg+xml;base64,' . base64_encode($qrCode);
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('QR code generation error: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -215,6 +251,90 @@ class ProductController extends Controller
     }
 
     /**
+     * Search products by flavor
+     */
+    public function searchByFlavor()
+    {
+        $flavor = isset($_GET['flavor']) ? trim($_GET['flavor']) : '';
+        
+        if (empty($flavor)) {
+            $this->setFlash('error', 'Please specify a flavor');
+            $this->redirect('products');
+            return;
+        }
+        
+        // Generate cache key based on flavor
+        $cacheKey = $this->cache->generateKey('product_flavor_search', ['flavor' => $flavor]);
+        
+        // Try to get data from cache
+        $viewData = $this->cache->get($cacheKey);
+        
+        if ($viewData === null) {
+            // Cache miss - fetch from database
+            $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
+            $products = $this->productModel->query($sql, ['%' . $flavor . '%']);
+            
+            $viewData = [
+                'products' => $products,
+                'flavor' => $flavor,
+                'title' => 'Products with ' . $flavor . ' Flavor',
+                'cached_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Store in cache for 15 minutes
+            $this->cache->set($cacheKey, $viewData, 900);
+        }
+        
+        // Add dynamic data that shouldn't be cached
+        // Check if products are in user's wishlist
+        if (Session::has('user_id')) {
+            foreach ($viewData['products'] as &$product) {
+                $product['in_wishlist'] = $this->wishlistModel->isInWishlist(Session::get('user_id'), $product['id']);
+            }
+        }
+        
+        $this->view('products/flavor', $viewData);
+    }
+
+    /**
+     * Filter products by capsule type
+     */
+    public function filterByCapsule($isCapsule = 1)
+    {
+        // Generate cache key based on capsule filter
+        $cacheKey = $this->cache->generateKey('product_capsule_filter', ['is_capsule' => $isCapsule]);
+        
+        // Try to get data from cache
+        $viewData = $this->cache->get($cacheKey);
+        
+        if ($viewData === null) {
+            // Cache miss - fetch from database
+            $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
+            $products = $this->productModel->query($sql, [$isCapsule]);
+            
+            $viewData = [
+                'products' => $products,
+                'isCapsule' => $isCapsule,
+                'title' => $isCapsule ? 'Capsule Products' : 'Non-Capsule Products',
+                'cached_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Store in cache for 1 hour
+            $this->cache->set($cacheKey, $viewData, 3600);
+        }
+        
+        // Add dynamic data that shouldn't be cached
+        // Check if products are in user's wishlist
+        if (Session::has('user_id')) {
+            foreach ($viewData['products'] as &$product) {
+                $product['in_wishlist'] = $this->wishlistModel->isInWishlist(Session::get('user_id'), $product['id']);
+            }
+        }
+        
+        $this->view('products/capsule', $viewData);
+    }
+
+    /**
      * Submit a product review and invalidate cache
      *
      * @return void
@@ -245,8 +365,15 @@ class ProductController extends Controller
             $errors['product_id'] = 'Invalid product';
         } else {
             $product = $this->productModel->find($productId);
+            $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+            
             if (!$product) {
                 $errors['product_id'] = 'Product not found';
+            }
+            
+            // Check if user has already reviewed this product
+            if ($hasReviewed) {
+                $errors['general'] = 'You have already reviewed this product';
             }
         }
         
@@ -256,11 +383,6 @@ class ProductController extends Controller
         
         if (empty($review)) {
             $errors['review'] = 'Review is required';
-        }
-        
-        // Check if user has already reviewed this product
-        if ($this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId)) {
-            $errors['general'] = 'You have already reviewed this product';
         }
         
         if (!empty($errors)) {
@@ -282,7 +404,6 @@ class ProductController extends Controller
             if ($result) {
                 // Invalidate cache for this product
                 $this->invalidateProductCache($productId, $product['slug'] ?? '');
-                
                 $this->setFlash('success', 'Your review has been submitted successfully');
             } else {
                 $this->setFlash('error', 'Failed to submit your review');
@@ -323,15 +444,13 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            
-            // Get products by category
             $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
             $products = $this->productModel->query($sql, [$category, $limit, $offset]);
             
-            // Get total count for pagination
             $sql = "SELECT COUNT(*) as count FROM products WHERE category = ?";
             $result = $this->productModel->querySingle($sql, [$category]);
             $totalProducts = $result ? (int)$result['count'] : 0;
+            
             $totalPages = ceil($totalProducts / $limit);
             
             $viewData = [
@@ -374,8 +493,6 @@ class ProductController extends Controller
         
         if ($recommendations === null) {
             // Cache miss - fetch from API or database
-            
-            // Try to get recommendations using Guzzle first, then fall back to cURL
             $recommendations = $this->fetchWithGuzzle('recommendations', ['product_id' => $productId]);
             
             if ($recommendations === null) {
@@ -441,6 +558,45 @@ class ProductController extends Controller
     }
     
     /**
+     * Get similar products based on flavor with caching
+     * 
+     * @param int $productId
+     * @param int $limit
+     * @return array
+     */
+    public function getSimilarFlavorProducts($productId, $limit = 4)
+    {
+        // Generate cache key
+        $cacheKey = $this->cache->generateKey('similar_flavor_products', [
+            'product_id' => $productId,
+            'limit' => $limit
+        ]);
+        
+        // Try to get from cache
+        $similarProducts = $this->cache->get($cacheKey);
+        
+        if ($similarProducts === null) {
+            // Cache miss - fetch from database
+            $product = $this->productModel->find($productId);
+            
+            if (!$product || empty($product['flavor'])) {
+                return [];
+            }
+            
+            $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
+            $results = $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
+            
+            // Ensure we return an array
+            $similarProducts = is_array($results) ? $results : [];
+            
+            // Store in cache for 3 hours
+            $this->cache->set($cacheKey, $similarProducts, 10800);
+        }
+        
+        return $similarProducts;
+    }
+    
+    /**
      * Fetch trending products from external API with caching
      * 
      * @param int $limit
@@ -456,8 +612,6 @@ class ProductController extends Controller
         
         if ($trending === null) {
             // Cache miss - fetch from API or database
-            
-            // Try to get trending products using Guzzle first, then fall back to cURL
             $trending = $this->fetchWithGuzzle('trending', ['limit' => $limit]);
             
             if ($trending === null) {
@@ -534,7 +688,7 @@ class ProductController extends Controller
             return false;
         }
         
-        // Try to sync products using Guzzle first, then fall back to cURL
+        // Try syncing with Guzzle first
         $synced = $this->syncWithGuzzle();
         
         if (!$synced) {
@@ -545,7 +699,6 @@ class ProductController extends Controller
         if ($synced) {
             // Clear all product-related caches
             $this->clearAllProductCache();
-            
             $this->setFlash('success', 'Products synchronized successfully');
         } else {
             $this->setFlash('error', 'Failed to synchronize products');
@@ -573,9 +726,9 @@ class ProductController extends Controller
         // Clear recommendations cache
         $this->cache->delete($this->cache->generateKey('product_recommendations', ['product_id' => $productId]));
         $this->cache->delete($this->cache->generateKey('local_recommendations', ['product_id' => $productId]));
+        $this->cache->delete($this->cache->generateKey('similar_flavor_products', ['product_id' => $productId]));
         
         // Clear category and product listing caches
-        // Note: This is a bit aggressive but ensures data consistency
         $this->clearListingCaches();
     }
     
@@ -593,8 +746,11 @@ class ProductController extends Controller
         // Clear trending products cache
         $this->cache->delete($this->cache->generateKey('trending_products', []));
         
-        // Note: For a more sophisticated approach, we would need to
-        // track all cache keys or use a cache tag system
+        // Clear flavor search cache
+        $this->cache->delete($this->cache->generateKey('product_flavor_search', []));
+        
+        // Clear capsule filter cache
+        $this->cache->delete($this->cache->generateKey('product_capsule_filter', []));
     }
     
     /**
@@ -602,8 +758,7 @@ class ProductController extends Controller
      */
     private function clearAllProductCache()
     {
-        // This is a simple but effective approach to clear all caches
-        // In a production environment, you might want to use a more targeted approach
+        // Clear all caches
         $this->cache->clear();
     }
     
@@ -714,7 +869,6 @@ class ProductController extends Controller
     private function getApiKey()
     {
         // Return API key from configuration or environment variable
-        // Use defined() to check if the constant exists
         return defined('API_KEY') ? API_KEY : 'default-api-key';
     }
     
@@ -841,6 +995,10 @@ class ProductController extends Controller
                 'stock_quantity' => $productData['stock'] ?? $existingProduct['stock_quantity'],
                 'description' => $productData['description'] ?? $existingProduct['description'],
                 'category' => $productData['category'] ?? $existingProduct['category'],
+                'weight' => $productData['weight'] ?? $existingProduct['weight'],
+                'serving' => $productData['serving'] ?? $existingProduct['serving'],
+                'flavor' => $productData['flavor'] ?? $existingProduct['flavor'],
+                'capsule' => $productData['capsule'] ?? $existingProduct['capsule']
             ]);
             
             // Invalidate cache for this product
@@ -854,6 +1012,10 @@ class ProductController extends Controller
                 'stock_quantity' => $productData['stock'] ?? 0,
                 'description' => $productData['description'] ?? '',
                 'category' => $productData['category'] ?? '',
+                'weight' => $productData['weight'] ?? null,
+                'serving' => $productData['serving'] ?? null,
+                'flavor' => $productData['flavor'] ?? null,
+                'capsule' => $productData['capsule'] ?? 0
             ]);
             
             // Clear listing caches

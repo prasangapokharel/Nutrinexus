@@ -18,11 +18,11 @@ class Order extends Model
      */
     public function generateInvoiceNumber()
     {
-        $prefix = 'NN';
+        $prefix = 'NX';
         $date = date('Ymd');
         $random = mt_rand(1000, 9999);
         
-        return $prefix . $date . $random;
+        return $prefix . $random;
     }
     
     /**

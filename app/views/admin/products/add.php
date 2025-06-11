@@ -42,6 +42,7 @@
                         <option value="Pre-Workout" <?= isset($data['category']) && $data['category'] === 'Pre-Workout' ? 'selected' : '' ?>>Pre-Workout</option>
                         <option value="Vitamins" <?= isset($data['category']) && $data['category'] === 'Vitamins' ? 'selected' : '' ?>>Vitamins</option>
                         <option value="Fat-Burners" <?= isset($data['category']) && $data['category'] === 'Fat-Burners' ? 'selected' : '' ?>>Fat Burners</option>
+                        <option value="Electrolytes" <?= isset($data['category']) && $data['category'] === 'Electrolytes' ? 'selected' : '' ?>>Electrolytes</option>
                     </select>
                 </div>
                 
@@ -67,6 +68,39 @@
                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
                 </div>
                 
+                <div>
+                    <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">Weight (Optional)</label>
+                    <input type="text" name="weight" id="weight" 
+                           value="<?= isset($data['weight']) ? htmlspecialchars($data['weight']) : '' ?>" 
+                           placeholder="e.g., 1kg, 500g" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label for="serving" class="block text-sm font-medium text-gray-700 mb-1">Serving Size (Optional)</label>
+                    <input type="text" name="serving" id="serving" 
+                           value="<?= isset($data['serving']) ? htmlspecialchars($data['serving']) : '' ?>" 
+                           placeholder="e.g., 30g per scoop" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label for="flavor" class="block text-sm font-medium text-gray-700 mb-1">Flavor (Optional)</label>
+                    <input type="text" name="flavor" id="flavor" 
+                           value="<?= isset($data['flavor']) ? htmlspecialchars($data['flavor']) : '' ?>" 
+                           placeholder="e.g., Chocolate, Vanilla" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label for="capsule" class="flex items-center">
+                        <input type="checkbox" name="capsule" id="capsule" value="1" 
+                               <?= isset($data['capsule']) && $data['capsule'] ? 'checked' : '' ?> 
+                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Is Capsule Product</span>
+                    </label>
+                </div>
+                
                 <div class="md:col-span-2">
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea name="description" id="description" rows="5" 
@@ -74,19 +108,28 @@
                 </div>
                 
                 <div>
-                    <label for="image" class="block text-sm font-medium text-gray-700 mb-1">Product Image (Upload)</label>
-                    <input type="file" name="image" id="image" accept="image/*" 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <p class="text-xs text-gray-500 mt-1">Recommended size: 800x800 pixels. Max file size: 2MB.</p>
-                </div>
-                
-                <div>
-                    <label for="image_url" class="block text-sm font-medium text-gray-700 mb-1">Product Image URL (Optional)</label>
-                    <input type="url" name="image_url" id="image_url" 
-                           value="<?= isset($data['image_url']) ? htmlspecialchars($data['image_url']) : '' ?>" 
-                           placeholder="https://example.com/image.jpg" 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <p class="text-xs text-gray-500 mt-1">Enter a direct URL to an image (e.g., from a CDN).</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="image" class="block text-sm font-medium text-gray-700 mb-1">Upload Image</label>
+                            <input type="file" name="image" id="image" accept="image/*" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                            <p class="text-xs text-gray-500 mt-1">Recommended size: 800x800 pixels. Max file size: 2MB.</p>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <span class="text-gray-500">OR</span>
+                        </div>
+                        
+                        <div>
+                            <label for="image_url" class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                            <input type="url" name="image_url" id="image_url" 
+                                   value="<?= isset($data['image_url']) ? htmlspecialchars($data['image_url']) : '' ?>" 
+                                   placeholder="https://example.com/image.jpg" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
+                            <p class="text-xs text-gray-500 mt-1">Enter a direct URL to an image (e.g., from a CDN).</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div>

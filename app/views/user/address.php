@@ -7,7 +7,7 @@
             </a>
         </div>
         
-        <h1 class="text-3xl font-bold text-gray-900 mb-8"><?= $id ? 'Edit Address' : 'Add New Address' ?></h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-8"><?= $user_id ? 'Edit Address' : 'Add New Address' ?></h1>
         
         <?php if (isset($errors) && !empty($errors)): ?>
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">

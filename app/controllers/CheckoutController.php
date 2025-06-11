@@ -19,8 +19,7 @@ use App\Models\Transaction;
 use App\Models\Notification;
 use App\Models\Setting;
 use App\Config\Khalti;
-// Correct namespace for Spatie Async
-use Spatie\Async\Pool;
+use Dompdf\Dompdf;
 
 /**
  * Checkout Controller
@@ -42,7 +41,6 @@ class CheckoutController extends Controller
     private $notificationModel;
     private $settingModel;
     private $khaltiConfig;
-    private $asyncPool;
 
     public function __construct()
     {
@@ -61,19 +59,6 @@ class CheckoutController extends Controller
         $this->notificationModel = new Notification();
         $this->settingModel = new Setting();
         $this->khaltiConfig = new Khalti();
-        
-        // Check if Spatie\Async\Pool exists before using it
-        if (class_exists('\\Spatie\\Async\\Pool')) {
-            try {
-                $this->asyncPool = Pool::create();
-            } catch (\Exception $e) {
-                error_log('Failed to create async pool: ' . $e->getMessage());
-                $this->asyncPool = null;
-            }
-        } else {
-            error_log('Spatie\\Async\\Pool class not found. Async processing disabled.');
-            $this->asyncPool = null;
-        }
     }
 
     /**
@@ -101,76 +86,12 @@ class CheckoutController extends Controller
             return;
         }
         
-        // Get data - use async if available, otherwise use standard approach
-        if ($this->asyncPool) {
-            try {
-                // Use async to fetch multiple data sources in parallel
-                $cartDataPromise = $this->asyncPool->add(function() {
-                    return $this->cartModel->getCartWithProducts($this->productModel);
-                });
-                
-                $userId = Session::get('user_id');
-                
-                $addressesPromise = $this->asyncPool->add(function() use ($userId) {
-                    return $this->addressModel->getByUserId($userId);
-                });
-                
-                $paymentMethodsPromise = $this->asyncPool->add(function() {
-                    return $this->paymentMethodModel->getAllActive();
-                });
-                
-                $deliveryChargesPromise = $this->asyncPool->add(function() {
-                    return $this->deliveryChargeModel->getAllCharges();
-                });
-                
-                // Wait for all async tasks to complete
-                $this->asyncPool->wait();
-                
-                // Get results from promises
-                $cartData = $cartDataPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) {
-                    error_log('Error fetching cart data: ' . $e->getMessage());
-                    return $this->cartModel->getCartWithProducts($this->productModel);
-                });
-                
-                $addresses = $addressesPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) use ($userId) {
-                    error_log('Error fetching addresses: ' . $e->getMessage());
-                    return $this->addressModel->getByUserId($userId);
-                });
-                
-                $paymentMethods = $paymentMethodsPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) {
-                    error_log('Error fetching payment methods: ' . $e->getMessage());
-                    return $this->paymentMethodModel->getAllActive();
-                });
-                
-                $deliveryCharges = $deliveryChargesPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) {
-                    error_log('Error fetching delivery charges: ' . $e->getMessage());
-                    return $this->deliveryChargeModel->getAllCharges();
-                });
-            } catch (\Exception $e) {
-                error_log('Async processing error: ' . $e->getMessage());
-                // Fall back to standard approach if async fails
-                $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-                $userId = Session::get('user_id');
-                $addresses = $this->addressModel->getByUserId($userId);
-                $paymentMethods = $this->paymentMethodModel->getAllActive();
-                $deliveryCharges = $this->deliveryChargeModel->getAllCharges();
-            }
-        } else {
-            // Standard approach without async
-            $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-            $userId = Session::get('user_id');
-            $addresses = $this->addressModel->getByUserId($userId);
-            $paymentMethods = $this->paymentMethodModel->getAllActive();
-            $deliveryCharges = $this->deliveryChargeModel->getAllCharges();
-        }
+        // Fetch data synchronously
+        $cartData = $this->cartModel->getCartWithProducts($this->productModel);
+        $userId = Session::get('user_id');
+        $addresses = $this->addressModel->getByUserId($userId);
+        $paymentMethods = $this->paymentMethodModel->getAllActive();
+        $deliveryCharges = $this->deliveryChargeModel->getAllCharges();
         
         $this->view('checkout/index', [
             'cartItems' => $cartData['items'],
@@ -237,52 +158,11 @@ class CheckoutController extends Controller
             return;
         }
         
-        // Get cart data and address - use async if available
-        if ($this->asyncPool) {
-            try {
-                $cartDataPromise = $this->asyncPool->add(function() {
-                    return $this->cartModel->getCartWithProducts($this->productModel);
-                });
-                
-                $userId = Session::get('user_id');
-                $addressId = $this->post('address_id');
-                
-                $addressPromise = $this->asyncPool->add(function() use ($addressId) {
-                    return $this->addressModel->find($addressId);
-                });
-                
-                // Wait for async tasks to complete
-                $this->asyncPool->wait();
-                
-                // Get results
-                $cartData = $cartDataPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) {
-                    error_log('Error fetching cart data: ' . $e->getMessage());
-                    return $this->cartModel->getCartWithProducts($this->productModel);
-                });
-                
-                $address = $addressPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) use ($addressId) {
-                    error_log('Error fetching address: ' . $e->getMessage());
-                    return $this->addressModel->find($addressId);
-                });
-            } catch (\Exception $e) {
-                error_log('Async processing error: ' . $e->getMessage());
-                // Fall back to standard approach
-                $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-                $userId = Session::get('user_id');
-                $addressId = $this->post('address_id');
-                $address = $this->addressModel->find($addressId);
-            }
-        } else {
-            // Standard approach without async
-            $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-            $userId = Session::get('user_id');
-            $addressId = $this->post('address_id');
-            $address = $this->addressModel->find($addressId);
-        }
+        // Fetch cart data and address synchronously
+        $cartData = $this->cartModel->getCartWithProducts($this->productModel);
+        $userId = Session::get('user_id');
+        $addressId = $this->post('address_id');
+        $address = $this->addressModel->find($addressId);
         
         if (!$address || $address['user_id'] != $userId) {
             $this->setFlash('error', 'Invalid address selected.');
@@ -339,94 +219,39 @@ class CheckoutController extends Controller
                 throw new \Exception('Failed to create order. Please try again.');
             }
             
-            // Create order items - use async if available
+            // Create order items synchronously
             $cart = $this->cartModel->getItems();
             
-            if ($this->asyncPool) {
-                try {
-                    $orderItemPromises = [];
-                    
-                    foreach ($cart as $productId => $item) {
-                        $orderItemPromises[] = $this->asyncPool->add(function() use ($productId, $item, $orderId, $invoice) {
-                            $product = $this->productModel->find($productId);
-                            
-                            if (!$product) {
-                                throw new \Exception('Product not found: ' . $productId);
-                            }
-                            
-                            // Check stock
-                            if ($product['stock_quantity'] < $item['quantity']) {
-                                throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                            }
-                            
-                            $orderItemData = [
-                                'order_id' => $orderId,
-                                'product_id' => $productId,
-                                'quantity' => $item['quantity'],
-                                'price' => $item['price'],
-                                'total' => $item['quantity'] * $item['price'],
-                                'invoice' => $invoice
-                            ];
-                            
-                            $orderItemId = $this->orderItemModel->create($orderItemData);
-                            
-                            if (!$orderItemId) {
-                                throw new \Exception('Failed to create order item.');
-                            }
-                            
-                            // Update product quantity
-                            $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                            $this->productModel->updateQuantity($productId, $newQuantity);
-                            
-                            return true;
-                        });
-                    }
-                    
-                    // Wait for all order items to be processed
-                    $this->asyncPool->wait();
-                    
-                    // Check if any order item processing failed
-                    foreach ($orderItemPromises as $promise) {
-                        $promise->then(function($result) {
-                            // Success, do nothing
-                        })->catch(function(\Exception $e) {
-                            throw $e; // Re-throw the exception to be caught by the main try-catch
-                        });
-                    }
-                } catch (\Exception $e) {
-                    // If async processing fails, fall back to standard approach
-                    error_log('Async order item processing failed: ' . $e->getMessage());
-                    throw $e; // Re-throw to be caught by the main try-catch
+            foreach ($cart as $productId => $item) {
+                $product = $this->productModel->find($productId);
+                
+                if (!$product) {
+                    throw new \Exception('Product not found: ' . $productId);
                 }
-            } else {
-                // Standard approach without async
-                foreach ($cart as $productId => $item) {
-                    $product = $this->productModel->find($productId);
-                    
-                    if ($product) {
-                        $orderItemData = [
-                            'order_id' => $orderId,
-                            'product_id' => $productId,
-                            'quantity' => $item['quantity'],
-                            'price' => $item['price'],
-                            'total' => $item['quantity'] * $item['price'],
-                            'invoice' => $invoice
-                        ];
-                        
-                        $orderItemId = $this->orderItemModel->create($orderItemData);
-                        
-                        if (!$orderItemId) {
-                            throw new \Exception('Failed to create order item.');
-                        }
-                        
-                        // Update product quantity
-                        $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                        if ($newQuantity < 0) {
-                            throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                        }
-                        $this->productModel->updateQuantity($productId, $newQuantity);
-                    }
+                
+                // Check stock
+                if ($product['stock_quantity'] < $item['quantity']) {
+                    throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
                 }
+                
+                $orderItemData = [
+                    'order_id' => $orderId,
+                    'product_id' => $productId,
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'total' => $item['quantity'] * $item['price'],
+                    'invoice' => $invoice
+                ];
+                
+                $orderItemId = $this->orderItemModel->create($orderItemData);
+                
+                if (!$orderItemId) {
+                    throw new \Exception('Failed to create order item.');
+                }
+                
+                // Update product quantity
+                $newQuantity = $product['stock_quantity'] - $item['quantity'];
+                $this->productModel->updateQuantity($productId, $newQuantity);
             }
             
             // Handle payment screenshot upload if needed
@@ -449,20 +274,7 @@ class CheckoutController extends Controller
             
             // Process referral earnings only if order is paid (not for COD which is now 'processing')
             if ($orderData['status'] === 'paid') {
-                if ($this->asyncPool) {
-                    // Process referral earnings asynchronously
-                    $this->asyncPool->add(function() use ($orderId) {
-                        $this->processReferralEarnings($orderId);
-                        return true;
-                    })->then(function($result) {
-                        error_log('Referral earnings processed asynchronously');
-                    })->catch(function(\Exception $e) {
-                        error_log('Error processing referral earnings asynchronously: ' . $e->getMessage());
-                    });
-                } else {
-                    // Process referral earnings synchronously
-                    $this->processReferralEarnings($orderId);
-                }
+                $this->processReferralEarnings($orderId);
             }
             
             // Clear cart
@@ -471,11 +283,6 @@ class CheckoutController extends Controller
             
             // Commit transaction
             $this->orderModel->commit();
-            
-            // Wait for any remaining async tasks if using async
-            if ($this->asyncPool) {
-                $this->asyncPool->wait();
-            }
             
             // Redirect to success page
             $this->redirect('checkout/success/' . $orderId);
@@ -530,91 +337,37 @@ class CheckoutController extends Controller
                     throw new \Exception('Failed to create order.');
                 }
                 
-                // Create order items - use async if available
-                if ($this->asyncPool) {
-                    try {
-                        $orderItemPromises = [];
-                        
-                        foreach ($this->cartModel->getItems() as $productId => $item) {
-                            $orderItemPromises[] = $this->asyncPool->add(function() use ($productId, $item, $orderId, $orderData) {
-                                $product = $this->productModel->find($productId);
-                                
-                                if (!$product) {
-                                    throw new \Exception('Product not found: ' . $productId);
-                                }
-                                
-                                // Check stock
-                                if ($product['stock_quantity'] < $item['quantity']) {
-                                    throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                                }
-                                
-                                $orderItemData = [
-                                    'order_id' => $orderId,
-                                    'product_id' => $productId,
-                                    'quantity' => $item['quantity'],
-                                    'price' => $item['price'],
-                                    'total' => $item['quantity'] * $item['price'],
-                                    'invoice' => $orderData['invoice']
-                                ];
-                                
-                                $orderItemId = $this->orderItemModel->create($orderItemData);
-                                
-                                if (!$orderItemId) {
-                                    throw new \Exception('Failed to create order item.');
-                                }
-                                
-                                // Update product quantity
-                                $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                                $this->productModel->updateQuantity($productId, $newQuantity);
-                                
-                                return true;
-                            });
-                        }
-                        
-                        // Wait for all order items to be processed
-                        $this->asyncPool->wait();
-                        
-                        // Check if any order item processing failed
-                        foreach ($orderItemPromises as $promise) {
-                            $promise->then(function($result) {
-                                // Success, do nothing
-                            })->catch(function(\Exception $e) {
-                                throw $e; // Re-throw the exception to be caught by the main try-catch
-                            });
-                        }
-                    } catch (\Exception $e) {
-                        // If async processing fails, fall back to standard approach
-                        error_log('Async order item processing failed: ' . $e->getMessage());
-                        throw $e; // Re-throw to be caught by the main try-catch
+                // Create order items synchronously
+                foreach ($this->cartModel->getItems() as $productId => $item) {
+                    $product = $this->productModel->find($productId);
+                    
+                    if (!$product) {
+                        throw new \Exception('Product not found: ' . $productId);
                     }
-                } else {
-                    // Standard approach without async
-                    foreach ($this->cartModel->getItems() as $productId => $item) {
-                        $product = $this->productModel->find($productId);
-                        if ($product) {
-                            $orderItemData = [
-                                'order_id' => $orderId,
-                                'product_id' => $productId,
-                                'quantity' => $item['quantity'],
-                                'price' => $item['price'],
-                                'total' => $item['quantity'] * $item['price'],
-                                'invoice' => $orderData['invoice']
-                            ];
-                            
-                            $orderItemId = $this->orderItemModel->create($orderItemData);
-                            
-                            if (!$orderItemId) {
-                                throw new \Exception('Failed to create order item.');
-                            }
-                            
-                            // Update product quantity
-                            $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                            if ($newQuantity < 0) {
-                                throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                            }
-                            $this->productModel->updateQuantity($productId, $newQuantity);
-                        }
+                    
+                    // Check stock
+                    if ($product['stock_quantity'] < $item['quantity']) {
+                        throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
                     }
+                    
+                    $orderItemData = [
+                        'order_id' => $orderId,
+                        'product_id' => $productId,
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                        'total' => $item['quantity'] * $item['price'],
+                        'invoice' => $orderData['invoice']
+                    ];
+                    
+                    $orderItemId = $this->orderItemModel->create($orderItemData);
+                    
+                    if (!$orderItemId) {
+                        throw new \Exception('Failed to create order item.');
+                    }
+                    
+                    // Update product quantity
+                    $newQuantity = $product['stock_quantity'] - $item['quantity'];
+                    $this->productModel->updateQuantity($productId, $newQuantity);
                 }
                 
                 // Create Khalti payment
@@ -720,20 +473,8 @@ class CheckoutController extends Controller
                         'updated_at' => date('Y-m-d H:i:s')
                     ]);
                     
-                    // Process referral earnings - use async if available
-                    if ($this->asyncPool) {
-                        $this->asyncPool->add(function() use ($orderId) {
-                            $this->processReferralEarnings($orderId);
-                            return true;
-                        })->then(function($result) {
-                            error_log('Referral earnings processed asynchronously after Khalti payment');
-                        })->catch(function(\Exception $e) {
-                            error_log('Error processing referral earnings after Khalti payment: ' . $e->getMessage());
-                        });
-                    } else {
-                        // Process referral earnings synchronously
-                        $this->processReferralEarnings($orderId);
-                    }
+                    // Process referral earnings synchronously
+                    $this->processReferralEarnings($orderId);
                     
                     // Update Khalti payment record
                     $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -744,11 +485,6 @@ class CheckoutController extends Controller
                     
                     // Commit transaction
                     $this->orderModel->commit();
-                    
-                    // Wait for async tasks to complete if using async
-                    if ($this->asyncPool) {
-                        $this->asyncPool->wait();
-                    }
                     
                     // Return success response
                     echo json_encode([
@@ -781,20 +517,8 @@ class CheckoutController extends Controller
                         'updated_at' => date('Y-m-d H:i:s')
                     ]);
                     
-                    // Process referral earnings - use async if available
-                    if ($this->asyncPool) {
-                        $this->asyncPool->add(function() use ($orderId) {
-                            $this->processReferralEarnings($orderId);
-                            return true;
-                        })->then(function($result) {
-                            error_log('Referral earnings processed asynchronously after Khalti token verification');
-                        })->catch(function(\Exception $e) {
-                            error_log('Error processing referral earnings after Khalti token verification: ' . $e->getMessage());
-                        });
-                    } else {
-                        // Process referral earnings synchronously
-                        $this->processReferralEarnings($orderId);
-                    }
+                    // Process referral earnings synchronously
+                    $this->processReferralEarnings($orderId);
                     
                     // Update Khalti payment record
                     $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -806,11 +530,6 @@ class CheckoutController extends Controller
                     
                     // Commit transaction
                     $this->orderModel->commit();
-                    
-                    // Wait for async tasks to complete if using async
-                    if ($this->asyncPool) {
-                        $this->asyncPool->wait();
-                    }
                     
                     // Return success response
                     echo json_encode(['success' => true, 'redirect' => \App\Core\View::url('checkout/success/' . $orderId)]);
@@ -887,20 +606,8 @@ class CheckoutController extends Controller
                     'updated_at' => date('Y-m-d H:i:s')
                 ]);
                 
-                // Process referral earnings - use async if available
-                if ($this->asyncPool) {
-                    $this->asyncPool->add(function() use ($orderId) {
-                        $this->processReferralEarnings($orderId);
-                        return true;
-                    })->then(function($result) {
-                        error_log('Referral earnings processed asynchronously after Khalti callback');
-                    })->catch(function(\Exception $e) {
-                        error_log('Error processing referral earnings after Khalti callback: ' . $e->getMessage());
-                    });
-                } else {
-                    // Process referral earnings synchronously
-                    $this->processReferralEarnings($orderId);
-                }
+                // Process referral earnings synchronously
+                $this->processReferralEarnings($orderId);
                 
                 // Update Khalti payment record
                 $this->khaltiPaymentModel->updateByOrderId($orderId, [
@@ -911,11 +618,6 @@ class CheckoutController extends Controller
                 
                 // Commit transaction
                 $this->orderModel->commit();
-                
-                // Wait for async tasks to complete if using async
-                if ($this->asyncPool) {
-                    $this->asyncPool->wait();
-                }
                 
                 // Set success message
                 $this->setFlash('success', 'Payment successful! Your order has been confirmed.');
@@ -1079,94 +781,43 @@ class CheckoutController extends Controller
             
             error_log("Updated referrer ID: $referrerId earnings from $currentEarnings to $newEarnings");
             
-            // Use async for non-critical operations if available
-            if ($this->asyncPool) {
-                $this->asyncPool->add(function() use ($referrerId, $commission, $earningId, $order, $newEarnings) {
-                    // Record transaction
-                    $transactionData = [
-                        'user_id' => $referrerId,
-                        'amount' => $commission,
-                        'type' => 'referral_earning',
-                        'reference_id' => $earningId,
-                        'reference_type' => 'referral_earning',
-                        'description' => "Referral commission from order #{$order['invoice']}",
-                        'balance_after' => $newEarnings,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ];
-                    
-                    $transactionId = $this->transactionModel->create($transactionData);
-                    
-                    if (!$transactionId) {
-                        error_log("Failed to create transaction record for referral earning: $earningId");
-                    } else {
-                        error_log("Created transaction record - ID: $transactionId");
-                    }
-                    
-                    // Create notification for referrer
-                    $notificationData = [
-                        'user_id' => $referrerId,
-                        'title' => 'New Referral Commission',
-                        'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                        'type' => 'referral_earning',
-                        'reference_id' => $earningId,
-                        'is_read' => 0,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ];
-                    
-                    $notificationId = $this->notificationModel->create($notificationData);
-                    
-                    if (!$notificationId) {
-                        error_log("Failed to create notification for referral earning: $earningId");
-                    } else {
-                        error_log("Created notification - ID: $notificationId");
-                    }
-                    
-                    return true;
-                })->then(function($result) {
-                    // Success, do nothing
-                })->catch(function(\Exception $e) {
-                    error_log('Error in async referral processing: ' . $e->getMessage());
-                });
+            // Record transaction
+            $transactionData = [
+                'user_id' => $referrerId,
+                'amount' => $commission,
+                'type' => 'referral_earning',
+                'reference_id' => $earningId,
+                'reference_type' => 'referral_earning',
+                'description' => "Referral commission from order #{$order['invoice']}",
+                'balance_after' => $newEarnings,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $transactionId = $this->transactionModel->create($transactionData);
+            
+            if (!$transactionId) {
+                error_log("Failed to create transaction record for referral earning: $earningId");
             } else {
-                // Standard approach without async
-                // Record transaction
-                $transactionData = [
-                    'user_id' => $referrerId,
-                    'amount' => $commission,
-                    'type' => 'referral_earning',
-                    'reference_id' => $earningId,
-                    'reference_type' => 'referral_earning',
-                    'description' => "Referral commission from order #{$order['invoice']}",
-                    'balance_after' => $newEarnings,
-                    'created_at' => date('Y-m-d H:i:s')
-                ];
-                
-                $transactionId = $this->transactionModel->create($transactionData);
-                
-                if (!$transactionId) {
-                    error_log("Failed to create transaction record for referral earning: $earningId");
-                } else {
-                    error_log("Created transaction record - ID: $transactionId");
-                }
-                
-                // Create notification for referrer
-                $notificationData = [
-                    'user_id' => $referrerId,
-                    'title' => 'New Referral Commission',
-                    'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                    'type' => 'referral_earning',
-                    'reference_id' => $earningId,
-                    'is_read' => 0,
-                    'created_at' => date('Y-m-d H:i:s')
-                ];
-                
-                $notificationId = $this->notificationModel->create($notificationData);
-                
-                if (!$notificationId) {
-                    error_log("Failed to create notification for referral earning: $earningId");
-                } else {
-                    error_log("Created notification - ID: $notificationId");
-                }
+                error_log("Created transaction record - ID: $transactionId");
+            }
+            
+            // Create notification for referrer
+            $notificationData = [
+                'user_id' => $referrerId,
+                'title' => 'New Referral Commission',
+                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
+                'type' => 'referral_earning',
+                'reference_id' => $earningId,
+                'is_read' => 0,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $notificationId = $this->notificationModel->create($notificationData);
+            
+            if (!$notificationId) {
+                error_log("Failed to create notification for referral earning: $earningId");
+            } else {
+                error_log("Created notification - ID: $notificationId");
             }
             
             error_log("Referral earnings processed successfully - Order ID: $orderId, Referrer ID: $referrerId, Amount: $commission");
@@ -1193,45 +844,9 @@ class CheckoutController extends Controller
             $this->redirect('');
         }
         
-        // Get order data - use async if available
-        if ($this->asyncPool) {
-            try {
-                $orderPromise = $this->asyncPool->add(function() use ($orderId) {
-                    return $this->orderModel->getOrderById($orderId);
-                });
-                
-                $orderItemsPromise = $this->asyncPool->add(function() use ($orderId) {
-                    return $this->orderItemModel->getByOrderId($orderId);
-                });
-                
-                // Wait for async tasks to complete
-                $this->asyncPool->wait();
-                
-                // Get results
-                $order = $orderPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) use ($orderId) {
-                    error_log('Error fetching order: ' . $e->getMessage());
-                    return $this->orderModel->getOrderById($orderId);
-                });
-                
-                $orderItems = $orderItemsPromise->then(function($result) {
-                    return $result;
-                })->catch(function(\Exception $e) use ($orderId) {
-                    error_log('Error fetching order items: ' . $e->getMessage());
-                    return $this->orderItemModel->getByOrderId($orderId);
-                });
-            } catch (\Exception $e) {
-                error_log('Async processing error: ' . $e->getMessage());
-                // Fall back to standard approach
-                $order = $this->orderModel->getOrderById($orderId);
-                $orderItems = $this->orderItemModel->getByOrderId($orderId);
-            }
-        } else {
-            // Standard approach without async
-            $order = $this->orderModel->getOrderById($orderId);
-            $orderItems = $this->orderItemModel->getByOrderId($orderId);
-        }
+        // Fetch order data synchronously
+        $order = $this->orderModel->getOrderById($orderId);
+        $orderItems = $this->orderItemModel->getByOrderId($orderId);
         
         if (!$order || $order['user_id'] != Session::get('user_id')) {
             $this->redirect('');

@@ -8,15 +8,31 @@ use App\Models\User;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
+// Add Spatie Async
+use Spatie\Async\Pool;
 
 class AuthController extends Controller
 {
     private $userModel;
+    private $asyncPool;
 
     public function __construct()
     {
         parent::__construct();
         $this->userModel = new User();
+        
+        // Initialize Spatie Async Pool with fallback
+        if (class_exists('\\Spatie\\Async\\Pool')) {
+            try {
+                $this->asyncPool = Pool::create();
+            } catch (\Exception $e) {
+                error_log('Failed to create async pool: ' . $e->getMessage());
+                $this->asyncPool = null;
+            }
+        } else {
+            error_log('Spatie\\Async\\Pool class not found. Async processing disabled.');
+            $this->asyncPool = null;
+        }
     }
 
     /**
@@ -56,12 +72,30 @@ class AuthController extends Controller
                     Session::set('user_email', $user['email']);
                     Session::set('user_role', $user['role']);
                     
-                    // Send login notification email
-                    try {
-                        $this->sendLoginNotificationEmail($user['email'], $user['first_name'], $_SERVER['REMOTE_ADDR']);
-                    } catch (\Exception $e) {
-                        // Log the error but don't prevent login
-                        error_log('Failed to send login notification: ' . $e->getMessage());
+                    // Send login notification email asynchronously
+                    if ($this->asyncPool) {
+                        $this->asyncPool->add(function() use ($user) {
+                            try {
+                                return $this->sendLoginNotificationEmail($user['email'], $user['first_name'], $_SERVER['REMOTE_ADDR']);
+                            } catch (\Exception $e) {
+                                error_log('Failed to send login notification asynchronously: ' . $e->getMessage());
+                                return false;
+                            }
+                        })->then(function($result) {
+                            if ($result) {
+                                error_log('Login notification email sent asynchronously');
+                            }
+                        })->catch(function(\Exception $e) {
+                            error_log('Error in async login notification: ' . $e->getMessage());
+                        });
+                    } else {
+                        // Fallback to synchronous email sending
+                        try {
+                            $this->sendLoginNotificationEmail($user['email'], $user['first_name'], $_SERVER['REMOTE_ADDR']);
+                        } catch (\Exception $e) {
+                            // Log the error but don't prevent login
+                            error_log('Failed to send login notification: ' . $e->getMessage());
+                        }
                     }
                     
                     // Redirect to appropriate page
@@ -147,7 +181,33 @@ class AuthController extends Controller
             
             // Validate referral code if provided
             if (!empty($data['referral_code'])) {
-                $referrer = $this->userModel->findOneBy('referral_code', $data['referral_code']);
+                // Use async to fetch referrer if available
+                if ($this->asyncPool) {
+                    try {
+                        $referrerPromise = $this->asyncPool->add(function() use ($data) {
+                            return $this->userModel->findOneBy('referral_code', $data['referral_code']);
+                        });
+                        
+                        // Wait for async task to complete
+                        $this->asyncPool->wait();
+                        
+                        // Get result
+                        $referrer = $referrerPromise->then(function($result) {
+                            return $result;
+                        })->catch(function(\Exception $e) use ($data) {
+                            error_log('Error fetching referrer asynchronously: ' . $e->getMessage());
+                            return $this->userModel->findOneBy('referral_code', $data['referral_code']);
+                        });
+                    } catch (\Exception $e) {
+                        error_log('Async processing error: ' . $e->getMessage());
+                        // Fall back to standard approach
+                        $referrer = $this->userModel->findOneBy('referral_code', $data['referral_code']);
+                    }
+                } else {
+                    // Standard approach without async
+                    $referrer = $this->userModel->findOneBy('referral_code', $data['referral_code']);
+                }
+                
                 if (!$referrer) {
                     $errors['referral_code'] = 'Invalid referral code';
                 } else {
@@ -180,13 +240,31 @@ class AuthController extends Controller
                     Session::set('user_email', $user['email'] ?? '');
                     Session::set('user_role', 'customer');
                     
-                    // Send welcome email if email is provided
+                    // Send welcome email asynchronously if email is provided
                     if (!empty($user['email'])) {
-                        try {
-                            $this->sendWelcomeEmail($user['email'], $user['first_name'], $user['last_name']);
-                        } catch (\Exception $e) {
-                            // Log the error but don't prevent registration
-                            error_log('Failed to send welcome email: ' . $e->getMessage());
+                        if ($this->asyncPool) {
+                            $this->asyncPool->add(function() use ($user) {
+                                try {
+                                    return $this->sendWelcomeEmail($user['email'], $user['first_name'], $user['last_name']);
+                                } catch (\Exception $e) {
+                                    error_log('Failed to send welcome email asynchronously: ' . $e->getMessage());
+                                    return false;
+                                }
+                            })->then(function($result) {
+                                if ($result) {
+                                    error_log('Welcome email sent asynchronously');
+                                }
+                            })->catch(function(\Exception $e) {
+                                error_log('Error in async welcome email: ' . $e->getMessage());
+                            });
+                        } else {
+                            // Fallback to synchronous email sending
+                            try {
+                                $this->sendWelcomeEmail($user['email'], $user['first_name'], $user['last_name']);
+                            } catch (\Exception $e) {
+                                // Log the error but don't prevent registration
+                                error_log('Failed to send welcome email: ' . $e->getMessage());
+                            }
                         }
                     }
                     
@@ -436,7 +514,32 @@ class AuthController extends Controller
                 return;
             }
             
-            $user = $this->userModel->findByEmail($email);
+            // Use async to fetch user if available
+            if ($this->asyncPool) {
+                try {
+                    $userPromise = $this->asyncPool->add(function() use ($email) {
+                        return $this->userModel->findByEmail($email);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get result
+                    $user = $userPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($email) {
+                        error_log('Error fetching user asynchronously: ' . $e->getMessage());
+                        return $this->userModel->findByEmail($email);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $user = $this->userModel->findByEmail($email);
+                }
+            } else {
+                // Standard approach without async
+                $user = $this->userModel->findByEmail($email);
+            }
             
             if ($user) {
                 // Generate reset token
@@ -446,12 +549,30 @@ class AuthController extends Controller
                 // Save token to database
                 $this->userModel->saveResetToken($user['id'], $token, $expires);
                 
-                // Send reset email
-                try {
-                    $this->sendPasswordResetEmail($email, $user['first_name'], $token);
-                } catch (\Exception $e) {
-                    // Log the error but don't prevent the process
-                    error_log('Failed to send password reset email: ' . $e->getMessage());
+                // Send reset email asynchronously
+                if ($this->asyncPool) {
+                    $this->asyncPool->add(function() use ($email, $user, $token) {
+                        try {
+                            return $this->sendPasswordResetEmail($email, $user['first_name'], $token);
+                        } catch (\Exception $e) {
+                            error_log('Failed to send password reset email asynchronously: ' . $e->getMessage());
+                            return false;
+                        }
+                    })->then(function($result) {
+                        if ($result) {
+                            error_log('Password reset email sent asynchronously');
+                        }
+                    })->catch(function(\Exception $e) {
+                        error_log('Error in async password reset email: ' . $e->getMessage());
+                    });
+                } else {
+                    // Fallback to synchronous email sending
+                    try {
+                        $this->sendPasswordResetEmail($email, $user['first_name'], $token);
+                    } catch (\Exception $e) {
+                        // Log the error but don't prevent the process
+                        error_log('Failed to send password reset email: ' . $e->getMessage());
+                    }
                 }
                 
                 $this->setFlash('success', 'Password reset instructions have been sent to your email');
@@ -570,7 +691,31 @@ class AuthController extends Controller
         }
         
         // Verify token
-        $user = $this->userModel->findByResetToken($token);
+        if ($this->asyncPool) {
+            try {
+                $userPromise = $this->asyncPool->add(function() use ($token) {
+                    return $this->userModel->findByResetToken($token);
+                });
+                
+                // Wait for async task to complete
+                $this->asyncPool->wait();
+                
+                // Get result
+                $user = $userPromise->then(function($result) {
+                    return $result;
+                })->catch(function(\Exception $e) use ($token) {
+                    error_log('Error fetching user by reset token asynchronously: ' . $e->getMessage());
+                    return $this->userModel->findByResetToken($token);
+                });
+            } catch (\Exception $e) {
+                error_log('Async processing error: ' . $e->getMessage());
+                // Fall back to standard approach
+                $user = $this->userModel->findByResetToken($token);
+            }
+        } else {
+            // Standard approach without async
+            $user = $this->userModel->findByResetToken($token);
+        }
         
         if (!$user || strtotime($user['reset_expires']) < time()) {
             $this->setFlash('error', 'Invalid or expired reset token');
@@ -596,12 +741,30 @@ class AuthController extends Controller
                 // Clear reset token
                 $this->userModel->clearResetToken($user['id']);
                 
-                // Send password changed confirmation email
-                try {
-                    $this->sendPasswordChangedEmail($user['email'], $user['first_name']);
-                } catch (\Exception $e) {
-                    // Log the error but don't prevent the process
-                    error_log('Failed to send password changed email: ' . $e->getMessage());
+                // Send password changed confirmation email asynchronously
+                if ($this->asyncPool) {
+                    $this->asyncPool->add(function() use ($user) {
+                        try {
+                            return $this->sendPasswordChangedEmail($user['email'], $user['first_name']);
+                        } catch (\Exception $e) {
+                            error_log('Failed to send password changed email asynchronously: ' . $e->getMessage());
+                            return false;
+                        }
+                    })->then(function($result) {
+                        if ($result) {
+                            error_log('Password changed email sent asynchronously');
+                        }
+                    })->catch(function(\Exception $e) {
+                        error_log('Error in async password changed email: ' . $e->getMessage());
+                    });
+                } else {
+                    // Fallback to synchronous email sending
+                    try {
+                        $this->sendPasswordChangedEmail($user['email'], $user['first_name']);
+                    } catch (\Exception $e) {
+                        // Log the error but don't prevent the process
+                        error_log('Failed to send password changed email: ' . $e->getMessage());
+                    }
                 }
                 
                 $this->setFlash('success', 'Password has been reset successfully');

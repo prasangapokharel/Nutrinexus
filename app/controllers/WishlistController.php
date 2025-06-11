@@ -215,7 +215,7 @@ class WishlistController extends Controller
         }
         
         // Check if product is in stock
-        if ($product['quantity'] < 1) {
+        if ($product['stock_quantity'] < 1) {
             $this->setFlash('error', 'Product is out of stock');
             $this->redirect('wishlist');
         }

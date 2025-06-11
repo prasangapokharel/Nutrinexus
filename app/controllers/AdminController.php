@@ -95,7 +95,11 @@ class AdminController extends Controller
                 'sale_price' => !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null,
                 'category' => trim($_POST['category'] ?? ''),
                 'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
-                'image' => null // Initialize as null, will be set below
+                'image' => null, // Initialize as null, will be set below
+                'weight' => trim($_POST['weight'] ?? ''),
+                'serving' => trim($_POST['serving'] ?? ''),
+                'flavor' => trim($_POST['flavor'] ?? ''),
+                'capsule' => isset($_POST['capsule']) ? 1 : 0
             ];
             
             // Handle image from file upload or URL
@@ -186,7 +190,11 @@ class AdminController extends Controller
                 'sale_price' => !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null,
                 'category' => trim($_POST['category'] ?? ''),
                 'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
-                'image' => $product['image'] // Default to existing image
+                'image' => $product['image'], // Default to existing image
+                'weight' => trim($_POST['weight'] ?? ''),
+                'serving' => trim($_POST['serving'] ?? ''),
+                'flavor' => trim($_POST['flavor'] ?? ''),
+                'capsule' => isset($_POST['capsule']) ? 1 : 0
             ];
             
             // Handle image from file upload or URL

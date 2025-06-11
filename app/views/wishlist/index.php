@@ -9,12 +9,17 @@
                    <i class="fas fa-check-circle text-green-500"></i>
                </div>
                <div class="ml-3">
-                   <p class="text-sm"><?= $_SESSION['flash_message'] ?></p>
+                   <p class="text-sm"><?= htmlspecialchars($_SESSION['flash_message']) ?></p>
                </div>
            </div>
        </div>
        <?php unset($_SESSION['flash_message']); ?>
    <?php endif; ?>
+   
+   <?php 
+   // Log the wishlist items for debugging
+   error_log("Wishlist items: " . json_encode($wishlistItems));
+   ?>
    
    <?php if (empty($wishlistItems)): ?>
        <div class="bg-white border border-gray-100 shadow-sm p-8 text-center">
@@ -30,11 +35,18 @@
    <?php else: ?>
        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
            <?php foreach ($wishlistItems as $item): ?>
+               <?php 
+               // Skip items missing critical fields
+               if (!isset($item['id']) || !isset($item['product_name'])) {
+                   error_log("Skipping wishlist item due to missing critical fields: " . json_encode($item));
+                   continue;
+               }
+               ?>
                <div id="wishlist-item-<?= $item['id'] ?>" class="bg-white border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 group">
                    <div class="relative overflow-hidden">
-                       <a href="<?= \App\Core\View::url('products/view/' . $item['slug']) ?>">
-                           <img src="<?= htmlspecialchars($item['image'] ? \App\Core\View::asset('images/products/' . $item['image']) : \App\Core\View::asset('images/products/default.jpg')) ?>" 
-                                alt="<?= htmlspecialchars($item['product_name']) ?>" 
+                       <a href="<?= \App\Core\View::url('products/view/' . htmlspecialchars($item['slug'] ?? '')) ?>">
+                           <img src="<?= htmlspecialchars($item['image'] ?? ($item['product']['image'] ?? \App\Core\View::asset('images/products/default.jpg'))) ?>" 
+                                alt="<?= htmlspecialchars($item['product_name'] ?? 'Product') ?>" 
                                 class="w-full h-64 object-contain transition-transform duration-500 group-hover:scale-105">
                        </a>
                        <button onclick="removeFromWishlist(<?= $item['id'] ?>)" 
@@ -52,9 +64,9 @@
                        <div class="text-sm text-accent font-medium mb-1">
                            <?= htmlspecialchars($item['category'] ?? 'Supplement') ?>
                        </div>
-                       <a href="<?= \App\Core\View::url('products/view/' . $item['slug']) ?>" class="block">
+                       <a href="<?= \App\Core\View::url('products/view/' . htmlspecialchars($item['slug'] ?? '')) ?>" class="block">
                            <h3 class="text-base font-semibold text-primary mb-2 line-clamp-2 h-12">
-                               <?= htmlspecialchars($item['product_name']) ?>
+                               <?= htmlspecialchars($item['product_name'] ?? 'Unknown Product') ?>
                            </h3>
                        </a>
                        <div class="flex items-center mb-3">
@@ -72,9 +84,9 @@
                        </div>
                        <div class="flex items-baseline gap-2 mb-4">
                            <span class="text-xl font-bold text-primary">
-                               ₹<?= number_format($item['price'], 2) ?>
+                               ₹<?= number_format($item['price'] ?? 0, 2) ?>
                            </span>
-                           <?php if ($item['stock_quantity'] > 0): ?>
+                           <?php if (isset($item['stock_quantity']) && $item['stock_quantity'] > 0): ?>
                                <span class="text-xs text-green-600 font-medium">In Stock</span>
                            <?php else: ?>
                                <span class="text-xs text-red-600 font-medium">Out of Stock</span>
@@ -82,7 +94,7 @@
                        </div>
                        <div class="flex gap-2">
                            <form action="<?= \App\Core\View::url('wishlist/moveToCart/' . $item['id']) ?>" method="get" class="flex-1">
-                               <?php if ($item['stock_quantity'] > 0): ?>
+                               <?php if (isset($item['stock_quantity']) && $item['stock_quantity'] > 0): ?>
                                    <button type="submit" 
                                            class="w-full bg-primary hover:bg-primary-dark text-white px-4 py-2 font-medium transition-colors duration-200">
                                        Add to Cart
@@ -94,7 +106,7 @@
                                    </button>
                                <?php endif; ?>
                            </form>
-                           <a href="<?= \App\Core\View::url('products/view/' . $item['slug']) ?>" 
+                           <a href="<?= \App\Core\View::url('products/view/' . htmlspecialchars($item['slug'] ?? '')) ?>" 
                               class="p-2 border border-gray-300 hover:bg-gray-50 transition-colors duration-200">
                                <i class="fas fa-eye text-gray-600"></i>
                            </a>
@@ -115,62 +127,62 @@
 <style>
 /* Remove focus outline and any borders on click */
 a:focus, button:focus {
-  outline: none !important;
+    outline: none !important;
 }
 a:active, a:focus, button:active, button:focus {
-  outline: none !important;
-  border: none !important;
-  -moz-outline-style: none !important;
+    outline: none !important;
+    border: none !important;
+    -moz-outline-style: none !important;
 }
 /* Ensure consistent card heights */
 .line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 </style>
 
 <script>
 function removeFromWishlist(wishlistId) {
-   if (!confirm('Are you sure you want to remove this item from your wishlist?')) {
-       return;
-   }
+    if (!confirm('Are you sure you want to remove this item from your wishlist?')) {
+        return;
+    }
 
-   fetch('<?= \App\Core\View::url('wishlist/remove') ?>' + '/' + wishlistId, {
-       method: 'GET',
-       headers: {
-           'Content-Type': 'application/x-www-form-urlencoded',
-       }
-   })
-   .then(response => {
-       if (response.redirected) {
-           window.location.href = response.url;
-           return;
-       }
-       return response.json();
-   })
-   .then(data => {
-       if (data && data.success) {
-           const item = document.getElementById(`wishlist-item-${wishlistId}`);
-           item.style.opacity = '0';
-           setTimeout(() => {
-               item.remove();
-               // Update wishlist count
-               const count = document.querySelectorAll('[id^="wishlist-item-"]').length;
-               if (count === 0) {
-                   location.reload(); // Reload to show empty state
-               }
-           }, 300);
-       } else if (data && data.error) {
-           alert(data.error);
-       }
-   })
-   .catch(error => {
-       console.error('Error:', error);
-       // If there's an error, just redirect to refresh the page
-       window.location.href = '<?= \App\Core\View::url('wishlist') ?>';
-   });
+    fetch('<?= \App\Core\View::url('wishlist/remove') ?>' + '/' + wishlistId, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.success) {
+            const item = document.getElementById(`wishlist-item-${wishlistId}`);
+            item.style.opacity = '0';
+            setTimeout(() => {
+                item.remove();
+                // Update wishlist count
+                const count = document.querySelectorAll('[id^="wishlist-item-"]').length;
+                if (count === 0) {
+                    location.reload(); // Reload to show empty state
+                }
+            }, 300);
+        } else if (data && data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // If there's an error, just redirect to refresh the page
+        window.location.href = '<?= \App\Core\View::url('wishlist') ?>';
+    });
 }
 </script>
 <?php $content = ob_get_clean(); ?>

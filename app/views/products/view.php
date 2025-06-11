@@ -2,18 +2,18 @@
 <div class="bg-gray-50 min-h-screen py-12">
     <div class="container mx-auto px-4">
         <div class="max-w-7xl mx-auto">
-            <!-- Breadcrumb -->
-            <div class="mb-8">
-                <div class="flex items-center text-sm">
-                    <a href="<?= \App\Core\View::url('') ?>" class="text-gray-500 hover:text-primary">Home</a>
-                    <span class="mx-2 text-gray-400">/</span>
-                    <a href="<?= \App\Core\View::url('products') ?>" class="text-gray-500 hover:text-primary">Products</a>
-                    <span class="mx-2 text-gray-400">/</span>
-                    <a href="<?= \App\Core\View::url('products/category/' . urlencode($product['category'] ?? '')) ?>" class="text-gray-500 hover:text-primary">
+            <!-- Breadcrumb - Fixed for mobile -->
+            <div class="mb-8 overflow-hidden">
+                <div class="flex items-center text-sm overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">
+                    <a href="<?= \App\Core\View::url('') ?>" class="text-gray-500 hover:text-primary flex-shrink-0">Home</a>
+                    <span class="mx-2 text-gray-400 flex-shrink-0">/</span>
+                    <a href="<?= \App\Core\View::url('products') ?>" class="text-gray-500 hover:text-primary flex-shrink-0">Products</a>
+                    <span class="mx-2 text-gray-400 flex-shrink-0">/</span>
+                    <a href="<?= \App\Core\View::url('products/category/' . urlencode($product['category'] ?? '')) ?>" class="text-gray-500 hover:text-primary flex-shrink-0 truncate max-w-[80px] sm:max-w-none">
                         <?= htmlspecialchars($product['category'] ?? 'Category') ?>
                     </a>
-                    <span class="mx-2 text-gray-400">/</span>
-                    <span class="text-primary font-medium"><?= htmlspecialchars($product['product_name'] ?? 'Product') ?></span>
+                    <span class="mx-2 text-gray-400 flex-shrink-0">/</span>
+                    <span class="text-primary font-medium flex-shrink-0 truncate max-w-[120px] sm:max-w-none"><?= htmlspecialchars($product['product_name'] ?? 'Product') ?></span>
                 </div>
             </div>
             
@@ -63,6 +63,11 @@
                             <span class="inline-block px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
                                 <?= htmlspecialchars($product['category'] ?? 'Supplement') ?>
                             </span>
+                            <?php if (isset($product['capsule']) && $product['capsule']): ?>
+                            <span class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full ml-2">
+                                Capsule
+                            </span>
+                            <?php endif; ?>
                         </div>
                         
                         <h1 class="text-2xl md:text-3xl font-bold text-primary mb-4">
@@ -85,8 +90,68 @@
                         
                         <div class="mb-6">
                             <p class="text-gray-600">
-                                <?= htmlspecialchars($product['short_description'] ?? $product['description'] ?? 'No description available.') ?>
+                                <?php 
+                                $description = $product['short_description'] ?? $product['description'] ?? 'No description available.';
+                                $maxLength = 150; // Maximum characters to show
+                                if (strlen($description) > $maxLength) {
+                                    echo htmlspecialchars(substr($description, 0, $maxLength)) . '...';
+                                } else {
+                                    echo htmlspecialchars($description);
+                                }
+                                ?>
                             </p>
+                        </div>
+                        
+                        <!-- Product Attributes -->
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <?php if (isset($product['weight']) && !empty($product['weight'])): ?>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                                    <i class="fas fa-weight text-primary text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-500">Weight</span>
+                                    <p class="font-medium text-gray-800"><?= htmlspecialchars($product['weight']) ?></p>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <?php if (isset($product['serving']) && !empty($product['serving'])): ?>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                                    <i class="fas fa-utensils text-primary text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-500">Serving Size</span>
+                                    <p class="font-medium text-gray-800"><?= htmlspecialchars($product['serving']) ?></p>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <?php if (isset($product['flavor']) && !empty($product['flavor'])): ?>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                                    <i class="fas fa-cookie-bite text-primary text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-500">Flavor</span>
+                                    <p class="font-medium text-gray-800"><?= htmlspecialchars($product['flavor']) ?></p>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Product URL Copy Button (Replacing QR Code) -->
+                        <div class="mb-6">
+                            <div id="copy-url-container" class="flex items-center p-3 bg-gray-100 rounded-md">
+                                <input type="text" id="product-url" value="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'] ?? '')) ?>" class="bg-transparent border-none flex-1 text-sm text-gray-600 focus:outline-none focus:ring-0 truncate" readonly>
+                                <button id="copy-url-btn" class="ml-2 w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full hover:bg-primary-dark transition-colors">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div id="copy-success" class="hidden mt-2 text-xs text-green-600 text-center">
+                                <i class="fas fa-check-circle mr-1"></i> Link copied to clipboard!
+                            </div>
                         </div>
                         
                         <div class="mb-8">
@@ -202,17 +267,55 @@
                             <?= nl2br(htmlspecialchars($product['description'] ?? 'No description available.')) ?>
                         </div>
                         
-                        <?php if (isset($product['benefits']) && is_array($product['benefits'])): ?>
-                            <h3 class="text-lg font-semibold text-primary mt-8 mb-4">Benefits</h3>
-                            <ul class="space-y-2">
-                                <?php foreach ($product['benefits'] as $benefit): ?>
+                        <!-- Product Specifications -->
+                        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-primary mb-4">Product Details</h3>
+                                <ul class="space-y-3">
+                                    <?php if (isset($product['weight']) && !empty($product['weight'])): ?>
                                     <li class="flex items-start">
                                         <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                        <span class="text-gray-600"><?= htmlspecialchars($benefit) ?></span>
+                                        <span class="text-gray-600"><strong>Weight:</strong> <?= htmlspecialchars($product['weight']) ?></span>
                                     </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (isset($product['serving']) && !empty($product['serving'])): ?>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span class="text-gray-600"><strong>Serving Size:</strong> <?= htmlspecialchars($product['serving']) ?></span>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (isset($product['flavor']) && !empty($product['flavor'])): ?>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span class="text-gray-600"><strong>Flavor:</strong> <?= htmlspecialchars($product['flavor']) ?></span>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (isset($product['capsule'])): ?>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span class="text-gray-600"><strong>Form:</strong> <?= $product['capsule'] ? 'Capsule' : 'Powder/Other' ?></span>
+                                    </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                            
+                            <?php if (isset($product['benefits']) && is_array($product['benefits'])): ?>
+                            <div>
+                                <h3 class="text-lg font-semibold text-primary mb-4">Benefits</h3>
+                                <ul class="space-y-2">
+                                    <?php foreach ($product['benefits'] as $benefit): ?>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                            <span class="text-gray-600"><?= htmlspecialchars($benefit) ?></span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     
                     <!-- Specifications Tab -->
@@ -461,8 +564,26 @@ function addToWishlist(productId) {
     });
 }
 
-// Product image gallery
+// Copy URL functionality
 document.addEventListener('DOMContentLoaded', function() {
+    const copyButton = document.getElementById('copy-url-btn');
+    const urlInput = document.getElementById('product-url');
+    const copySuccess = document.getElementById('copy-success');
+    
+    copyButton.addEventListener('click', function() {
+        urlInput.select();
+        document.execCommand('copy');
+        
+        // Show success message
+        copySuccess.classList.remove('hidden');
+        
+        // Hide success message after 3 seconds
+        setTimeout(function() {
+            copySuccess.classList.add('hidden');
+        }, 3000);
+    });
+    
+    // Product image gallery
     const thumbnails = document.querySelectorAll('.product-thumbnail');
     const mainImage = document.getElementById('mainProductImage');
     
@@ -544,6 +665,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<style>
+    /* Add this to your CSS file to hide scrollbars but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Ensure text truncation works properly */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+</style>
 <?php $content = ob_get_clean(); ?>
 
 <?php include dirname(dirname(__FILE__)) . '/layouts/main.php'; ?>

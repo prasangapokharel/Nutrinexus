@@ -37,3 +37,15 @@ if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
 
 // Initialize the application
 $app = new App\Core\App();
+// Define cache directory
+define('CACHE_DIR', __DIR__ . '/../storage/cache');
+
+// Create cache directory if it doesn't exist
+if (!is_dir(CACHE_DIR)) {
+    mkdir(CACHE_DIR, 0755, true);
+}
+
+// Add Symfony Cache to Composer autoload if not already included
+// This is just a reminder - you should add these dependencies to your composer.json
+// "symfony/cache": "^6.0",
+// "symfony/var-exporter": "^6.0"

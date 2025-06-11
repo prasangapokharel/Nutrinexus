@@ -32,6 +32,7 @@ class OrderController extends Controller
         parent::__construct();
         $this->orderModel = new Order();
         $this->orderItemModel = new OrderItem();
+        $this->productModel = new Product();
         $this->userModel = new User();
         $this->referralEarningModel = new ReferralEarning();
         $this->transactionModel = new Transaction();
@@ -49,6 +50,8 @@ class OrderController extends Controller
         $this->requireLogin();
         
         $userId = Session::get('user_id');
+        
+        // Fetch orders synchronously
         $orders = $this->orderModel->getOrdersByUserId($userId);
         
         $this->view('orders/index', [
@@ -73,15 +76,16 @@ class OrderController extends Controller
         }
         
         $userId = Session::get('user_id');
+        
+        // Fetch order and items synchronously
         $order = $this->orderModel->getOrderById($id);
+        $orderItems = $this->orderItemModel->getByOrderId($id);
         
         if (!$order || $order['user_id'] != $userId) {
             $this->setFlash('error', 'Order not found.');
             $this->redirect('orders');
             return;
         }
-        
-        $orderItems = $this->orderItemModel->getByOrderId($id);
         
         $this->view('orders/view', [
             'order' => $order,
@@ -106,6 +110,7 @@ class OrderController extends Controller
                 return;
             }
             
+            // Fetch order and items synchronously
             $order = $this->orderModel->getOrderByInvoice($invoice);
             
             if (!$order) {
@@ -144,6 +149,8 @@ class OrderController extends Controller
         }
         
         $userId = Session::get('user_id');
+        
+        // Fetch order synchronously
         $order = $this->orderModel->getOrderById($id);
         
         if (!$order || $order['user_id'] != $userId) {
@@ -174,9 +181,10 @@ class OrderController extends Controller
                     throw new \Exception('Failed to cancel order.');
                 }
                 
-                // Restore product quantities
+                // Fetch order items synchronously
                 $orderItems = $this->orderItemModel->getByOrderId($id);
                 
+                // Process order items synchronously
                 foreach ($orderItems as $item) {
                     $this->productModel->updateQuantity($item['product_id'], $item['stock_quantity']);
                 }
@@ -235,7 +243,7 @@ class OrderController extends Controller
         $this->orderModel->beginTransaction();
         
         try {
-            // Get current order status
+            // Get current order status synchronously
             $order = $this->orderModel->getOrderById($id);
             
             if (!$order) {
@@ -254,12 +262,12 @@ class OrderController extends Controller
                 throw new \Exception('Failed to update order status.');
             }
             
-            // If status changed to paid, process referral earnings
+            // If status changed to paid, process referral earnings synchronously
             if ($status === 'paid' && $oldStatus !== 'paid') {
                 $this->processReferralEarnings($id);
             }
             
-            // If status changed from paid to cancelled, reverse referral earnings
+            // If status changed from paid to cancelled, reverse referral earnings synchronously
             if ($status === 'cancelled' && $oldStatus === 'paid') {
                 $this->reverseReferralEarnings($id);
             }
@@ -304,8 +312,9 @@ class OrderController extends Controller
             return false;
         }
         
-        // Get user who placed the order
+        // Fetch user and referrer data synchronously
         $user = $this->userModel->find($order['user_id']);
+        
         if (!$user) {
             error_log("Process referral earnings: User not found - ID: {$order['user_id']}");
             return false;
@@ -321,9 +330,9 @@ class OrderController extends Controller
         }
         
         $referrerId = $user['referred_by'];
-        
-        // Get referrer details
         $referrer = $this->userModel->find($referrerId);
+        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
+        
         if (!$referrer) {
             error_log("Process referral earnings: Referrer not found - ID: $referrerId");
             return false;
@@ -333,7 +342,6 @@ class OrderController extends Controller
         error_log("Referrer found - ID: $referrerId, Name: {$referrer['first_name']} {$referrer['last_name']}");
         
         // Check if referral earning already exists for this order
-        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
         if ($existingEarning) {
             error_log("Process referral earnings: Earning already exists - Order ID: $orderId, Earning ID: {$existingEarning['id']}");
             return false;
@@ -469,6 +477,7 @@ class OrderController extends Controller
      */
     public function reverseReferralEarnings($orderId)
     {
+        // Fetch referral earning synchronously
         $referralEarning = $this->referralEarningModel->findByOrderId($orderId);
         
         if (!$referralEarning) {
@@ -499,7 +508,7 @@ class OrderController extends Controller
             
             // Only deduct from referrer's balance if the earning was previously paid
             if ($referralEarning['status'] === 'paid') {
-                // Deduct amount from referrer's balance
+                // Fetch referrer data synchronously
                 $referrer = $this->userModel->find($referralEarning['user_id']);
                 
                 if (!$referrer) {

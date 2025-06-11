@@ -10,36 +10,7 @@ header('Content-Type: text/html; charset=utf-8');
 ?>
 <div class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
-        <!-- Checkout Steps -->
-        <div class="flex justify-between items-center max-w-3xl mx-auto py-8">
-            <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                    <i class="fas fa-shopping-cart text-white text-lg"></i>
-                </div>
-                <span class="text-sm mt-2 text-accent font-medium">Cart</span>
-            </div>
-            <div class="flex-1 h-1 bg-primary mx-2"></div>
-            <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                    <i class="fas fa-address-card text-white text-lg"></i>
-                </div>
-                <span class="text-sm mt-2 text-accent font-medium">Details</span>
-            </div>
-            <div class="flex-1 h-1 bg-primary mx-2"></div>
-            <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                    <i class="fas fa-credit-card text-white text-lg"></i>
-                </div>
-                <span class="text-sm mt-2 text-accent">Payment</span>
-            </div>
-            <div class="flex-1 h-1 bg-primary mx-2"></div>
-            <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                    <i class="fas fa-check text-white text-lg"></i>
-                </div>
-                <span class="text-sm mt-2 text-accent">Complete</span>
-            </div>
-        </div>
+      
 
         <!-- Checkout Content -->
         <div class="flex flex-col lg:flex-row gap-8">
@@ -96,6 +67,17 @@ header('Content-Type: text/html; charset=utf-8');
 
                         <!-- Bank Transfer Fields -->
                         <div id="bank-transfer-fields" class="payment-method-fields hidden mt-6">
+                            <div class="grid grid-cols-1 gap-6">
+                                <div>
+                                    <label  class="block text-gray-700 mb-2">Bank Name: Nabil Bank Limited</label>
+                                    <label  class="block text-gray-700 mb-2">Account Number: 1234567890</label>
+                                    <label  class="block text-gray-700 mb-2">Account Name: NutriNexus</label>
+
+                                    <img src="<?= URLROOT ?>/images/pay.png" alt="Bank Logo" class="h-24 w-24  mb-4">
+                                </div>
+                                <div>
+                                </div>
+                            </div>
                             <div class="grid grid-cols-1 gap-6">
                                 <div>
                                     <label for="transaction_id" class="block text-gray-700 mb-2">Transaction ID</label>

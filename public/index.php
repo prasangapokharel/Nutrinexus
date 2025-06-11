@@ -5,17 +5,20 @@
  * This file initializes the application and routes requests
  * to the appropriate controllers
  */
-
+ 
+ ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 // Define constants
 define('DS', DIRECTORY_SEPARATOR);
 define('ROOT', dirname(__DIR__));
 
-define('APPROOT', ROOT . DS . 'app');
+define('APPROOT', ROOT . DS . 'App');
 // Update the URLROOT constant to match your base URL
 define('URLROOT', 'http://localhost:8000');
 
 // Load configuration
-require_once APPROOT . DS . 'config' . DS . 'config.php';
+require_once APPROOT . DS . 'Config' . DS . 'config.php';
 
 // Autoload classes
 spl_autoload_register(function($className) {

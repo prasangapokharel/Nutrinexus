@@ -136,7 +136,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <header class="sticky top-0 z-50 w-full bg-white shadow-sm">
-        <?php include ROOT_DIR . '/app/views/includes/header.php'; ?>
+        <?php include ROOT_DIR . '/App/views/includes/header.php'; ?>
     </header>
     
     <main class="flex-grow">
@@ -162,7 +162,7 @@
     </main>
     
     <footer class="mt-auto bg-primary-dark text-white">
-        <?php include ROOT_DIR . '/app/views/includes/footer.php'; ?>
+        <?php include ROOT_DIR . '/App/views/includes/footer.php'; ?>
     </footer>
     
     <!-- Mobile navigation drawer overlay (hidden by default) -->

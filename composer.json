@@ -10,7 +10,9 @@
     "khalti/php-sdk": "^1.1",
     "phpfastcache/phpfastcache": "^9.2",
     "symfony/cache": "^7.2",
-    "spatie/async": "^1.6"
+    "spatie/async": "^1.6",
+    "bacon/bacon-qr-code": "^3.0",
+    "dompdf/dompdf": "^3.1"
   },
   "autoload": {
     "psr-4": {

@@ -47,7 +47,12 @@ define('CACHE_ENABLED', true);
 define('CACHE_LIFETIME', 3600); // 1 hour
 
 // API Keys for khalti 
-define('KHALTI_API_KEY', 'live_secret_key_68791341fdd94846a146f0457ff7b455'); // Replace with your actual khalti 
+define('KHALTI_SECRET_KEY', 'live_secret_key_68791341fdd94846a146f0457ff7b455'); 
+
+// Khalti API endpoints
+define('KHALTI_INITIATE_URL', 'https://dev.khalti.com/api/v2/epayment/initiate/');
+define('KHALTI_LOOKUP_URL', 'https://dev.khalti.com/api/v2/epayment/lookup/');
+define('KHALTI_VERIFY_URL', 'https://dev.khalti.com/api/v2/payment/verify/');
 
 // Define ROOT_DIR if not already defined
 if (!defined('ROOT_DIR')) {
