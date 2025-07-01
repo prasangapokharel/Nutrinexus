@@ -12,17 +12,244 @@ class Order extends Model
     private $transactionActive = false;
     
     /**
+     * Create a new order with order items - FIXED TO MATCH DATABASE SCHEMA
+     *
+     * @param array $orderData Order details
+     * @param array $cartItems Cart items to be added as order items
+     * @return int|false Order ID on success, false on failure
+     */
+    public function createOrder($orderData, $cartItems)
+    {
+        // Start transaction
+        $this->beginTransaction();
+        
+        try {
+            error_log('=== ORDER CREATION START ===');
+            error_log('Order data: ' . json_encode($orderData));
+            error_log('Cart items count: ' . count($cartItems));
+            
+            // Generate invoice number
+            $invoiceNumber = $this->generateInvoiceNumber();
+            
+            // Build address string from components
+            $addressParts = [
+                $orderData['address_line1'],
+                $orderData['address_line2'] ?? '',
+                $orderData['city'],
+                $orderData['state'],
+                $orderData['country'] ?? 'Nepal'
+            ];
+            $fullAddress = implode(', ', array_filter($addressParts));
+            
+            // Prepare order data for insertion - MATCHING EXISTING DATABASE SCHEMA
+            $orderInsertData = [
+                'invoice' => $invoiceNumber,
+                'user_id' => $orderData['user_id'],
+                'customer_name' => $orderData['recipient_name'], // Maps to customer_name
+                'contact_no' => $orderData['phone'], // Maps to contact_no
+                'payment_method_id' => $orderData['payment_method_id'],
+                'status' => $orderData['order_status'] ?? 'pending',
+                'address' => $fullAddress, // Single address field
+                'order_notes' => $orderData['order_notes'] ?? '',
+                'transaction_id' => $orderData['transaction_id'] ?? null,
+                'total_amount' => $orderData['final_amount'], // Use final_amount as total_amount
+                'delivery_fee' => 0.00, // Default delivery fee
+                'payment_screenshot' => $orderData['payment_screenshot'] ?? null,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            error_log('Inserting order with data: ' . json_encode($orderInsertData));
+            
+            // Build SQL for order insertion
+            $sql = "INSERT INTO {$this->table} (
+                invoice, user_id, customer_name, contact_no, payment_method_id, 
+                status, address, order_notes, transaction_id, total_amount, 
+                delivery_fee, payment_screenshot, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            $result = $this->db->query($sql)->bind([
+                $orderInsertData['invoice'],
+                $orderInsertData['user_id'],
+                $orderInsertData['customer_name'],
+                $orderInsertData['contact_no'],
+                $orderInsertData['payment_method_id'],
+                $orderInsertData['status'],
+                $orderInsertData['address'],
+                $orderInsertData['order_notes'],
+                $orderInsertData['transaction_id'],
+                $orderInsertData['total_amount'],
+                $orderInsertData['delivery_fee'],
+                $orderInsertData['payment_screenshot'],
+                $orderInsertData['created_at'],
+                $orderInsertData['updated_at']
+            ])->execute();
+            
+            if (!$result) {
+                throw new \Exception('Failed to create order record');
+            }
+            
+            // Get the inserted order ID
+            $orderId = $this->db->lastInsertId();
+            
+            if (!$orderId) {
+                throw new \Exception('Failed to get order ID after insertion');
+            }
+            
+            error_log('Order created with ID: ' . $orderId);
+            
+            // Insert order items - MATCHING EXISTING SCHEMA
+            $orderItemsInserted = 0;
+            foreach ($cartItems as $item) {
+                $orderItemData = [
+                    'order_id' => $orderId,
+                    'product_id' => $item['product']['id'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['product']['price'],
+                    'total' => $item['subtotal'],
+                    'invoice' => $invoiceNumber
+                ];
+                
+                error_log('Inserting order item: ' . json_encode($orderItemData));
+                
+                $sql = "INSERT INTO order_items (order_id, product_id, quantity, price, total, invoice) 
+                        VALUES (?, ?, ?, ?, ?, ?)";
+                
+                $result = $this->db->query($sql)->bind([
+                    $orderItemData['order_id'],
+                    $orderItemData['product_id'],
+                    $orderItemData['quantity'],
+                    $orderItemData['price'],
+                    $orderItemData['total'],
+                    $orderItemData['invoice']
+                ])->execute();
+                
+                if (!$result) {
+                    throw new \Exception('Failed to create order item for product ID: ' . $item['product']['id']);
+                }
+                
+                $orderItemsInserted++;
+                error_log('Order item inserted for product ID: ' . $item['product']['id']);
+            }
+            
+            error_log('Total order items inserted: ' . $orderItemsInserted);
+            
+            // Update product stock (if stock_quantity field exists)
+            foreach ($cartItems as $item) {
+                $sql = "UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?";
+                $result = $this->db->query($sql)->bind([
+                    $item['quantity'],
+                    $item['product']['id']
+                ])->execute();
+                
+                if (!$result) {
+                    error_log('Warning: Could not update stock for product ID: ' . $item['product']['id']);
+                    // Don't throw exception for stock update failure, just log it
+                }
+            }
+            
+            // Record coupon usage if coupon was applied
+            if (!empty($orderData['coupon_code'])) {
+                // Check if coupon_usage table exists and has the right structure
+                $sql = "INSERT INTO coupon_usage (coupon_id, user_id, order_id, used_at) 
+                        SELECT c.id, ?, ?, NOW() 
+                        FROM coupons c 
+                        WHERE c.code = ?";
+                
+                $result = $this->db->query($sql)->bind([
+                    $orderData['user_id'],
+                    $orderId,
+                    $orderData['coupon_code']
+                ])->execute();
+                
+                if (!$result) {
+                    error_log('Warning: Could not record coupon usage for: ' . $orderData['coupon_code']);
+                    // Don't throw exception for coupon usage recording failure
+                }
+                
+                error_log('Coupon usage recorded: ' . $orderData['coupon_code']);
+            }
+            
+            // Commit transaction
+            $this->commit();
+            
+            error_log('=== ORDER CREATION SUCCESS ===');
+            error_log('Order ID: ' . $orderId . ', Invoice: ' . $invoiceNumber);
+            
+            return $orderId;
+            
+        } catch (\Exception $e) {
+            // Rollback transaction
+            $this->rollback();
+            
+            error_log('=== ORDER CREATION FAILED ===');
+            error_log('Error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Get order items for a specific order
+     *
+     * @param int $orderId
+     * @return array
+     */
+    public function getOrderItems($orderId)
+    {
+        $sql = "SELECT oi.*, p.image, p.slug 
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+                ORDER BY oi.id";
+        
+        return $this->db->query($sql)->bind([$orderId])->all();
+    }
+    
+    /**
+     * Get order with items
+     *
+     * @param int $orderId
+     * @return array|false
+     */
+    public function getOrderWithItems($orderId)
+    {
+        $order = $this->getOrderById($orderId);
+        
+        if (!$order) {
+            return false;
+        }
+        
+        $order['items'] = $this->getOrderItems($orderId);
+        
+        return $order;
+    }
+    
+    /**
      * Generate a unique invoice number
      *
      * @return string
      */
     public function generateInvoiceNumber()
     {
-        $prefix = 'NX';
+        $prefix = 'NN';
         $date = date('Ymd');
         $random = mt_rand(1000, 9999);
         
-        return $prefix . $random;
+        // Check if invoice number already exists
+        $invoiceNumber = $prefix . $date . $random;
+        
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE invoice = ?";
+        $result = $this->db->query($sql)->bind([$invoiceNumber])->single();
+        
+        // If invoice exists, generate a new one
+        if ($result && $result['count'] > 0) {
+            $random = mt_rand(10000, 99999);
+            $invoiceNumber = $prefix . $date . $random;
+        }
+        
+        return $invoiceNumber;
     }
     
     /**
@@ -132,7 +359,7 @@ class Order extends Model
      */
     public function getTotalSales()
     {
-        $sql = "SELECT SUM(total_amount) as total FROM {$this->table} WHERE status = 'paid'";
+        $sql = "SELECT SUM(total_amount) as total FROM {$this->table} WHERE status IN ('paid', 'delivered')";
         $result = $this->db->query($sql)->single();
         return $result ? (float)$result['total'] : 0;
     }
@@ -144,7 +371,6 @@ class Order extends Model
      */
     public function inTransaction()
     {
-        // Use our internal flag to track transaction state
         return $this->transactionActive;
     }
     
@@ -155,16 +381,13 @@ class Order extends Model
      */
     public function beginTransaction()
     {
-        // If we already have an active transaction, roll it back
         if ($this->transactionActive) {
             error_log('Attempted to start a transaction while one is already active. Rolling back existing transaction.');
             $this->rollback();
         }
         
-        // Start a new transaction
         $result = $this->db->beginTransaction();
         
-        // Set our transaction flag
         if ($result) {
             $this->transactionActive = true;
         }
@@ -179,7 +402,6 @@ class Order extends Model
      */
     public function commit()
     {
-        // Only commit if we have an active transaction
         if (!$this->transactionActive) {
             error_log('Attempted to commit when no transaction is active.');
             return false;
@@ -187,7 +409,6 @@ class Order extends Model
         
         $result = $this->db->commit();
         
-        // Reset our transaction flag
         if ($result) {
             $this->transactionActive = false;
         }
@@ -202,7 +423,6 @@ class Order extends Model
      */
     public function rollback()
     {
-        // Only rollback if we have an active transaction
         if (!$this->transactionActive) {
             error_log('Attempted to rollback when no transaction is active.');
             return false;
@@ -210,7 +430,6 @@ class Order extends Model
         
         $result = $this->db->rollback();
         
-        // Reset our transaction flag
         if ($result) {
             $this->transactionActive = false;
         }
@@ -219,426 +438,55 @@ class Order extends Model
     }
     
     /**
-     * Update order status and process referral if needed
+     * Update order status
      *
      * @param int $orderId
      * @param string $status
      * @return bool
      */
-    public function updateStatusAndProcessReferral($orderId, $status)
+    public function updateOrderStatus($orderId, $status)
     {
-        // Start transaction
-        $this->beginTransaction();
-        
         try {
-            // First, get the current order to check its status
-            $order = $this->getOrderById($orderId);
-            
-            if (!$order) {
-                error_log("Order not found: $orderId");
-                $this->rollback();
-                return false;
-            }
-            
-            // Update the order status
             $sql = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?";
             $result = $this->db->query($sql)->bind([$status, $orderId])->execute();
             
-            if (!$result) {
-                error_log("Failed to update order status: $orderId to $status");
-                $this->rollback();
+            if ($result) {
+                error_log("Order status updated - ID: $orderId, Status: $status");
+                return true;
+            } else {
+                error_log("Failed to update order status - ID: $orderId, Status: $status");
                 return false;
             }
-            
-            // Process referral earnings based on status change
-            if ($status === 'paid' && $order['status'] !== 'paid') {
-                // Order is now paid, process referral earnings
-                $this->processReferralEarnings($orderId);
-                error_log("Processed referral earnings for order: $orderId");
-            } elseif ($status === 'cancelled' && $order['status'] === 'paid') {
-                // Order was paid but now cancelled, reverse referral earnings
-                $this->reverseReferralEarnings($orderId);
-                error_log("Reversed referral earnings for order: $orderId");
-            }
-            
-            // Commit transaction
-            $this->commit();
-            return true;
         } catch (\Exception $e) {
-            // Log the error
             error_log('Error updating order status: ' . $e->getMessage());
-            
-            // Rollback transaction
-            $this->rollback();
             return false;
         }
     }
     
     /**
-     * Process referral earnings for a paid order
+     * Get order statistics
      *
-     * @param int $orderId
-     * @return void
+     * @return array
      */
-    private function processReferralEarnings($orderId)
+    public function getOrderStats()
     {
-        // Get order details
-        $order = $this->getOrderById($orderId);
-        if (!$order) {
-            error_log("Process referral earnings: Order not found - ID: $orderId");
-            return;
+        $stats = [];
+        
+        // Total orders
+        $sql = "SELECT COUNT(*) as total FROM {$this->table}";
+        $result = $this->db->query($sql)->single();
+        $stats['total_orders'] = $result ? (int)$result['total'] : 0;
+        
+        // Orders by status
+        $sql = "SELECT status, COUNT(*) as count FROM {$this->table} GROUP BY status";
+        $results = $this->db->query($sql)->all();
+        $stats['by_status'] = [];
+        foreach ($results as $row) {
+            $stats['by_status'][$row['status']] = (int)$row['count'];
         }
         
-        // Log order details for debugging
-        error_log("Processing referral for Order ID: $orderId, Status: {$order['status']}, Amount: {$order['total_amount']}");
-        
-        // Get user who placed the order
-        $userModel = new User();
-        $user = $userModel->find($order['user_id']);
-        
-        if (!$user) {
-            error_log("Process referral earnings: User not found - ID: {$order['user_id']}");
-            return;
-        }
-        
-        // Log user details for debugging
-        error_log("Order placed by User ID: {$user['id']}, Name: {$user['first_name']} {$user['last_name']}, Referred by: " . ($user['referred_by'] ?? 'None'));
-        
-        // Check if user was referred by someone
-        if (empty($user['referred_by'])) {
-            error_log("Process referral earnings: User has no referrer - User ID: {$user['id']}");
-            return;
-        }
-        
-        $referrerId = $user['referred_by'];
-        
-        // Get referrer details
-        $referrer = $userModel->find($referrerId);
-        if (!$referrer) {
-            error_log("Process referral earnings: Referrer not found - ID: $referrerId");
-            return;
-        }
-        
-        // Log referrer details for debugging
-        error_log("Referrer found - ID: $referrerId, Name: {$referrer['first_name']} {$referrer['last_name']}");
-        
-        // Check if referral earning already exists for this order
-        $referralEarningModel = new ReferralEarning();
-        $existingEarning = $referralEarningModel->findByOrderId($orderId);
-        
-        if ($existingEarning) {
-            error_log("Process referral earnings: Earning already exists - Order ID: $orderId, Earning ID: {$existingEarning['id']}");
-            return;
-        }
-        
-        // Calculate commission (5% of total_amount, excluding delivery fee)
-        $deliveryFee = isset($order['delivery_fee']) ? (float)$order['delivery_fee'] : 0;
-        $orderTotal = (float)$order['total_amount'];
-        $commission = ($orderTotal - $deliveryFee) * 0.05;
-        
-        // Round to 2 decimal places
-        $commission = round($commission, 2);
-        
-        // Log commission calculation for debugging
-        error_log("Commission calculation: Order Total: $orderTotal, Delivery Fee: $deliveryFee, Commission Rate: 5%, Final Commission: $commission");
-        
-        if ($commission <= 0) {
-            error_log("Process referral earnings: Commission is zero or negative - Order ID: $orderId");
-            return;
-        }
-        
-        try {
-            // Create referral earning record
-            $earningData = [
-                'user_id' => $referrerId,
-                'order_id' => $orderId,
-                'amount' => $commission,
-                'status' => 'pending',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-            
-            // Log the data being inserted
-            error_log("Inserting referral earning: " . json_encode($earningData));
-            
-            $earningId = $referralEarningModel->create($earningData);
-            
-            if (!$earningId) {
-                throw new \Exception("Failed to create referral earning record for order: $orderId");
-            }
-            
-            error_log("Created referral earning record - ID: $earningId");
-            
-            // Update referrer's balance
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = $currentEarnings + $commission;
-            
-            // Log the balance update
-            error_log("Updating referrer balance - Current: $currentEarnings, New: $newEarnings");
-            
-            $updateData = [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $result = $userModel->update($referrerId, $updateData);
-            
-            if (!$result) {
-                throw new \Exception("Failed to update referrer balance for user: $referrerId");
-            }
-            
-            error_log("Updated referrer ID: $referrerId earnings from $currentEarnings to $newEarnings");
-            
-            // Record transaction
-            $transactionModel = new Transaction();
-            $transactionData = [
-                'user_id' => $referrerId,
-                'amount' => $commission,
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'reference_type' => 'referral_earning',
-                'description' => "Referral commission from order #{$order['invoice']}",
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                error_log("Failed to create transaction record for referral earning: $earningId");
-            } else {
-                error_log("Created transaction record - ID: $transactionId");
-            }
-            
-            // Create notification for referrer
-            $notificationModel = new Notification();
-            $notificationData = [
-                'user_id' => $referrerId,
-                'title' => 'New Referral Commission',
-                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $notificationId = $notificationModel->create($notificationData);
-            
-            if (!$notificationId) {
-                error_log("Failed to create notification for referral earning: $earningId");
-            } else {
-                error_log("Created notification - ID: $notificationId");
-            }
-            
-            error_log("Referral earnings processed successfully - Order ID: $orderId, Referrer ID: $referrerId, Amount: $commission");
-            
-        } catch (\Exception $e) {
-            // Log error
-            error_log('Error processing referral earnings: ' . $e->getMessage());
-            throw $e; // Re-throw to be caught by the calling method's transaction
-        }
-    }
-    
-    /**
-     * Reverse referral earnings for a cancelled order
-     *
-     * @param int $orderId
-     * @return void
-     */
-    private function reverseReferralEarnings($orderId)
-    {
-        $referralEarningModel = new ReferralEarning();
-        $earning = $referralEarningModel->findByOrderId($orderId);
-        
-        if (!$earning) {
-            error_log("Reverse referral earnings: No earning found - Order ID: $orderId");
-            return;
-        }
-        
-        if ($earning['status'] === 'cancelled') {
-            error_log("Reverse referral earnings: Earning already cancelled - Order ID: $orderId");
-            return;
-        }
-        
-        try {
-            // Update earning status to cancelled
-            $result = $referralEarningModel->update($earning['id'], [
-                'status' => 'cancelled',
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception("Failed to update referral earning status for ID: {$earning['id']}");
-            }
-            
-            error_log("Updated referral earning status to cancelled - ID: {$earning['id']}");
-            
-            // Deduct amount from referrer's balance
-            $userModel = new User();
-            $referrer = $userModel->find($earning['user_id']);
-            
-            if (!$referrer) {
-                throw new \Exception("Reverse referral earnings: Referrer not found - ID: {$earning['user_id']}");
-            }
-            
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = max(0, $currentEarnings - $earning['amount']);
-            
-            $result = $userModel->update($earning['user_id'], [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            if (!$result) {
-                throw new \Exception("Failed to update referrer balance for user: {$earning['user_id']}");
-            }
-            
-            error_log("Updated referrer ID: {$earning['user_id']} earnings from $currentEarnings to $newEarnings (deduction)");
-            
-            // Record transaction
-            $transactionModel = new Transaction();
-            $transactionData = [
-                'user_id' => $earning['user_id'],
-                'amount' => -$earning['amount'], // Negative amount for deduction
-                'type' => 'referral_cancelled',
-                'reference_id' => $earning['id'],
-                'reference_type' => 'referral_earning',
-                'description' => 'Referral commission reversed due to order cancellation',
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                error_log("Failed to create transaction record for reversed referral: {$earning['id']}");
-            } else {
-                error_log("Created transaction record for reversal - ID: $transactionId");
-            }
-            
-            // Create notification
-            $notificationModel = new Notification();
-            $notificationData = [
-                'user_id' => $earning['user_id'],
-                'title' => 'Referral Commission Cancelled',
-                'message' => '₹' . number_format($earning['amount'], 2) . ' commission has been reversed due to order cancellation.',
-                'type' => 'referral_cancelled',
-                'reference_id' => $earning['id'],
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $notificationId = $notificationModel->create($notificationData);
-            
-            if (!$notificationId) {
-                error_log("Failed to create notification for reversed referral: {$earning['id']}");
-            } else {
-                error_log("Created notification for reversal - ID: $notificationId");
-            }
-            
-            error_log("Referral earnings reversed successfully - Order ID: $orderId, Referrer ID: {$earning['user_id']}, Amount: {$earning['amount']}");
-            
-        } catch (\Exception $e) {
-            // Log error
-            error_log('Error reversing referral earnings: ' . $e->getMessage());
-            throw $e; // Re-throw to be caught by the calling method's transaction
-        }
-    }
-    
-    /**
-     * Process all pending referrals for paid orders
-     * This can be used to fix missing referral earnings
-     *
-     * @return array Statistics about processed referrals
-     */
-    public function processAllPendingReferrals()
-    {
-        $stats = [
-            'processed' => 0,
-            'skipped' => 0,
-            'failed' => 0,
-            'total' => 0
-        ];
-        
-        // Get all paid orders
-        $sql = "SELECT id FROM {$this->table} WHERE status = 'paid'";
-        $paidOrders = $this->db->query($sql)->all();
-        
-        $stats['total'] = count($paidOrders);
-        
-        $referralEarningModel = new ReferralEarning();
-        
-        foreach ($paidOrders as $order) {
-            $orderId = $order['id'];
-            
-            // Check if referral earning already exists
-            $existingEarning = $referralEarningModel->findByOrderId($orderId);
-            
-            if ($existingEarning) {
-                $stats['skipped']++;
-                error_log("Skipping order $orderId - Referral earning already exists");
-                continue;
-            }
-            
-            try {
-                // Process referral earnings for this order
-                $this->processReferralEarnings($orderId);
-                $stats['processed']++;
-                error_log("Successfully processed referral for order $orderId");
-            } catch (\Exception $e) {
-                $stats['failed']++;
-                error_log("Failed to process referral for order $orderId: " . $e->getMessage());
-            }
-        }
-        
-        return $stats;
-    }
-    
-    /**
-     * Fix referral earnings for a specific user's orders
-     *
-     * @param int $userId The user ID whose orders need to be processed
-     * @return array Statistics about processed referrals
-     */
-    public function fixReferralsForUser($userId)
-    {
-        $stats = [
-            'processed' => 0,
-            'skipped' => 0,
-            'failed' => 0,
-            'total' => 0
-        ];
-        
-        // Get all paid orders for this user
-        $sql = "SELECT id FROM {$this->table} WHERE user_id = ? AND status = 'paid'";
-        $paidOrders = $this->db->query($sql)->bind([$userId])->all();
-        
-        $stats['total'] = count($paidOrders);
-        
-        $referralEarningModel = new ReferralEarning();
-        
-        foreach ($paidOrders as $order) {
-            $orderId = $order['id'];
-            
-            // Check if referral earning already exists
-            $existingEarning = $referralEarningModel->findByOrderId($orderId);
-            
-            if ($existingEarning) {
-                $stats['skipped']++;
-                error_log("Skipping order $orderId - Referral earning already exists");
-                continue;
-            }
-            
-            try {
-                // Process referral earnings for this order
-                $this->processReferralEarnings($orderId);
-                $stats['processed']++;
-                error_log("Successfully processed referral for order $orderId");
-            } catch (\Exception $e) {
-                $stats['failed']++;
-                error_log("Failed to process referral for order $orderId: " . $e->getMessage());
-            }
-        }
+        // Total sales
+        $stats['total_sales'] = $this->getTotalSales();
         
         return $stats;
     }

@@ -2,7 +2,7 @@
         <div class="flex flex-wrap justify-between gap-10">
             <div class="max-w-md">
                 <a href='<?= URLROOT ?>'>
-                    <img src="<?= URLROOT ?>/images/logo/logo.jpg" alt="Nutri Nexas" class='w-36 rounded-full' />
+                    <img src="<?= \App\Core\View::asset('images/logo/logo.svg') ?>" alt="Nutri Nexas" class='w-16 h-16 sm:w-20 sm:h-20 rounded-full' />
                 </a>
                 <div class="mt-6">
                     <p class="text-gray-300 leading-relaxed text-sm">Nutri Nexas is your trusted source for premium quality supplements. We offer a wide range of products to support your health and fitness journey, from protein powders to vitamins and everything in between.</p>
@@ -71,7 +71,7 @@
 
                 <form class="mt-6" action="<?= URLROOT ?>/newsletter/subscribe" method="post">
                     <div class="relative max-w-xs">
-                        <input type="email" name="email" placeholder="Enter your email" class="w-full px-4 py-2 text-gray-700 bg-white border rounded-md focus:border-accent focus:outline-none focus:ring focus:ring-opacity-40 focus:ring-accent" required />
+                        <input type="email" name="email" placeholder="Enter your email" class="w-full px-4 py-2 text-gray-700 bg-white border rounded-none focus:border-accent focus:outline-none focus:ring focus:ring-opacity-40 focus:ring-accent" required />
                         <button type="submit" class="absolute inset-y-0 right-0 px-3 text-sm font-medium text-white bg-accent rounded-r-md hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
                             Subscribe
                         </button>

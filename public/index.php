@@ -15,7 +15,7 @@ define('ROOT', dirname(__DIR__));
 
 define('APPROOT', ROOT . DS . 'App');
 // Update the URLROOT constant to match your base URL
-define('URLROOT', 'http://localhost:8000');
+define('URLROOT', 'http://192.168.1.74:8000');
 
 // Load configuration
 require_once APPROOT . DS . 'Config' . DS . 'config.php';

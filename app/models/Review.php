@@ -10,14 +10,14 @@ class Review extends Model
     protected $fillable = ['user_id', 'product_id', 'rating', 'review'];
 
     /**
-     * Get reviews by product ID
+     * Get reviews by product ID with user information
      *
      * @param int $productId
      * @return array
      */
     public function getByProductId($productId)
     {
-        $sql = "SELECT r.*, u.first_name, u.last_name 
+        $sql = "SELECT r.*, u.first_name, u.last_name, u.email 
                 FROM {$this->table} r
                 JOIN users u ON r.user_id = u.id
                 WHERE r.product_id = ?
@@ -53,6 +53,33 @@ class Review extends Model
     }
 
     /**
+     * Get rating distribution for a product
+     *
+     * @param int $productId
+     * @return array
+     */
+    public function getRatingDistribution($productId)
+    {
+        $sql = "SELECT rating, COUNT(*) as count 
+                FROM {$this->table} 
+                WHERE product_id = ? 
+                GROUP BY rating 
+                ORDER BY rating DESC";
+        
+        $results = $this->db->query($sql)->bind([$productId])->all();
+        
+        // Initialize all ratings to 0
+        $distribution = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
+        
+        // Fill in actual counts
+        foreach ($results as $result) {
+            $distribution[$result['rating']] = (int)$result['count'];
+        }
+        
+        return $distribution;
+    }
+
+    /**
      * Check if user has reviewed a product
      *
      * @param int $userId
@@ -67,17 +94,30 @@ class Review extends Model
     }
 
     /**
+     * Get user's review for a product
+     *
+     * @param int $userId
+     * @param int $productId
+     * @return array|null
+     */
+    public function getUserReview($userId, $productId)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE user_id = ? AND product_id = ?";
+        return $this->db->query($sql)->bind([$userId, $productId])->single();
+    }
+
+    /**
      * Create a new review
      *
      * @param array $data
      * @return int|false Returns the last inserted ID on success, false on failure
      * @throws \Exception If validation fails
      */
-    public function create($data): int|false
+    public function create($data)
     {
         // Validate required fields
-        if (empty($data['review'])) {
-            throw new \Exception("Review is required");
+        if (empty($data['review']) || trim($data['review']) === '') {
+            throw new \Exception("Review text is required");
         }
 
         if (empty($data['rating']) || !is_numeric($data['rating']) || $data['rating'] < 1 || $data['rating'] > 5) {
@@ -88,24 +128,96 @@ class Review extends Model
             throw new \Exception("User ID and Product ID are required");
         }
 
+        // Check if user has already reviewed this product
+        if ($this->hasUserReviewed($data['user_id'], $data['product_id'])) {
+            throw new \Exception("You have already reviewed this product");
+        }
+
+        // Sanitize review text
+        $data['review'] = trim($data['review']);
+        $data['rating'] = (int)$data['rating'];
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = $data['created_at'];
+
         $sql = "INSERT INTO {$this->table} (user_id, product_id, rating, review, created_at, updated_at) 
-                VALUES (:user_id, :product_id, :rating, :review, :created_at, :updated_at)";
+                VALUES (?, ?, ?, ?, ?, ?)";
         
-        $query = $this->db->query($sql)
-            ->bind([
-                ':user_id' => $data['user_id'],
-                ':product_id' => $data['product_id'],
-                ':rating' => $data['rating'],
-                ':review' => $data['review'],
-                ':created_at' => $data['created_at'],
-                ':updated_at' => $data['updated_at']
-            ]);
+        $result = $this->db->query($sql)->bind([
+            $data['user_id'],
+            $data['product_id'],
+            $data['rating'],
+            $data['review'],
+            $data['created_at'],
+            $data['updated_at']
+        ])->execute();
         
-        if ($query->execute()) {
+        if ($result) {
             return $this->db->lastInsertId();
         }
         return false;
+    }
+
+    /**
+     * Update an existing review
+     *
+     * @param int $id
+     * @param array $data
+     * @return bool
+     * @throws \Exception If validation fails
+     */
+    public function update($id, $data)
+    {
+        // Validate required fields
+        if (empty($data['review']) || trim($data['review']) === '') {
+            throw new \Exception("Review text is required");
+        }
+
+        if (empty($data['rating']) || !is_numeric($data['rating']) || $data['rating'] < 1 || $data['rating'] > 5) {
+            throw new \Exception("Rating must be between 1 and 5");
+        }
+
+        // Sanitize review text
+        $data['review'] = trim($data['review']);
+        $data['rating'] = (int)$data['rating'];
+        $data['updated_at'] = date('Y-m-d H:i:s');
+
+        $sql = "UPDATE {$this->table} SET rating = ?, review = ?, updated_at = ? WHERE id = ?";
+        
+        return $this->db->query($sql)->bind([
+            $data['rating'],
+            $data['review'],
+            $data['updated_at'],
+            $id
+        ])->execute();
+    }
+
+    /**
+     * Delete a review
+     *
+     * @param int $id
+     * @return bool
+     */
+    public function delete($id)
+    {
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        return $this->db->query($sql)->bind([$id])->execute();
+    }
+
+    /**
+     * Get recent reviews (for admin dashboard)
+     *
+     * @param int $limit
+     * @return array
+     */
+    public function getRecentReviews($limit = 10)
+    {
+        $sql = "SELECT r.*, u.first_name, u.last_name, p.product_name 
+                FROM {$this->table} r
+                JOIN users u ON r.user_id = u.id
+                JOIN products p ON r.product_id = p.id
+                ORDER BY r.created_at DESC
+                LIMIT ?";
+        
+        return $this->db->query($sql)->bind([$limit])->all();
     }
 }

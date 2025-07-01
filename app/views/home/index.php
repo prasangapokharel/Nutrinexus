@@ -1,647 +1,972 @@
 <?php ob_start(); ?>
-<!-- Hero Section -->
-<div class="relative bg-primary-lightest overflow-hidden">
-    <div class="absolute inset-0">
-        <img src="https://sunpump.digital/cdn?id=421oSQuv4Bjq5lQplKElxn40g7fB84rH" 
-             alt="Background" 
-             class="w-full h-full object-cover opacity-10">
-    </div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
-        <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            <div class="text-center md:text-left space-y-6 md:space-y-8">
-                <span class="inline-block px-4 py-1 bg-primary/10 text-primary text-sm font-medium">
-                    Premium Quality
-                </span>
-                <h1 class="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight">
-                    Transform Your <span class="text-primary">Fitness Journey</span>
-                </h1>
-                <p class="text-base md:text-lg text-gray-600 max-w-2xl">
-                    Discover our premium range of supplements designed to help you achieve your fitness goals faster and more effectively.
-                </p>
-                <div class="flex flex-wrap gap-4 justify-center md:justify-start">
-                    <a href="<?= \App\Core\View::url('products') ?>" 
-                       class="inline-flex items-center px-6 md:px-8 py-3 border border-transparent text-base font-medium bg-primary text-white hover:bg-primary-dark transition-colors">
-                        Shop Now
-                        <i class="fas fa-arrow-right ml-2"></i>
-                    </a>
-                    <a href="#categories" 
-                       class="inline-flex items-center px-6 md:px-8 py-3 border border-gray-200 text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Browse Categories
-                    </a>
-                </div>
-            </div>
-            <div class="relative hidden md:block">
-                <div class="absolute -top-20 -right-20 w-54 h-54 bg-golden-light opacity-20"></div>
-                <img src="https://sunpump.digital/cdn?id=oAdcJt5LZUjz2RfZcvZ7rEdWsEOmbzIC"
-                     alt="Featured Product" 
-                     class="relative z-10 mx-auto max-w-full h-auto md:max-w-md lg:max-w-lg">
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Featured Products -->
-<section class="py-12 md:py-20 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12">
-            <div>
-                <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">Best Sellers</h2>
-                <p class="text-gray-600">Our most popular products based on sales</p>
-            </div>
-            <a href="<?= \App\Core\View::url('products') ?>" class="mt-4 md:mt-0 inline-flex items-center text-primary font-medium">
-                View All Products
-                <i class="fas fa-arrow-right ml-2"></i>
-            </a>
-        </div>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            <?php foreach ($popular_products as $product): ?>
-            <div class="bg-white border border-gray-100 group">
-                <div class="relative">
-                    <a href="<?= \App\Core\View::url('products/view/' . $product['slug']) ?>" class="block outline-none">
-                        <div class="relative aspect-square overflow-hidden">
-                            <img src="<?php
-                                $image = $product['image'] ?? '';
-                                echo htmlspecialchars(
-                                    filter_var($image, FILTER_VALIDATE_URL) 
-                                        ? $image 
-                                        : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'))
-                                );
-                            ?>" 
-                                 alt="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>" 
-                                 class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105">
-                        </div>
-                    </a>
-                    
-                    <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] < 10 && $product['stock_quantity'] > 0): ?>
-                        <span class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 text-xs font-medium">
-                            Low Stock
-                        </span>
-                    <?php elseif (isset($product['stock_quantity']) && $product['stock_quantity'] <= 0): ?>
-                        <span class="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 text-xs font-medium">
-                            Out of Stock
-                        </span>
-                    <?php elseif (isset($product['is_new']) && $product['is_new']): ?>
-                        <span class="absolute top-3 right-3 bg-accent text-white px-3 py-1 text-xs font-medium">
-                            NEW
-                        </span>
-                    <?php endif; ?>
-                    
-                    <button type="button" 
-                            class="absolute bottom-3 right-3 bg-white p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity quick-view-btn"
-                            data-product-id="<?= $product['id'] ?? 0 ?>"
-                            data-product-name="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>"
-                            data-product-price="<?= number_format($product['price'] ?? 0, 2) ?>"
-                            data-product-image="<?php
-                                $image = $product['image'] ?? '';
-                                echo htmlspecialchars(
-                                    filter_var($image, FILTER_VALIDATE_URL) 
-                                        ? $image 
-                                        : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'))
-                                );
-                            ?>"
-                            data-product-description="<?= htmlspecialchars($product['description'] ?? 'No description available.') ?>"
-                            data-product-category="<?= htmlspecialchars($product['category'] ?? 'Supplement') ?>"
-                            data-product-stock="<?= $product['stock_quantity'] ?? 0 ?>">
-                        <i class="fas fa-eye"></i>
-                        <span class="sr-only">Quick view</span>
-                    </button>
-                </div>
-                
-                <div class="p-4">
-                    <div class="text-sm text-accent font-medium mb-1">
-                        <?= htmlspecialchars($product['category'] ?? 'Supplement') ?>
-                    </div>
-                    <a href="<?= \App\Core\View::url('products/view/' . $product['slug']) ?>" class="block outline-none">
-                        <h3 class="text-base font-semibold text-primary mb-2 line-clamp-2 h-12">
-                            <?= htmlspecialchars($product['product_name'] ?? 'Product Name') ?>
-                        </h3>
-                    </a>
-                    
-                    <div class="flex items-center mb-3">
-                        <div class="flex text-accent">
-                            <?php 
-                            $avg_rating = isset($product['review_stats']['avg_rating']) ? $product['review_stats']['avg_rating'] : 5;
-                            for ($i = 0; $i < 5; $i++): 
-                            ?>
-                                <i class="fas fa-star <?= $i < $avg_rating ? 'text-accent' : 'text-gray-300' ?> text-xs"></i>
-                            <?php endfor; ?>
-                        </div>
-                        <span class="text-xs text-gray-500 ml-2">
-                            (<?= isset($product['review_stats']['review_count']) ? $product['review_stats']['review_count'] : 0 ?>)
-                        </span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <span class="text-xl font-bold text-primary">
-                                ₹<?= number_format($product['price'] ?? 0, 2) ?>
-                            </span>
-                            <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
-                                <span class="text-xs text-green-600 block mt-1">In Stock</span>
-                            <?php else: ?>
-                                <span class="text-xs text-red-600 block mt-1">Out of Stock</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
-                            <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form">
-                                <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="w-full py-2 bg-primary text-white font-medium hover:bg-primary-dark transition-colors">
-                                    Add to Cart
-                                </button>
-                            </form>
-                        <?php else: ?>
-                            <button disabled class="w-full py-2 bg-gray-300 text-gray-500 font-medium cursor-not-allowed">
-                                Out of Stock
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
+<?php
+$title = 'NutriNexas - Premium Supplements & Nutrition';
+$description = 'Discover premium quality supplements and nutrition products at NutriNexas. Transform your fitness journey with our wide range of proteins, vitamins, and wellness products.';
 
-<!-- Categories Section -->
-<section id="categories" class="py-12 md:py-20 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-8 md:mb-16">
-            <h2 class="text-2xl md:text-3xl font-bold text-primary mb-4">Shop by Category</h2>
-            <p class="text-gray-600">Explore our wide range of premium supplements categorized for your convenience</p>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-            <?php
-            $categoryIcons = [
-                'Protein' => 'dumbbell',
-                'Creatine' => 'bolt',
-                'Pre-Workout' => 'fire',
-                'Vitamins' => 'pills'
-            ];
-            
-            $categoryColors = [
-                'Protein' => 'bg-blue-50 text-primary',
-                'Creatine' => 'bg-purple-50 text-primary',
-                'Pre-Workout' => 'bg-red-50 text-primary',
-                'Vitamins' => 'bg-green-50 text-primary'
-            ];
-            
-            foreach ($categories as $category):
-                $icon = $categoryIcons[$category] ?? 'tag';
-                $color = $categoryColors[$category] ?? 'bg-gray-50 text-primary';
-            ?>
-            <a href="<?= \App\Core\View::url('products/category/' . urlencode($category)) ?>" class="group">
-                <div class="relative overflow-hidden p-4 md:p-8 text-center h-32 md:h-48 flex flex-col items-center justify-center <?= $color ?> transition-transform duration-300 group-hover:scale-[1.02]">
-                    <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/50 to-transparent"></div>
-                    <div class="relative">
-                        <i class="fas fa-<?= $icon ?> text-2xl md:text-4xl mb-2 md:mb-4"></i>
-                        <h3 class="text-sm md:text-base font-semibold text-gray-900"><?= $category ?></h3>
-                    </div>
-                </div>
-            </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
+// Get main image URL function
+function getProductImageUrl($product) {
+    $mainImageUrl = '';
+    if (!empty($product['images'])) {
+        $primaryImage = null;
+        foreach ($product['images'] as $img) {
+            if ($img['is_primary']) {
+                $primaryImage = $img;
+                break;
+            }
+        }
+        $imageData = $primaryImage ?: $product['images'][0];
+        $mainImageUrl = filter_var($imageData['image_url'], FILTER_VALIDATE_URL) 
+            ? $imageData['image_url'] 
+            : \App\Core\View::asset('uploads/images/' . $imageData['image_url']);
+    } else {
+        $image = $product['image'] ?? '';
+        $mainImageUrl = filter_var($image, FILTER_VALIDATE_URL) 
+            ? $image 
+            : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'));
+    }
+    return $mainImageUrl;
+}
 
-<!-- All Products -->
-<section id="all-products" class="py-12 md:py-20 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12">
-            <div>
-                <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">Latest Products</h2>
-                <p class="text-gray-600">Browse our newest additions to our collection</p>
-            </div>
-            <a href="<?= \App\Core\View::url('products') ?>" class="mt-4 md:mt-0 inline-flex items-center text-primary font-medium">
-                View All Products
-                <i class="fas fa-arrow-right ml-2"></i>
-            </a>
-        </div>
+// Get discount percentage
+function getDiscountPercent($originalPrice, $currentPrice) {
+    if ($originalPrice <= 0 || $currentPrice <= 0) return 0;
+    return round((($originalPrice - $currentPrice) / $originalPrice) * 100);
+}
 
-        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            <?php foreach ($products as $product): ?>
-            <div class="bg-white border border-gray-100 group">
-                <div class="relative">
-                    <a href="<?= \App\Core\View::url('products/view/' . $product['slug']) ?>" class="block outline-none">
-                        <div class="relative aspect-square overflow-hidden">
-                            <img src="<?php
-                                $image = $product['image'] ?? '';
-                                echo htmlspecialchars(
-                                    filter_var($image, FILTER_VALIDATE_URL) 
-                                        ? $image 
-                                        : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'))
-                                );
-                            ?>" 
-                                 alt="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>" 
-                                 class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105">
-                        </div>
-                    </a>
-                    
-                    <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] < 10 && $product['stock_quantity'] > 0): ?>
-                        <span class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 text-xs font-medium">
-                            Low Stock
-                        </span>
-                    <?php elseif (isset($product['stock_quantity']) && $product['stock_quantity'] <= 0): ?>
-                        <span class="absolute top-3 right-3 bg-gray-500 text-white px-3 py-1 text-xs font-medium">
-                            Out of Stock
-                        </span>
-                    <?php elseif (isset($product['is_new']) && $product['is_new']): ?>
-                        <span class="absolute top-3 right-3 bg-accent text-white px-3 py-1 text-xs font-medium">
-                            NEW
-                        </span>
-                    <?php endif; ?>
-                    
-                    <button type="button" 
-                            class="absolute bottom-3 right-3 bg-white p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity quick-view-btn"
-                            data-product-id="<?= $product['id'] ?? 0 ?>"
-                            data-product-name="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>"
-                            data-product-price="<?= number_format($product['price'] ?? 0, 2) ?>"
-                            data-product-image="<?php
-                                $image = $product['image'] ?? '';
-                                echo htmlspecialchars(
-                                    filter_var($image, FILTER_VALIDATE_URL) 
-                                        ? $image 
-                                        : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'))
-                                );
-                            ?>"
-                            data-product-description="<?= htmlspecialchars($product['description'] ?? 'No description available.') ?>"
-                            data-product-category="<?= htmlspecialchars($product['category'] ?? 'Supplement') ?>"
-                            data-product-stock="<?= $product['stock_quantity'] ?? 0 ?>">
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-</svg>
+// Get category image
+function getCategoryImage($category) {
+    $categoryImages = [
+        'Protein' => 'https://m.media-amazon.com/images/I/716ruiQM3mL._AC_SL1500_.jpg',
+        'Vitamins' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
+        'Pre-Workout' => 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
+        'Mass Gainer' => 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=100&h=100&fit=crop',
+        'Creatine' => 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
+        'BCAA' => 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=100&h=100&fit=crop',
+        'Fat Burner' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
+        'Multivitamin' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop'
+    ];
+    
+    return $categoryImages[$category] ?? 'https://m.media-amazon.com/images/I/716ruiQM3mL._AC_SL1500_.jpg';
+}
 
-                    </button>
-                </div>
-                
-                <div class="p-4">
-                    <div class="text-sm text-accent font-medium mb-1">
-                        <?= htmlspecialchars($product['category'] ?? 'Supplement') ?>
-                    </div>
-                    <a href="<?= \App\Core\View::url('products/view/' . $product['slug']) ?>" class="block outline-none">
-                        <h3 class="text-base font-semibold text-primary mb-2 line-clamp-2 h-12">
-                            <?= htmlspecialchars($product['product_name'] ?? 'Product Name') ?>
-                        </h3>
-                    </a>
-                    
-                    <p class="text-xs text-gray-600 mb-3 line-clamp-2 h-8">
-                        <?= htmlspecialchars($product['description'] ?? 'Product description') ?>
-                    </p>
-                    
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <span class="text-xl font-bold text-primary">
-                                ₹<?= number_format($product['price'] ?? 0, 2) ?>
-                            </span>
-                            <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
-                                <span class="text-xs text-green-600 block mt-1">In Stock</span>
-                            <?php else: ?>
-                                <span class="text-xs text-red-600 block mt-1">Out of Stock</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
-                            <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form">
-                                <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="w-full py-2 bg-primary text-white font-medium hover:bg-primary-dark transition-colors">
-                                    Add to Cart
-                                </button>
-                            </form>
-                        <?php else: ?>
-                            <button disabled class="w-full py-2 bg-gray-300 text-gray-500 font-medium cursor-not-allowed">
-                                Out of Stock
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
+// Promotional banners
+$promotionalBanners = [
+        [
+        'type' => 'image',
+        'src' => 'https://img.lazcdn.com/us/domino/5f1ef282-3dc5-4729-8493-6340fcd7d612_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
+        'title' => 'PROTEIN POWER',
+        'subtitle' => 'BUILD MUSCLE',
+        'description' => 'High-quality protein supplements for serious athletes',
+        'button_text' => 'Explore',
+        'button_link' => \App\Core\View::url('products/category/protein')
+    ],
+        [
+        'type' => 'image',
+        'src' => 'https://img.lazcdn.com/us/domino/c6aeb09c-a6ac-47b7-99cb-0782cbbcb43a_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
+        'title' => 'PROTEIN POWER',
+        'subtitle' => 'BUILD MUSCLE',
+        'description' => 'High-quality protein supplements for serious athletes',
+        'button_text' => 'Explore',
+        'button_link' => \App\Core\View::url('products/category/protein')
+    ],
+    [
+        'type' => 'image',
+        'src' => 'https://img.lazcdn.com/us/domino/67787c26-8a79-4c08-a544-86317f92d12e_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
+        'title' => 'MEGA SALE',
+        'subtitle' => 'UP TO 50% OFF',
+        'description' => 'Premium supplements at unbeatable prices',
+        'button_text' => 'Shop Now',
+        'button_link' => \App\Core\View::url('products')
+    ],
+    [
+        'type' => 'image',
+        'src' => 'https://img.drz.lazcdn.com/g/kf/S59eca1b9255c494987bfe016f7e5ecf0v.jpg_2200x2200q80.jpg_.webp',
+        'title' => 'PROTEIN POWER',
+        'subtitle' => 'BUILD MUSCLE',
+        'description' => 'High-quality protein supplements for serious athletes',
+        'button_text' => 'Explore',
+        'button_link' => \App\Core\View::url('products/category/protein')
+    ],
+    [
+        'type' => 'image',
+        'src' => 'https://img.lazcdn.com/us/domino/e9c9b8b2-81fe-4542-99b1-031daedd4c2f_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
+        'title' => 'FLASH SALE',
+        'subtitle' => 'LIMITED TIME OFFER',
+        'description' => 'Free delivery on orders above Rs. 999',
+        'button_text' => 'Grab Now',
+        'button_link' => \App\Core\View::url('products')
+    ]
+];
+?>
 
-<!-- Quick View Modal -->
-<div id="quickViewModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-            <div class="absolute inset-0 bg-gray-500 opacity-75" id="quickViewBackdrop"></div>
-        </div>
-        
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
-        <div class="inline-block align-bottom bg-white text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="absolute top-0 right-0 pt-4 pr-4">
-                <button type="button" class="text-gray-400 hover:text-gray-500" id="closeQuickViewBtn">
-                    <span class="sr-only">Close</span>
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2">
-                <div class="p-6 flex items-center justify-center bg-gray-50">
-                    <img src="/placeholder.svg" alt="Product" id="quickViewImage" class="max-h-96 object-contain">
-                </div>
-                
-                <div class="p-6">
-                    <div class="text-sm text-accent font-medium mb-1" id="quickViewCategory"></div>
-                    <h3 class="text-xl font-bold text-primary mb-2" id="quickViewName"></h3>
-                    
-                    <div class="mb-4">
-                        <span class="text-2xl font-bold text-primary" id="quickViewPrice"></span>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <p class="text-gray-600" id="quickViewDescription"></p>
-                    </div>
-                    
-                    <div class="mb-6" id="quickViewStockContainer">
-                        <span class="text-green-600 font-medium" id="quickViewStock"></span>
-                    </div>
-                    
-                    <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" id="quickViewForm" class="space-y-4">
-                        <input type="hidden" name="product_id" id="quickViewProductId" value="">
+<div class="min-h-screen bg-gray-50">
+    <!-- Promotional Banner Carousel -->
+    <div class="relative overflow-hidden mx-4 mt-4">
+        <div class="banner-carousel flex transition-transform duration-500 ease-in-out" id="bannerCarousel">
+            <?php foreach ($promotionalBanners as $index => $banner): ?>
+                <div class="w-full flex-shrink-0 relative">
+                    <div class="relative h-48 md:h-64 rounded-xl overflow-hidden">
+                        <!-- Background Image -->
+                        <img src="<?= htmlspecialchars($banner['src']) ?>" 
+                             alt="Promotional Banner" 
+                             class="absolute inset-0 w-full h-full object-fit ">
                         
-                        <div>
-                            <label for="quickViewQuantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                            <div class="flex w-full max-w-[180px] h-10 border border-gray-300">
-                                <button type="button" class="w-10 flex items-center justify-center bg-gray-100 text-gray-600" id="quickViewDecrement">
-                                    <i class="fas fa-minus text-xs"></i>
-                                </button>
-                                <input type="number" name="quantity" id="quickViewQuantity" value="1" min="1" 
-                                       class="flex-1 h-full text-center border-0 focus:ring-0" readonly>
-                                <button type="button" class="w-10 flex items-center justify-center bg-gray-100 text-gray-600" id="quickViewIncrement">
-                                    <i class="fas fa-plus text-xs"></i>
-                                </button>
+                        <!-- Overlay -->
+                        <!-- <div class="absolute inset-0 bg-black bg-opacity-40"></div> -->
+                        
+                        <!-- Content -->
+                        <!-- <div class="relative z-10 h-full flex items-center px-4 md:px-8">
+                            <div class="text-white max-w-md">
+                                <h2 class="text-xl md:text-3xl font-bold mb-2"><?= htmlspecialchars($banner['title']) ?></h2>
+                                <p class="text-sm md:text-lg mb-1 opacity-90"><?= htmlspecialchars($banner['subtitle']) ?></p>
+                                <p class="text-xs md:text-sm mb-4 opacity-80"><?= htmlspecialchars($banner['description']) ?></p>
+                                <a href="<?= htmlspecialchars($banner['button_link']) ?>" 
+                                   class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                                    <?= htmlspecialchars($banner['button_text']) ?>
+                                </a>
                             </div>
-                        </div>
-                        
-                        <div class="flex gap-3">
-                            <button type="submit" class="flex-1 py-2 bg-primary text-white font-medium hover:bg-primary-dark transition-colors" id="quickViewAddToCart">
-                                Add to Cart
-                            </button>
-                            
-                            <a href="" id="quickViewDetailsLink" class="py-2 px-4 border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-                                View Details
-                            </a>
-                        </div>
-                    </form>
+                        </div> -->
+                    </div>
                 </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <!-- Navigation Arrows -->
+        <?php if (count($promotionalBanners) > 1): ?>
+            <!-- <button class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all z-20" 
+                    onclick="CarouselManager.previousSlide()" id="prevBtn">
+                <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <button class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all z-20" 
+                    onclick="CarouselManager.nextSlide()" id="nextBtn">
+                <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button> -->
+        <?php endif; ?>
+        
+        <!-- Carousel Dots -->
+        <?php if (count($promotionalBanners) > 1): ?>
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                <?php foreach ($promotionalBanners as $index => $banner): ?>
+                    <button class="w-2 h-2 rounded-full transition-colors <?= $index === 0 ? 'bg-white' : 'bg-white/50' ?>" 
+                            onclick="CarouselManager.goToSlide(<?= $index ?>)" data-slide="<?= $index ?>"></button>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Flash Sale Section -->
+    <div class="bg-white mx-4 rounded-xl shadow-sm mb-4 mt-6">
+        <div class="flex items-center justify-between p-4 border-b border-gray-100">
+            <div class="flex items-center">
+                <h3 class="text-lg font-bold text-gray-900 mr-3">Flash Sale</h3>
+                <div class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
+                    Limited Time
+                </div>
+            </div>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">SHOP MORE ></a>
+        </div>
+        
+        <div class="p-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <?php 
+                $flashProducts = array_slice($popular_products, 0, 6);
+                foreach ($flashProducts as $index => $product): 
+                    // Calculate discount with proper original price
+                    $currentPrice = $product['price'] ?? 0;
+                    $originalPrice = $currentPrice * 1.4; // 40% markup for original price
+                    $discountPercent = getDiscountPercent($originalPrice, $currentPrice);
+                ?>
+                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group">
+                        <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
+                            <div class="relative aspect-square bg-gray-50 p-2">
+                                <img src="<?= htmlspecialchars(getProductImageUrl($product)) ?>" 
+                                     alt="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>" 
+                                     class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                                     loading="lazy">
+                                
+                                <!-- Discount Badge -->
+                                <?php if ($discountPercent > 0): ?>
+                                    <div class="absolute top-2 left-2">
+                                        <span class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                            -<?= $discountPercent ?>%
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- Stock Badge -->
+                                <?php if (isset($product['stock_quantity'])): ?>
+                                    <div class="absolute top-2 right-2">
+                                        <?php if ($product['stock_quantity'] < 10 && $product['stock_quantity'] > 0): ?>
+                                            <span class="bg-yellow-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">
+                                                LOW
+                                            </span>
+                                        <?php elseif ($product['stock_quantity'] <= 0): ?>
+                                            <span class="bg-red-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">
+                                                OUT
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </a>
+                        
+                        <div class="p-2">
+                            <!-- Product Name -->
+                            <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
+                                <h4 class="text-xs font-medium text-gray-900 mb-1 line-clamp-2">
+                                    <?= htmlspecialchars($product['product_name'] ?? 'Product Name') ?>
+                                </h4>
+                            </a>
+                            
+                            <!-- Price -->
+                            <div class="mb-2">
+                                <div class="text-sm font-bold text-blue-900">
+                                    Rs. <?= number_format($currentPrice, 0) ?>
+                                </div>
+                                <?php if ($discountPercent > 0): ?>
+                                    <div class="text-xs text-gray-500 line-through">
+                                        Rs. <?= number_format($originalPrice, 0) ?>
+                                    </div>
+                                    <div class="text-xs text-green-600 font-medium">
+                                        Save Rs. <?= number_format($originalPrice - $currentPrice, 0) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Add to Cart Button -->
+                            <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
+                                <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form">
+                                    <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="w-full py-1 bg-blue-900 text-white text-xs font-medium rounded hover:bg-blue-800 transition-colors add-to-cart-btn">
+                                        <span class="btn-text">Add to Cart</span>
+                                        <span class="btn-loading hidden">Adding...</span>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <button disabled class="w-full py-1 bg-gray-300 text-gray-500 text-xs font-medium rounded cursor-not-allowed">
+                                    Out of Stock
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="bg-white mx-4 rounded-xl shadow-sm mb-4">
+        <div class="flex items-center justify-between p-4 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">Categories</h3>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">Shop More ></a>
+        </div>
+        
+        <div class="p-4">
+            <div class="grid grid-cols-4 gap-4">
+                <?php foreach ($categories as $category): ?>
+                    <a href="<?= \App\Core\View::url('products/category/' . urlencode($category)) ?>" 
+                       class="text-center group">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-50 to-yellow-50 rounded-lg flex items-center justify-center mb-2 mx-auto group-hover:from-blue-100 group-hover:to-yellow-100 transition-all duration-200 overflow-hidden">
+                            <img src="<?= getCategoryImage($category) ?>" 
+                                 alt="<?= htmlspecialchars($category) ?>" 
+                                 class="w-12 h-12 object-cover rounded-md group-hover:scale-110 transition-transform duration-200">
+                        </div>
+                        <span class="text-xs text-gray-700 font-medium group-hover:text-blue-900 transition-colors"><?= htmlspecialchars($category) ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Products -->
+    <div class="bg-white mx-4 rounded-xl shadow-sm mb-4">
+        <div class="flex items-center justify-between p-4 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">Latest Products</h3>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">View All ></a>
+        </div>
+        
+        <div class="p-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <?php 
+                $latestProducts = array_slice($products, 0, 8);
+                foreach ($latestProducts as $product): 
+                    // Calculate discount
+                    $currentPrice = $product['price'] ?? 0;
+                    $originalPrice = $currentPrice * 1.3; // 30% markup for original price
+                    $discountPercent = getDiscountPercent($originalPrice, $currentPrice);
+                ?>
+                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group">
+                        <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
+                            <div class="relative aspect-square bg-gray-50 p-3">
+                                <img src="<?= htmlspecialchars(getProductImageUrl($product)) ?>" 
+                                     alt="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>" 
+                                     class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                                     loading="lazy">
+                                
+                                <!-- Discount Badge -->
+                                <?php if ($discountPercent > 0): ?>
+                                    <div class="absolute top-2 left-2">
+                                        <span class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                            -<?= $discountPercent ?>%
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- Stock Badge -->
+                                <?php if (isset($product['stock_quantity'])): ?>
+                                    <div class="absolute top-2 right-2">
+                                        <?php if ($product['stock_quantity'] < 10 && $product['stock_quantity'] > 0): ?>
+                                            <span class="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                                LOW
+                                            </span>
+                                        <?php elseif ($product['stock_quantity'] <= 0): ?>
+                                            <span class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                                OUT
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="bg-green-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                                IN STOCK
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- Wishlist Button -->
+                                <div class="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button class="bg-white p-1.5 rounded-full shadow-md hover:bg-red-50 wishlist-btn" 
+                                            data-product-id="<?= $product['id'] ?>"
+                                            onclick="event.preventDefault(); WishlistManager.toggle(<?= $product['id'] ?>)">
+                                        <svg class="w-3 h-3 text-gray-600 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <div class="p-3">
+                            <!-- Category -->
+                            <div class="text-xs text-yellow-600 font-medium mb-1">
+                                <?= htmlspecialchars($product['category'] ?? 'Supplement') ?>
+                            </div>
+                            
+                            <!-- Product Name -->
+                            <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-900 transition-colors">
+                                    <?= htmlspecialchars($product['product_name'] ?? 'Product Name') ?>
+                                </h4>
+                            </a>
+                            
+                            <!-- Price -->
+                            <div class="mb-2">
+                                <span class="text-lg font-bold text-blue-900">
+                                    ₹<?= number_format($currentPrice, 0) ?>
+                                </span>
+                                <?php if ($discountPercent > 0): ?>
+                                    <span class="text-xs text-gray-500 line-through ml-1">
+                                        ₹<?= number_format($originalPrice, 0) ?>
+                                    </span>
+                                    <div class="text-xs text-green-600 font-medium">
+                                        You save ₹<?= number_format($originalPrice - $currentPrice, 0) ?> (<?= $discountPercent ?>%)
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Stock Info -->
+                            <div class="flex items-center justify-between text-xs mb-3">
+                                <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
+                                    <span class="text-green-600 font-medium">In Stock (<?= $product['stock_quantity'] ?>)</span>
+                                <?php else: ?>
+                                    <span class="text-red-600 font-medium">Out of Stock</span>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Add to Cart Button -->
+                            <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
+                                <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form">
+                                    <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="w-full py-2 bg-blue-900 text-white text-xs font-medium rounded hover:bg-blue-800 transition-colors add-to-cart-btn">
+                                        <span class="btn-text">Add to Cart</span>
+                                        <span class="btn-loading hidden">
+                                            <svg class="inline w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Adding...
+                                        </span>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <button disabled class="w-full py-2 bg-gray-300 text-gray-500 text-xs font-medium rounded cursor-not-allowed">
+                                    Out of Stock
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Success Notification -->
-<div id="addToCartNotification" class="fixed top-4 right-4 z-50 bg-white shadow-md p-3 max-w-xs w-full transform translate-y-[-150%] opacity-0 transition-all duration-300">
+<div id="addToCartNotification" class="fixed top-4 right-4 z-50 bg-white shadow-lg border border-green-200 rounded-lg p-4 max-w-sm transform translate-x-full opacity-0 transition-all duration-300">
     <div class="flex items-center">
         <div class="flex-shrink-0">
-            <i class="fas fa-check-circle text-green-500"></i>
+            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
         </div>
         <div class="ml-3 flex-1">
-            <p class="text-sm font-medium text-gray-900">Added to cart</p>
+            <p class="text-sm font-medium text-gray-900">Product added to cart!</p>
+            <p class="text-xs text-gray-600 mt-1">Redirecting to cart page...</p>
         </div>
-        <button type="button" class="ml-auto text-gray-400 hover:text-gray-500" onclick="hideNotification()">
-            <i class="fas fa-times"></i>
+        <button type="button" class="ml-auto text-gray-400 hover:text-gray-600" onclick="NotificationManager.hide()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 z-50 bg-white shadow-lg border border-gray-200 rounded-lg p-4 max-w-sm transform translate-x-full opacity-0 transition-all duration-300">
+    <div class="flex items-center">
+        <div class="flex-shrink-0" id="toastIcon">
+            <!-- Icon will be inserted here -->
+        </div>
+        <div class="ml-3 flex-1">
+            <p class="text-sm font-medium text-gray-900" id="toastTitle"></p>
+            <p class="text-xs text-gray-600 mt-1" id="toastMessage"></p>
+        </div>
+        <button type="button" class="ml-auto text-gray-400 hover:text-gray-600" onclick="ToastManager.hide()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
         </button>
     </div>
 </div>
 
 <style>
-/* Remove focus outline and any borders on click */
-a:focus, button:focus {
-  outline: none !important;
+.toast-show {
+    transform: translateX(0);
+    opacity: 1;
 }
-a:active, a:focus, button:active, button:focus {
-  outline: none !important;
-  border: none !important;
-  -moz-outline-style: none !important;
-}
-/* Ensure consistent card heights */
+
 .line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.aspect-square {
+    aspect-ratio: 1 / 1;
+}
+
+.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.wishlist-active svg {
+    fill: #ef4444;
+    color: #ef4444;
+}
+
+.add-to-cart-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Carousel smooth transitions */
+.banner-carousel {
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover effects for navigation buttons */
+#prevBtn:hover, #nextBtn:hover {
+    transform: translateY(-50%) scale(1.1);
 }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Quick View Functionality
-    const quickViewBtns = document.querySelectorAll('.quick-view-btn');
-    const quickViewModal = document.getElementById('quickViewModal');
-    const quickViewBackdrop = document.getElementById('quickViewBackdrop');
-    const closeQuickViewBtn = document.getElementById('closeQuickViewBtn');
-    
-    // Quick View Elements
-    const quickViewImage = document.getElementById('quickViewImage');
-    const quickViewCategory = document.getElementById('quickViewCategory');
-    const quickViewName = document.getElementById('quickViewName');
-    const quickViewPrice = document.getElementById('quickViewPrice');
-    const quickViewDescription = document.getElementById('quickViewDescription');
-    const quickViewStock = document.getElementById('quickViewStock');
-    const quickViewStockContainer = document.getElementById('quickViewStockContainer');
-    const quickViewProductId = document.getElementById('quickViewProductId');
-    const quickViewQuantity = document.getElementById('quickViewQuantity');
-    const quickViewAddToCart = document.getElementById('quickViewAddToCart');
-    const quickViewDetailsLink = document.getElementById('quickViewDetailsLink');
-    const quickViewDecrement = document.getElementById('quickViewDecrement');
-    const quickViewIncrement = document.getElementById('quickViewIncrement');
-    const quickViewForm = document.getElementById('quickViewForm');
-    
-    // Open Quick View Modal
-    quickViewBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const productId = this.dataset.productId;
-            const productName = this.dataset.productName;
-            const productPrice = this.dataset.productPrice;
-            const productImage = this.dataset.productImage;
-            const productDescription = this.dataset.productDescription;
-            const productCategory = this.dataset.productCategory;
-            const productStock = parseInt(this.dataset.productStock);
-            
-            // Set Quick View content
-            quickViewImage.src = productImage;
-            quickViewImage.alt = productName;
-            quickViewCategory.textContent = productCategory;
-            quickViewName.textContent = productName;
-            quickViewPrice.textContent = `₹${productPrice}`;
-            quickViewDescription.textContent = productDescription;
-            quickViewProductId.value = productId;
-            quickViewDetailsLink.href = `<?= \App\Core\View::url('products/view/') ?>${productId}`;
-            
-            // Set stock status
-            if (productStock > 0) {
-                quickViewStock.textContent = 'In Stock';
-                quickViewStock.classList.remove('text-red-600');
-                quickViewStock.classList.add('text-green-600');
-                quickViewAddToCart.disabled = false;
-                quickViewAddToCart.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-                quickViewAddToCart.classList.add('bg-primary', 'text-white');
-                
-                // Set max quantity
-                quickViewQuantity.max = productStock;
-                quickViewQuantity.value = 1;
-            } else {
-                quickViewStock.textContent = 'Out of Stock';
-                quickViewStock.classList.remove('text-green-600');
-                quickViewStock.classList.add('text-red-600');
-                quickViewAddToCart.disabled = true;
-                quickViewAddToCart.classList.remove('bg-primary', 'text-white');
-                quickViewAddToCart.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-            }
-            
-            // Show modal
-            quickViewModal.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        });
-    });
-    
-    // Close Quick View Modal
-    function closeQuickView() {
-        quickViewModal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    }
-    
-    if (closeQuickViewBtn) {
-        closeQuickViewBtn.addEventListener('click', closeQuickView);
-    }
-    
-    if (quickViewBackdrop) {
-        quickViewBackdrop.addEventListener('click', closeQuickView);
-    }
-    
-    // Quantity controls for Quick View
-    if (quickViewDecrement) {
-        quickViewDecrement.addEventListener('click', function() {
-            const currentValue = parseInt(quickViewQuantity.value);
-            if (currentValue > 1) {
-                quickViewQuantity.value = currentValue - 1;
-            }
-        });
-    }
-    
-    if (quickViewIncrement) {
-        quickViewIncrement.addEventListener('click', function() {
-            const currentValue = parseInt(quickViewQuantity.value);
-            const maxValue = parseInt(quickViewQuantity.getAttribute('max'));
-            if (currentValue < maxValue) {
-                quickViewQuantity.value = currentValue + 1;
-            }
-        });
-    }
-    
-    // Handle Add to Cart forms via AJAX
-    const addToCartForms = document.querySelectorAll('.add-to-cart-form');
-    
-    addToCartForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            
-            fetch(form.action, {
-                method: 'POST',
-                body: new URLSearchParams(formData),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification();
-                    
-                    // Update cart count if you have a cart counter element
-                    const cartCountElement = document.querySelector('.cart-count');
-                    if (cartCountElement && data.cart_count) {
-                        cartCountElement.textContent = data.cart_count;
-                    }
-                } else {
-                    alert(data.error || 'An error occurred while adding the product to cart.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-    });
-    
-    // Handle Quick View form submission
-    if (quickViewForm) {
-        quickViewForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(quickViewForm);
-            
-            fetch(quickViewForm.action, {
-                method: 'POST',
-                body: new URLSearchParams(formData),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeQuickView();
-                    showNotification();
-                    
-                    // Update cart count if you have a cart counter element
-                    const cartCountElement = document.querySelector('.cart-count');
-                    if (cartCountElement && data.cart_count) {
-                        cartCountElement.textContent = data.cart_count;
-                    }
-                } else {
-                    alert(data.error || 'An error occurred while adding the product to cart.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-    }
-    
-    // Check if there's a URL parameter to show notification
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('added') === 'true') {
-        showNotification();
-    }
-});
+// Global variables
+window.currentSlide = 0;
+window.totalSlides = <?= count($promotionalBanners) ?>;
+window.autoSlideInterval = null;
+window.isUserInteracting = false;
 
-function showNotification() {
-    const notification = document.getElementById('addToCartNotification');
-    if (notification) {
-        notification.classList.remove('translate-y-[-150%]', 'opacity-0');
-        notification.classList.add('translate-y-0', 'opacity-100');
+// Cookie utility functions
+window.CookieManager = {
+    set: function(name, value, days) {
+        days = days || 30;
+        var expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        var valueStr = typeof value === 'object' ? JSON.stringify(value) : value;
+        document.cookie = name + '=' + valueStr + ';expires=' + expires.toUTCString() + ';path=/';
+    },
+    
+    get: function(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) {
+                try {
+                    return JSON.parse(c.substring(nameEQ.length, c.length));
+                } catch(e) {
+                    return c.substring(nameEQ.length, c.length);
+                }
+            }
+        }
+        return null;
+    },
+    
+    remove: function(name) {
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
+    }
+};
+
+// Cart management with cookies
+window.CartManager = {
+    getCart: function() {
+        return CookieManager.get('cart_items') || [];
+    },
+    
+    addToCart: function(productId, quantity) {
+        quantity = quantity || 1;
+        var cart = this.getCart();
+        var existingItem = cart.find(function(item) {
+            return item.product_id == productId;
+        });
+        
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            cart.push({
+                product_id: productId,
+                quantity: quantity,
+                added_at: new Date().toISOString()
+            });
+        }
+        
+        CookieManager.set('cart_items', cart);
+        this.updateCartCount();
+        return cart;
+    },
+    
+    updateCartCount: function() {
+        var cart = this.getCart();
+        var totalItems = cart.reduce(function(sum, item) {
+            return sum + item.quantity;
+        }, 0);
+        
+        // Update cart count in header if element exists
+        var cartCountElements = document.querySelectorAll('.cart-count');
+        cartCountElements.forEach(function(element) {
+            element.textContent = totalItems;
+            if (totalItems > 0) {
+                element.classList.remove('hidden');
+            } else {
+                element.classList.add('hidden');
+            }
+        });
+        
+        // Store count in cookie for server-side access
+        CookieManager.set('cart_count', totalItems);
+    },
+    
+    clearCart: function() {
+        CookieManager.remove('cart_items');
+        CookieManager.remove('cart_count');
+        this.updateCartCount();
+    }
+};
+
+// Enhanced Carousel functionality
+window.CarouselManager = {
+    goToSlide: function(slideIndex) {
+        window.currentSlide = slideIndex;
+        this.updateCarousel();
+        this.updateDots();
+        this.resetAutoSlide();
+    },
+
+    nextSlide: function() {
+        window.currentSlide = (window.currentSlide + 1) % window.totalSlides;
+        this.updateCarousel();
+        this.updateDots();
+        if (!window.isUserInteracting) {
+            this.resetAutoSlide();
+        }
+    },
+
+    previousSlide: function() {
+        window.currentSlide = (window.currentSlide - 1 + window.totalSlides) % window.totalSlides;
+        this.updateCarousel();
+        this.updateDots();
+        this.resetAutoSlide();
+    },
+
+    updateCarousel: function() {
+        var carousel = document.getElementById('bannerCarousel');
+        if (carousel) {
+            carousel.style.transform = 'translateX(-' + (window.currentSlide * 100) + '%)';
+        }
+    },
+
+    updateDots: function() {
+        var dots = document.querySelectorAll('[data-slide]');
+        dots.forEach(function(dot, index) {
+            if (index === window.currentSlide) {
+                dot.classList.remove('bg-white/50');
+                dot.classList.add('bg-white');
+            } else {
+                dot.classList.remove('bg-white');
+                dot.classList.add('bg-white/50');
+            }
+        });
+    },
+
+    startAutoSlide: function() {
+        if (window.totalSlides > 1) {
+            window.autoSlideInterval = setInterval(function() {
+                if (!window.isUserInteracting) {
+                    CarouselManager.nextSlide();
+                }
+            }, 4000); // Auto slide every 4 seconds
+        }
+    },
+
+    resetAutoSlide: function() {
+        clearInterval(window.autoSlideInterval);
+        var self = this;
+        setTimeout(function() {
+            self.startAutoSlide();
+        }, 1000); // Restart after 1 second
+    },
+
+    pauseAutoSlide: function() {
+        window.isUserInteracting = true;
+        clearInterval(window.autoSlideInterval);
+    },
+
+    resumeAutoSlide: function() {
+        window.isUserInteracting = false;
+        this.startAutoSlide();
+    }
+};
+
+// Wishlist functionality
+window.WishlistManager = {
+    toggle: function(productId) {
+        var button = document.querySelector('[data-product-id="' + productId + '"].wishlist-btn');
+        
+        // Toggle visual state
+        button.classList.toggle('wishlist-active');
+        
+        // Show toast notification
+        var isAdded = button.classList.contains('wishlist-active');
+        ToastManager.show(
+            isAdded ? 'Added to Wishlist' : 'Removed from Wishlist',
+            isAdded ? 'Product saved to your wishlist' : 'Product removed from wishlist',
+            isAdded ? 'success' : 'info'
+        );
+        
+        // Make API call to update wishlist
+        fetch('/wishlist/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'product_id=' + productId
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (!data.success) {
+                // Revert visual state if API call failed
+                button.classList.toggle('wishlist-active');
+                ToastManager.show('Error', data.error || 'Failed to update wishlist', 'error');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            button.classList.toggle('wishlist-active');
+            ToastManager.show('Error', 'Failed to update wishlist', 'error');
+        });
+    }
+};
+
+// Toast notification system
+window.ToastManager = {
+    show: function(title, message, type) {
+        type = type || 'success';
+        var toast = document.getElementById('toast');
+        var toastIcon = document.getElementById('toastIcon');
+        var toastTitle = document.getElementById('toastTitle');
+        var toastMessage = document.getElementById('toastMessage');
+        
+        // Set icon based on type
+        var iconHTML = '';
+        var iconClass = '';
+        
+        switch (type) {
+            case 'success':
+                iconClass = 'text-green-600';
+                iconHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
+                break;
+            case 'error':
+                iconClass = 'text-red-600';
+                iconHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>';
+                break;
+            case 'info':
+                iconClass = 'text-blue-600';
+                iconHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
+                break;
+        }
+        
+        toastIcon.className = iconClass;
+        toastIcon.innerHTML = iconHTML;
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+        
+        // Show toast
+        toast.classList.add('toast-show');
         
         // Auto hide after 3 seconds
-        setTimeout(hideNotification, 3000);
+        setTimeout(function() {
+            ToastManager.hide();
+        }, 3000);
+    },
+
+    hide: function() {
+        var toast = document.getElementById('toast');
+        toast.classList.remove('toast-show');
     }
+};
+
+// Notification manager
+window.NotificationManager = {
+    show: function() {
+        var notification = document.getElementById('addToCartNotification');
+        if (notification) {
+            notification.classList.remove('translate-x-full', 'opacity-0');
+            notification.classList.add('translate-x-0', 'opacity-100');
+            
+            // Auto hide after 3 seconds
+            setTimeout(function() {
+                NotificationManager.hide();
+            }, 3000);
+        }
+    },
+
+    hide: function() {
+        var notification = document.getElementById('addToCartNotification');
+        if (notification) {
+            notification.classList.remove('translate-x-0', 'opacity-100');
+            notification.classList.add('translate-x-full', 'opacity-0');
+        }
+    }
+};
+
+// Global functions for backward compatibility
+function goToSlide(slideIndex) {
+    CarouselManager.goToSlide(slideIndex);
+}
+
+function nextSlide() {
+    CarouselManager.nextSlide();
+}
+
+function previousSlide() {
+    CarouselManager.previousSlide();
+}
+
+function toggleWishlist(productId) {
+    WishlistManager.toggle(productId);
+}
+
+function showToast(title, message, type) {
+    ToastManager.show(title, message, type);
+}
+
+function hideToast() {
+    ToastManager.hide();
+}
+
+function showNotification() {
+    NotificationManager.show();
 }
 
 function hideNotification() {
-    const notification = document.getElementById('addToCartNotification');
-    if (notification) {
-        notification.classList.remove('translate-y-0', 'opacity-100');
-        notification.classList.add('translate-y-[-150%]', 'opacity-0');
-    }
+    NotificationManager.hide();
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize cart count on page load
+    CartManager.updateCartCount();
+    
+    // Start auto slide
+    CarouselManager.startAutoSlide();
+    
+    // Enhanced carousel event listeners
+    var carousel = document.getElementById('bannerCarousel');
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    
+    if (carousel) {
+        // Pause auto slide on hover
+        carousel.addEventListener('mouseenter', function() {
+            CarouselManager.pauseAutoSlide();
+        });
+        carousel.addEventListener('mouseleave', function() {
+            CarouselManager.resumeAutoSlide();
+        });
+        
+        // Touch/swipe support for mobile
+        var startX = 0;
+        var endX = 0;
+        
+        carousel.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+            CarouselManager.pauseAutoSlide();
+        });
+        
+        carousel.addEventListener('touchend', function(e) {
+            endX = e.changedTouches[0].clientX;
+            var diff = startX - endX;
+            
+            if (Math.abs(diff) > 50) { // Minimum swipe distance
+                if (diff > 0) {
+                    CarouselManager.nextSlide();
+                } else {
+                    CarouselManager.previousSlide();
+                }
+            }
+            
+            setTimeout(function() {
+                CarouselManager.resumeAutoSlide();
+            }, 1000);
+        });
+    }
+    
+    // Button hover effects
+    if (prevBtn && nextBtn) {
+        [prevBtn, nextBtn].forEach(function(btn) {
+            btn.addEventListener('mouseenter', function() {
+                CarouselManager.pauseAutoSlide();
+            });
+            btn.addEventListener('mouseleave', function() {
+                setTimeout(function() {
+                    CarouselManager.resumeAutoSlide();
+                }, 500);
+            });
+        });
+    }
+    
+    // Handle Add to Cart forms
+    var addToCartForms = document.querySelectorAll('.add-to-cart-form');
+    
+    addToCartForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var button = form.querySelector('.add-to-cart-btn');
+            var btnText = button.querySelector('.btn-text');
+            var btnLoading = button.querySelector('.btn-loading');
+            var productId = form.querySelector('input[name="product_id"]').value;
+            var quantity = parseInt(form.querySelector('input[name="quantity"]').value);
+            
+            // Show loading state
+            button.classList.add('loading');
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+            button.disabled = true;
+            
+            // Add to cookie cart
+            CartManager.addToCart(productId, quantity);
+            
+            // Submit form to server
+            var formData = new FormData(form);
+            var urlEncodedData = new URLSearchParams(formData);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: urlEncodedData,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(function(response) {
+                // Show notification
+                NotificationManager.show();
+                
+                // Redirect to cart page after 1.5 seconds
+                setTimeout(function() {
+                    window.location.href = '<?= \App\Core\View::url('cart') ?>';
+                }, 1500);
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                // Still redirect to cart page even if server request fails
+                NotificationManager.show();
+                setTimeout(function() {
+                    window.location.href = '<?= \App\Core\View::url('cart') ?>';
+                }, 1500);
+            })
+            .finally(function() {
+                // Reset button state
+                button.classList.remove('loading');
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+                button.disabled = false;
+            });
+        });
+    });
+    
+    // Close toast on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            NotificationManager.hide();
+            ToastManager.hide();
+        }
+    });
+    
+    // Keyboard navigation for carousel
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+            CarouselManager.previousSlide();
+        } else if (e.key === 'ArrowRight') {
+            CarouselManager.nextSlide();
+        }
+    });
+});
 </script>
 
 <?php $content = ob_get_clean(); ?>
-
 <?php include dirname(dirname(__FILE__)) . '/layouts/main.php'; ?>

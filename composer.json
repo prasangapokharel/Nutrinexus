@@ -4,7 +4,7 @@
   "type": "project",
   "require": {
     "php": ">=7.4",
-    "phpmailer/phpmailer": "^6.8",
+    "phpmailer/phpmailer": "^6.10",
     "vlucas/phpdotenv": "^5.5",
     "guzzlehttp/guzzle": "^7.9",
     "khalti/php-sdk": "^1.1",

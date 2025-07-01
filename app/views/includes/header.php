@@ -23,25 +23,27 @@
                     },
                     fontFamily: {
                         'heading': ['Playfair Display', 'serif'],
-                        'body': ['Montserrat', 'sans-serif'],
+                        'body': ['MFjalla One', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
     <style>
-
+@import url('https://fonts.googleapis.com/css2?family=Fjalla+One&display=swap');
         body {
             
-            font-family: 'Montserrat', 'sans-serif';
+             font-family: "Fjalla One", sans-serif;
+  font-weight: 400;
+  font-style: normal
           
         }
         header{
-            font-family: 'Playfair Display', 'serif';
+             font-family: "Fjalla One", sans-serif;
 
         }
         footer{
-            font-family: 'Playfair Display', 'serif';
+             font-family: "Fjalla One", sans-serif;
 
         }
     </style>

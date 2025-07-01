@@ -56,19 +56,31 @@ class Database
 
     /**
      * Bind values to prepared statement
+     * Supports both array of parameters and single parameter binding
      *
-     * @param array $params Parameters to bind
+     * @param mixed $param Parameter key or array of parameters
+     * @param mixed $value Parameter value (if $param is not array)
+     * @param int $type PDO parameter type
      * @return $this
      */
-    public function bind($params)
+    public function bind($param, $value = null, $type = null)
     {
-        foreach ($params as $key => $value) {
-            $paramType = $this->determineParamType($value);
-            $this->stmt->bindValue(
-                is_numeric($key) ? $key + 1 : $key,
-                $value,
-                $paramType
-            );
+        // If $param is an array, bind all parameters
+        if (is_array($param)) {
+            foreach ($param as $key => $val) {
+                $paramType = $this->determineParamType($val);
+                $this->stmt->bindValue(
+                    is_numeric($key) ? $key + 1 : $key,
+                    $val,
+                    $paramType
+                );
+            }
+        } else {
+            // Single parameter binding
+            if ($type === null) {
+                $type = $this->determineParamType($value);
+            }
+            $this->stmt->bindValue($param, $value, $type);
         }
         return $this;
     }
@@ -123,6 +135,14 @@ class Database
     }
 
     /**
+     * Alias for all() method - for backward compatibility
+     */
+    public function resultSet()
+    {
+        return $this->all();
+    }
+
+    /**
      * Get row count
      */
     public function rowCount()
@@ -163,6 +183,9 @@ class Database
     }
 
     /**
+     * Alias for rollBack() method - for backward compatibility
+     */
+    /**
      * Get the PDO instance
      */
     public function getPdo()
@@ -177,5 +200,18 @@ class Database
     public function rawQuery($sql)
     {
         return $this->pdo->query($sql);
+    }
+
+    /**
+     * Prevent cloning of the instance
+     */
+    private function __clone() {}
+
+    /**
+     * Prevent unserialization of the instance
+     */
+    public function __wakeup()
+    {
+        throw new \Exception("Cannot unserialize singleton");
     }
 }

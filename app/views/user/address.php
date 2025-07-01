@@ -7,7 +7,8 @@
             </a>
         </div>
         
-        <h1 class="text-3xl font-bold text-gray-900 mb-8"><?= $user_id ? 'Edit Address' : 'Add New Address' ?></h1>
+        <!-- FIXED: Use $address instead of $user_id to determine edit mode -->
+        <h1 class="text-3xl font-bold text-gray-900 mb-8"><?= isset($address) && $address ? 'Edit Address' : 'Add New Address' ?></h1>
         
         <?php if (isset($errors) && !empty($errors)): ?>
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
@@ -24,7 +25,7 @@
                 <h2 class="text-xl font-semibold text-gray-900">Address Information</h2>
             </div>
             
-            <form action="<?= \App\Core\View::url('user/address' . ($address ? '/' . $address['id'] : '')) ?>" method="post" class="p-6">
+            <form action="<?= \App\Core\View::url('user/address' . (isset($address) && $address ? '/' . $address['id'] : '')) ?>" method="post" class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="recipient_name" class="block text-sm font-medium text-gray-700 mb-1">Recipient Name</label>
@@ -99,7 +100,8 @@
                         Cancel
                     </a>
                     <button type="submit" class="px-6 py-2 bg-primary text-white rounded-none hover:bg-primary-dark transition-colors">
-                        <?= $address ? 'Update Address' : 'Save Address' ?>
+                        <!-- FIXED: Use $address instead of $user_id to determine button text -->
+                        <?= isset($address) && $address ? 'Update Address' : 'Save Address' ?>
                     </button>
                 </div>
             </form>

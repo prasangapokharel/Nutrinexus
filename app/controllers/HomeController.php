@@ -3,12 +3,14 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\OrderItem;
 use App\Helpers\CacheHelper;
 
 class HomeController extends Controller
 {
     private $productModel;
+    private $productImageModel;
     private $orderItemModel;
     private $cache;
     private $hasSymfonyCache = false;
@@ -19,6 +21,7 @@ class HomeController extends Controller
     {
         parent::__construct();
         $this->productModel = new Product();
+        $this->productImageModel = new ProductImage();
         $this->orderItemModel = new OrderItem();
         $this->cache = CacheHelper::getInstance();
         
@@ -54,17 +57,17 @@ class HomeController extends Controller
     {
         // Try to get data from cache (with Symfony cache if available)
         $viewData = $this->getFromCache('home_page_data', function() {
-            // Get featured products
-            $featuredProducts = $this->productModel->getFeaturedProducts(8);
+            // Get featured products with images
+            $featuredProducts = $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
             
-            // Get best selling products using OrderItem model
-            $bestSellingProducts = $this->orderItemModel->getBestSellingProducts(4);
+            // Get best selling products with images
+            $bestSellingProducts = $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
             
             // Get all categories
             $categories = ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
             
-            // Get all products for latest products section
-            $products = $this->productModel->getProducts(8, 0);
+            // Get all products for latest products section with images
+            $products = $this->getProductsWithImages($this->productModel->getProducts(8, 0));
             
             // Get popular products (same as featured for now)
             $popular_products = $featuredProducts;
@@ -85,6 +88,13 @@ class HomeController extends Controller
     }
 
     /**
+     * Get products with their images
+     * 
+     * @param array $products
+     * @return array
+     */
+ 
+    /**
      * Display about page with caching
      */
     public function about()
@@ -99,6 +109,23 @@ class HomeController extends Controller
         }, 86400, ['page' => 'about', 'static' => true]);
         
         $this->view('home/about', $viewData);
+    }
+
+      /**
+     * Display about page with caching
+     */
+    public function privacy()
+    {
+        // Try to get data from cache (with Symfony cache if available)
+        $viewData = $this->getFromCache('privacy_page_data', function() {
+            return [
+                'title' => 'Privacy Policy',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cache_source' => 'none'
+            ];
+        }, 86400, ['page' => 'about', 'static' => true]);
+        
+        $this->view('home/privacy', $viewData);
     }
 
     /**
@@ -726,17 +753,17 @@ class HomeController extends Controller
      */
     public function getHomePageData()
     {
-        // Get featured products
-        $featuredProducts = $this->productModel->getFeaturedProducts(8);
+        // Get featured products with images
+        $featuredProducts = $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
         
-        // Get best selling products using OrderItem model
-        $bestSellingProducts = $this->orderItemModel->getBestSellingProducts(4);
+        // Get best selling products with images
+        $bestSellingProducts = $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
         
         // Get all categories
         $categories = ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
         
-        // Get all products for latest products section
-        $products = $this->productModel->getProducts(8, 0);
+        // Get all products for latest products section with images
+        $products = $this->getProductsWithImages($this->productModel->getProducts(8, 0));
         
         // Get popular products (same as featured for now)
         $popular_products = $featuredProducts;
@@ -794,4 +821,43 @@ class HomeController extends Controller
             'cache_source' => 'warmup'
         ];
     }
+
+    private function getProductsWithImages($products)
+{
+    if (empty($products)) {
+        return [];
+    }
+
+    foreach ($products as &$product) {
+        // Get all images for this product
+        $images = $this->productImageModel->getByProductId($product['id']);
+        
+        // Set default image structure
+        $product['images'] = $images;
+        $product['primary_image'] = null;
+        
+        // Find primary image (first check for is_primary flag, then use first image)
+        foreach ($images as $image) {
+            if (!empty($image['is_primary'])) {
+                $product['primary_image'] = $image;
+                break;
+            }
+        }
+        
+        // If no primary image found, use the first image
+        if (empty($product['primary_image']) && !empty($images)) {
+            $product['primary_image'] = $images[0];
+        }
+        
+        // Fallback to placeholder if no images exist
+        if (empty($product['primary_image'])) {
+            $product['primary_image'] = [
+                'image_path' => '/assets/images/placeholder-product.jpg',
+                'alt_text' => 'Product image placeholder'
+            ];
+        }
+    }
+
+    return $products;
+}
 }

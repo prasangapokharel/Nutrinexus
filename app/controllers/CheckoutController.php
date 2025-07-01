@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -6,41 +7,16 @@ use App\Core\Session;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\User;
-use App\Models\Address;
-use App\Helpers\ValidationHelper;
-use App\Helpers\FileHelper;
-use App\Models\PaymentMethod;
-use App\Models\DeliveryCharge;
-use App\Models\KhaltiPayment;
-use App\Models\ReferralEarning;
-use App\Models\Transaction;
-use App\Models\Notification;
-use App\Models\Setting;
-use App\Config\Khalti;
-use Dompdf\Dompdf;
+use App\Models\Coupon;
+use App\Core\Database;
+use Exception;
 
-/**
- * Checkout Controller
- * Handles checkout process
- */
 class CheckoutController extends Controller
 {
     private $cartModel;
     private $productModel;
     private $orderModel;
-    private $orderItemModel;
-    private $paymentMethodModel;
-    private $deliveryChargeModel;
-    private $addressModel;
-    private $khaltiPaymentModel;
-    private $userModel;
-    private $referralEarningModel;
-    private $transactionModel;
-    private $notificationModel;
-    private $settingModel;
-    private $khaltiConfig;
+    private $couponModel;
 
     public function __construct()
     {
@@ -48,847 +24,392 @@ class CheckoutController extends Controller
         $this->cartModel = new Cart();
         $this->productModel = new Product();
         $this->orderModel = new Order();
-        $this->orderItemModel = new OrderItem();
-        $this->paymentMethodModel = new PaymentMethod();
-        $this->deliveryChargeModel = new DeliveryCharge();
-        $this->addressModel = new Address();
-        $this->khaltiPaymentModel = new KhaltiPayment();
-        $this->userModel = new User();
-        $this->referralEarningModel = new ReferralEarning();
-        $this->transactionModel = new Transaction();
-        $this->notificationModel = new Notification();
-        $this->settingModel = new Setting();
-        $this->khaltiConfig = new Khalti();
+        $this->couponModel = new Coupon();
     }
 
-    /**
-     * Display checkout page
-     *
-     * @return void
-     */
     public function index()
     {
-        $this->requireLogin();
-        
-        // Check if cart is empty
-        if ($this->cartModel->isEmpty()) {
-            $this->setFlash('error', 'Your cart is empty.');
-            $this->redirect('cart');
+        // Check if user is logged in
+        if (!Session::get('user_id')) {
+            $this->setFlash('error', 'Please login to proceed with checkout');
+            $this->redirect('auth/login');
             return;
         }
-        
-        // Validate cart items against stock
-        $errors = $this->cartModel->validate($this->productModel);
-        
-        if (!empty($errors)) {
-            $this->setFlash('error', implode('<br>', $errors));
-            $this->redirect('cart');
-            return;
-        }
-        
-        // Fetch data synchronously
+
+        // Get cart data
         $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-        $userId = Session::get('user_id');
-        $addresses = $this->addressModel->getByUserId($userId);
-        $paymentMethods = $this->paymentMethodModel->getAllActive();
-        $deliveryCharges = $this->deliveryChargeModel->getAllCharges();
         
+        if (empty($cartData['items'])) {
+            $this->setFlash('error', 'Your cart is empty');
+            $this->redirect('cart');
+            return;
+        }
+
+        // Check for applied coupon
+        $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
+        $couponDiscount = 0;
+        
+        if ($appliedCoupon) {
+            $couponDiscount = $this->couponModel->calculateDiscount($appliedCoupon, $cartData['total']);
+        }
+
+        $finalTotal = $cartData['final_total'] - $couponDiscount;
+
         $this->view('checkout/index', [
             'cartItems' => $cartData['items'],
             'total' => $cartData['total'],
             'tax' => $cartData['tax'],
-            'finalTotal' => $cartData['final_total'],
-            'addresses' => $addresses,
-            'paymentMethods' => $paymentMethods,
-            'deliveryCharges' => $deliveryCharges,
+            'finalTotal' => $finalTotal,
+            'appliedCoupon' => $appliedCoupon,
+            'couponDiscount' => $couponDiscount,
             'title' => 'Checkout'
         ]);
     }
 
     /**
-     * Process checkout
-     *
-     * @return void
+     * Validate coupon - Proxy to CouponController
      */
-    public function process()
+    public function validateCoupon()
     {
-        $this->requireLogin();
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('checkout');
-            return;
-        }
-        
-        // Check if cart is empty
-        if ($this->cartModel->isEmpty()) {
-            $this->setFlash('error', 'Your cart is empty.');
-            $this->redirect('cart');
-            return;
-        }
-        
-        // Validate cart items against stock
-        $errors = $this->cartModel->validate($this->productModel);
-        
-        if (!empty($errors)) {
-            $this->setFlash('error', implode('<br>', $errors));
-            $this->redirect('cart');
-            return;
-        }
-        
-        // Validate form data
-        $validator = new ValidationHelper($_POST);
-        $validator->required([
-            'address_id',
-            'payment_method_id'
-        ]);
-        
-        // Validate payment method specific fields
-        if ($this->post('payment_method_id') == 4) { // Bank transfer (ID 4)
-            $validator->required(['transaction_id']);
-            
-            // Check if payment screenshot was uploaded
-            if (empty($_FILES['payment_screenshot']['name'])) {
-                $validator->addError('payment_screenshot', 'Payment screenshot is required');
-            }
-        }
-        
-        if ($validator->fails()) {
-            $this->setFlash('error', 'Please fill in all required fields.');
-            $this->redirect('checkout');
-            return;
-        }
-        
-        // Fetch cart data and address synchronously
-        $cartData = $this->cartModel->getCartWithProducts($this->productModel);
-        $userId = Session::get('user_id');
-        $addressId = $this->post('address_id');
-        $address = $this->addressModel->find($addressId);
-        
-        if (!$address || $address['user_id'] != $userId) {
-            $this->setFlash('error', 'Invalid address selected.');
-            $this->redirect('checkout');
-            return;
-        }
-        
-        // Check if there's already an active transaction and roll it back if needed
-        if ($this->orderModel->inTransaction()) {
-            $this->orderModel->rollback();
-            error_log('Checkout process: Found active transaction, rolling back before starting new one');
-        }
-        
-        // Start transaction
-        $this->orderModel->beginTransaction();
+        header('Content-Type: application/json');
         
         try {
-            // Generate invoice number
-            $invoice = $this->orderModel->generateInvoiceNumber();
+            error_log('=== CHECKOUT COUPON VALIDATION START ===');
             
-            // Create order data
-            $orderData = [
-                'invoice' => $invoice,
-                'user_id' => $userId,
-                'customer_name' => $address['recipient_name'],
-                'contact_no' => $address['phone'],
-                'payment_method_id' => $this->post('payment_method_id'),
-                'status' => 'unpaid',
-                'total_amount' => $cartData['final_total'],
-                'delivery_fee' => $this->post('delivery_fee', 0),
-                'address' => $address['address_line1'] . ', ' . $address['city'] . ', ' . $address['state'] . ', ' . $address['country']
-            ];
-            
-            // If Cash on Delivery, set status to 'processing' instead of 'paid'
-            if ($this->post('payment_method_id') == 1) { // COD (ID 1)
-                $orderData['status'] = 'processing';
-            }
-            
-            // If Khalti payment, redirect to Khalti payment page
-            if ($this->post('payment_method_id') == 2) { // Khalti (ID 2)
-                // Store order data in session for Khalti payment
-                Session::set('khalti_order_data', $orderData);
-                Session::set('khalti_cart_data', $cartData);
-                Session::set('khalti_address_id', $addressId);
-                
-                $this->orderModel->rollback(); // Rollback as we'll create the order in khalti method
-                $this->redirect('checkout/khalti');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                error_log('Invalid request method: ' . $_SERVER['REQUEST_METHOD']);
+                echo json_encode(['success' => false, 'message' => 'Invalid request method']);
                 return;
             }
             
-            $orderId = $this->orderModel->create($orderData);
+            // Get input data
+            $rawInput = file_get_contents('php://input');
+            $input = json_decode($rawInput, true);
             
-            if (!$orderId) {
-                throw new \Exception('Failed to create order. Please try again.');
+            error_log('Checkout coupon validation - Raw input: ' . $rawInput);
+            error_log('Checkout coupon validation - Decoded input: ' . json_encode($input));
+            
+            $code = trim($input['code'] ?? '');
+            $userId = Session::get('user_id') ?? 0;
+            
+            error_log('Checkout coupon validation - Code: ' . $code);
+            error_log('Checkout coupon validation - User ID: ' . $userId);
+            
+            if (empty($code)) {
+                error_log('Empty coupon code provided');
+                echo json_encode(['success' => false, 'message' => 'Coupon code is required']);
+                return;
             }
             
-            // Create order items synchronously
-            $cart = $this->cartModel->getItems();
+            // Get cart data for validation
+            $cartData = $this->cartModel->getCartWithProducts($this->productModel);
+            error_log('Checkout coupon validation - Cart data structure: ' . json_encode(array_keys($cartData)));
+            error_log('Checkout coupon validation - Cart items count: ' . count($cartData['items'] ?? []));
             
-            foreach ($cart as $productId => $item) {
-                $product = $this->productModel->find($productId);
-                
-                if (!$product) {
-                    throw new \Exception('Product not found: ' . $productId);
-                }
-                
-                // Check stock
-                if ($product['stock_quantity'] < $item['quantity']) {
-                    throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                }
-                
-                $orderItemData = [
-                    'order_id' => $orderId,
-                    'product_id' => $productId,
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                    'total' => $item['quantity'] * $item['price'],
-                    'invoice' => $invoice
-                ];
-                
-                $orderItemId = $this->orderItemModel->create($orderItemData);
-                
-                if (!$orderItemId) {
-                    throw new \Exception('Failed to create order item.');
-                }
-                
-                // Update product quantity
-                $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                $this->productModel->updateQuantity($productId, $newQuantity);
+            if (empty($cartData['items'])) {
+                error_log('Cart is empty');
+                echo json_encode(['success' => false, 'message' => 'Cart is empty']);
+                return;
             }
             
-            // Handle payment screenshot upload if needed
-            if ($this->post('payment_method_id') == 4 && !empty($_FILES['payment_screenshot']['name'])) { // Bank transfer (ID 4)
-                $screenshotFile = FileHelper::upload(
-                    $_FILES['payment_screenshot'],
-                    PAYMENT_SCREENSHOTS_DIR,
-                    ['image/jpeg', 'image/png', 'image/gif'],
-                    5 * 1024 * 1024 // 5MB
-                );
-                
-                if ($screenshotFile) {
-                    // Update order with screenshot info
-                    $this->orderModel->update($orderId, [
-                        'payment_screenshot' => '/uploads/payment_screenshots/' . $screenshotFile,
-                        'transaction_id' => $this->post('transaction_id')
-                    ]);
-                }
+            $orderAmount = $cartData['total'];
+            
+            // Extract product IDs properly
+            $productIds = $this->extractProductIds($cartData['items']);
+            
+            error_log('Checkout coupon validation - Order amount: ' . $orderAmount);
+            error_log('Checkout coupon validation - Product IDs: ' . json_encode($productIds));
+            
+            // Validate coupon exists first
+            $coupon = $this->couponModel->getCouponByCode($code);
+            if (!$coupon) {
+                error_log('Coupon not found: ' . $code);
+                echo json_encode(['success' => false, 'message' => 'Invalid coupon code']);
+                return;
             }
             
-            // Process referral earnings only if order is paid (not for COD which is now 'processing')
-            if ($orderData['status'] === 'paid') {
-                $this->processReferralEarnings($orderId);
-            }
+            error_log('Checkout coupon validation - Coupon found: ' . json_encode($coupon));
             
-            // Clear cart
-            $this->cartModel->clear();
-            Session::set('cart_count', 0);
+            // Validate coupon
+            $validation = $this->couponModel->validateCoupon($code, $userId, $orderAmount, $productIds);
+            error_log('Checkout coupon validation - Validation result: ' . json_encode($validation));
             
-            // Commit transaction
-            $this->orderModel->commit();
-            
-            // Redirect to success page
-            $this->redirect('checkout/success/' . $orderId);
-            
-        } catch (\Exception $e) {
-            // Rollback transaction
-            $this->orderModel->rollback();
-            
-            // Log error
-            error_log('Checkout error: ' . $e->getMessage());
-            
-            // Set flash message
-            $this->setFlash('error', $e->getMessage());
-            
-            // Redirect back to checkout
-            $this->redirect('checkout');
-        }
-    }
-
-    /**
-     * Process Khalti payment
-     *
-     * @return void
-     */
-    public function khalti()
-    {
-        $this->requireLogin();
-        
-        if (!Session::has('khalti_order_data') || !Session::has('khalti_cart_data')) {
-            $this->redirect('checkout');
-            return;
-        }
-        
-        $orderData = Session::get('khalti_order_data');
-        $cartData = Session::get('khalti_cart_data');
-        $userId = Session::get('user_id');
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            // Check if there's already an active transaction and roll it back if needed
-            if ($this->orderModel->inTransaction()) {
-                $this->orderModel->rollback();
-                error_log('Khalti process: Found active transaction, rolling back before starting new one');
-            }
-            
-            // Start transaction
-            $this->orderModel->beginTransaction();
-            
-            try {
-                $orderId = $this->orderModel->create($orderData);
+            if ($validation['valid']) {
+                $discount = $this->couponModel->calculateDiscount($validation['coupon'], $orderAmount);
+                $finalAmount = ($cartData['final_total'] - $discount);
                 
-                if (!$orderId) {
-                    throw new \Exception('Failed to create order.');
-                }
+                error_log('Checkout coupon validation - Discount calculated: ' . $discount);
+                error_log('Checkout coupon validation - Final amount: ' . $finalAmount);
                 
-                // Create order items synchronously
-                foreach ($this->cartModel->getItems() as $productId => $item) {
-                    $product = $this->productModel->find($productId);
-                    
-                    if (!$product) {
-                        throw new \Exception('Product not found: ' . $productId);
-                    }
-                    
-                    // Check stock
-                    if ($product['stock_quantity'] < $item['quantity']) {
-                        throw new \Exception('Insufficient stock for product: ' . $product['product_name']);
-                    }
-                    
-                    $orderItemData = [
-                        'order_id' => $orderId,
-                        'product_id' => $productId,
-                        'quantity' => $item['quantity'],
-                        'price' => $item['price'],
-                        'total' => $item['quantity'] * $item['price'],
-                        'invoice' => $orderData['invoice']
-                    ];
-                    
-                    $orderItemId = $this->orderItemModel->create($orderItemData);
-                    
-                    if (!$orderItemId) {
-                        throw new \Exception('Failed to create order item.');
-                    }
-                    
-                    // Update product quantity
-                    $newQuantity = $product['stock_quantity'] - $item['quantity'];
-                    $this->productModel->updateQuantity($productId, $newQuantity);
-                }
-                
-                // Create Khalti payment
-                $khaltiData = [
-                    'order_id' => $orderId,
-                    'user_id' => $userId,
-                    'amount' => $cartData['final_total'],
-                    'status' => 'pending'
-                ];
-                
-                $khaltiPaymentId = $this->khaltiPaymentModel->create($khaltiData);
-                
-                if (!$khaltiPaymentId) {
-                    throw new \Exception('Failed to initiate payment.');
-                }
-                
-                // Commit transaction
-                $this->orderModel->commit();
-                
-                Session::set('khalti_order_id', $orderId);
-                $this->cartModel->clear();
-                Session::set('cart_count', 0);
-                
-                $this->view('checkout/khalti', [
-                    'order' => $this->orderModel->getOrderById($orderId),
-                    'orderItems' => $this->orderItemModel->getByOrderId($orderId),
-                    'amount' => $cartData['final_total'] * 100, // Convert to paisa
-                    'khaltiPublicKey' => $this->khaltiConfig->getPublicKey(),
-                    'title' => 'Khalti Payment'
-                ]);
-                
-                Session::remove('khalti_order_data');
-                Session::remove('khalti_cart_data');
-                
-            } catch (\Exception $e) {
-                // Rollback transaction
-                $this->orderModel->rollback();
-                
-                // Log error
-                error_log('Khalti payment error: ' . $e->getMessage());
-                
-                // Set flash message
-                $this->setFlash('error', $e->getMessage());
-                
-                // Redirect back to checkout
-                $this->redirect('checkout');
-            }
-        } else {
-            $this->verifyKhalti();
-        }
-    }
-
-    /**
-     * Verify Khalti payment
-     *
-     * @return void
-     */
-    public function verifyKhalti()
-    {
-        $this->requireLogin();
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('checkout');
-            return;
-        }
-        
-        // Get the request body
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
-        
-        if (!$data && isset($_POST['token'])) {
-            $data = $_POST;
-        }
-        
-        $token = $data['token'] ?? null;
-        $amount = $data['amount'] ?? null;
-        $pidx = $data['pidx'] ?? null;
-        $orderId = Session::get('khalti_order_id');
-        
-        if ((!$token && !$pidx) || !$orderId) {
-            echo json_encode(['success' => false, 'message' => 'Invalid payment data.']);
-            exit;
-        }
-        
-        // Check if there's already an active transaction and roll it back if needed
-        if ($this->orderModel->inTransaction()) {
-            $this->orderModel->rollback();
-            error_log('Khalti verify: Found active transaction, rolling back before starting new one');
-        }
-        
-        // Start transaction
-        $this->orderModel->beginTransaction();
-        
-        try {
-            // If we have a pidx, check payment status
-            if ($pidx) {
-                $result = $this->khaltiPaymentModel->lookupPayment($pidx);
-                
-                if ($result['success'] && $result['status'] === 'Completed') {
-                    // Update order status
-                    $this->orderModel->update($orderId, [
-                        'status' => 'paid',
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
-                    
-                    // Process referral earnings synchronously
-                    $this->processReferralEarnings($orderId);
-                    
-                    // Update Khalti payment record
-                    $this->khaltiPaymentModel->updateByOrderId($orderId, [
-                        'status' => 'completed',
-                        'transaction_id' => $result['transaction_id'] ?? null,
-                        'response_data' => json_encode($result['data'] ?? [])
-                    ]);
-                    
-                    // Commit transaction
-                    $this->orderModel->commit();
-                    
-                    // Return success response
-                    echo json_encode([
-                        'success' => true, 
-                        'status' => 'completed',
-                        'redirect' => \App\Core\View::url('checkout/success/' . $orderId)
-                    ]);
-                    exit;
-                }
-                
-                // Commit transaction
-                $this->orderModel->commit();
+                // Store coupon in session
+                $_SESSION['applied_coupon'] = $validation['coupon'];
+                error_log('Checkout coupon validation - Coupon stored in session');
                 
                 echo json_encode([
                     'success' => true,
-                    'status' => strtolower($result['status'] ?? 'pending')
+                    'coupon' => $validation['coupon'],
+                    'discount' => $discount,
+                    'final_amount' => $finalAmount,
+                    'message' => 'Coupon applied successfully!'
                 ]);
-                exit;
+            } else {
+                error_log('Checkout coupon validation - Validation failed: ' . $validation['message']);
+                echo json_encode([
+                    'success' => false,
+                    'message' => $validation['message']
+                ]);
             }
             
-            // If we have a token, verify the payment
-            if ($token) {
-                // Verify payment with Khalti
-                $verificationResult = $this->khaltiPaymentModel->verifyPayment($token, $amount);
-                
-                if ($verificationResult['success']) {
-                    // Update order status
-                    $this->orderModel->update($orderId, [
-                        'status' => 'paid',
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
-                    
-                    // Process referral earnings synchronously
-                    $this->processReferralEarnings($orderId);
-                    
-                    // Update Khalti payment record
-                    $this->khaltiPaymentModel->updateByOrderId($orderId, [
-                        'token' => $token,
-                        'status' => 'completed',
-                        'transaction_id' => $verificationResult['transaction_id'] ?? null,
-                        'response_data' => json_encode($verificationResult['data'] ?? [])
-                    ]);
-                    
-                    // Commit transaction
-                    $this->orderModel->commit();
-                    
-                    // Return success response
-                    echo json_encode(['success' => true, 'redirect' => \App\Core\View::url('checkout/success/' . $orderId)]);
-                } else {
-                    // Update Khalti payment record with error
-                    $this->khaltiPaymentModel->updateByOrderId($orderId, [
-                        'token' => $token,
-                        'status' => 'failed',
-                        'response_data' => json_encode($verificationResult['data'] ?? [])
-                    ]);
-                    
-                    // Commit transaction
-                    $this->orderModel->commit();
-                    
-                    // Return error response
-                    echo json_encode(['success' => false, 'message' => $verificationResult['message'] ?? 'Payment verification failed']);
-                }
-                exit;
-            }
+            error_log('=== CHECKOUT COUPON VALIDATION END ===');
             
-            // Commit transaction
-            $this->orderModel->commit();
+        } catch (Exception $e) {
+            error_log('Checkout coupon validation error: ' . $e->getMessage());
+            error_log('Checkout coupon validation stack trace: ' . $e->getTraceAsString());
             
-            echo json_encode(['success' => false, 'message' => 'Invalid payment data']);
-            exit;
-            
-        } catch (\Exception $e) {
-            // Rollback transaction
-            $this->orderModel->rollback();
-            
-            // Log error
-            error_log('Khalti verification error: ' . $e->getMessage());
-            
-            // Return error response
-            echo json_encode(['success' => false, 'message' => 'An error occurred during payment verification']);
-            exit;
+            echo json_encode([
+                'success' => false,
+                'message' => 'An error occurred while validating the coupon: ' . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle Khalti payment callback
-     *
-     * @return void
+     * Remove coupon - Proxy to CouponController
      */
-    public function khaltiCallback()
+    public function removeCoupon()
     {
-        // Get parameters from the callback
-        $pidx = $_GET['pidx'] ?? null;
-        $orderId = Session::get('khalti_order_id') ?? ($_GET['order_id'] ?? null);
+        header('Content-Type: application/json');
         
-        if (!$pidx || !$orderId) {
-            $this->setFlash('error', 'Invalid payment data');
-            $this->redirect('');
+        try {
+            error_log('=== CHECKOUT COUPON REMOVE START ===');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                error_log('Invalid request method for remove: ' . $_SERVER['REQUEST_METHOD']);
+                echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+                return;
+            }
+            
+            // Remove coupon from session
+            if (isset($_SESSION['applied_coupon'])) {
+                error_log('Removing coupon from checkout: ' . $_SESSION['applied_coupon']['code']);
+                unset($_SESSION['applied_coupon']);
+            } else {
+                error_log('No coupon to remove from session');
+            }
+            
+            // Get updated cart data
+            $cartData = $this->cartModel->getCartWithProducts($this->productModel);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Coupon removed successfully!',
+                'final_amount' => $cartData['final_total']
+            ]);
+            
+            error_log('=== CHECKOUT COUPON REMOVE END ===');
+            
+        } catch (Exception $e) {
+            error_log('Checkout coupon remove error: ' . $e->getMessage());
+            error_log('Checkout coupon remove stack trace: ' . $e->getTraceAsString());
+            
+            echo json_encode([
+                'success' => false,
+                'message' => 'An error occurred while removing the coupon: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Extract product IDs from cart items
+     */
+    private function extractProductIds($cartItems)
+    {
+        $productIds = [];
+        foreach ($cartItems as $item) {
+            if (isset($item['product']['id'])) {
+                $productIds[] = (int)$item['product']['id'];
+            } elseif (isset($item['product_id'])) {
+                $productIds[] = (int)$item['product_id'];
+            }
+        }
+        return array_unique($productIds);
+    }
+
+    public function process()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('checkout');
             return;
         }
-        
-        // Check if there's already an active transaction and roll it back if needed
-        if ($this->orderModel->inTransaction()) {
-            $this->orderModel->rollback();
-            error_log('Khalti callback: Found active transaction, rolling back before starting new one');
-        }
-        
-        // Start transaction
-        $this->orderModel->beginTransaction();
-        
+
         try {
-            // Verify payment status with Khalti
-            $result = $this->khaltiPaymentModel->lookupPayment($pidx);
-            
-            if ($result['success'] && $result['status'] === 'Completed') {
-                // Payment successful, update order status
-                $this->orderModel->update($orderId, [
-                    'status' => 'paid',
-                    'updated_at' => date('Y-m-d H:i:s')
-                ]);
-                
-                // Process referral earnings synchronously
-                $this->processReferralEarnings($orderId);
-                
-                // Update Khalti payment record
-                $this->khaltiPaymentModel->updateByOrderId($orderId, [
-                    'status' => 'completed',
-                    'transaction_id' => $result['transaction_id'] ?? null,
-                    'response_data' => json_encode($result['data'] ?? [])
-                ]);
-                
-                // Commit transaction
-                $this->orderModel->commit();
-                
-                // Set success message
-                $this->setFlash('success', 'Payment successful! Your order has been confirmed.');
-                
-                // Redirect to success page
-                $this->redirect('checkout/success/' . $orderId);
+            // Check if user is logged in
+            if (!Session::get('user_id')) {
+                $this->setFlash('error', 'Please login to proceed with checkout');
+                $this->redirect('auth/login');
                 return;
-            } else {
-                // Payment failed or pending
-                $status = $result['status'] ?? 'failed';
-                
-                // Update Khalti payment record
-                $this->khaltiPaymentModel->updateByOrderId($orderId, [
-                    'status' => strtolower($status),
-                    'response_data' => json_encode($result['data'] ?? [])
-                ]);
-                
-                // Commit transaction
-                $this->orderModel->commit();
-                
-                // Set error message
-                $this->setFlash('error', 'Payment ' . strtolower($status) . '. Please contact support if you need assistance.');
             }
+
+            // Get cart data
+            $cartData = $this->cartModel->getCartWithProducts($this->productModel);
             
-        } catch (\Exception $e) {
-            // Rollback transaction
-            $this->orderModel->rollback();
+            if (empty($cartData['items'])) {
+                $this->setFlash('error', 'Your cart is empty');
+                $this->redirect('cart');
+                return;
+            }
+
+            // Validate required fields
+            $requiredFields = ['recipient_name', 'phone', 'address_line1', 'city', 'state', 'postal_code', 'payment_method_id'];
+            $errors = [];
+
+            foreach ($requiredFields as $field) {
+                if (empty($_POST[$field])) {
+                    $errors[] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
+                }
+            }
+
+            // Validate payment method specific fields
+            if ($_POST['payment_method_id'] == 2) { // Bank Transfer
+                if (empty($_POST['transaction_id'])) {
+                    $errors[] = 'Transaction ID is required for bank transfer';
+                }
+                if (empty($_FILES['payment_screenshot']['name'])) {
+                    $errors[] = 'Payment screenshot is required for bank transfer';
+                }
+            }
+
+            if (!empty($errors)) {
+                $this->setFlash('error', implode('<br>', $errors));
+                $this->redirect('checkout');
+                return;
+            }
+
+            // Calculate totals with coupon
+            $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
+            $couponDiscount = 0;
             
-            // Log error
-            error_log('Khalti callback error: ' . $e->getMessage());
-            
-            // Set error message
-            $this->setFlash('error', 'An error occurred during payment processing.');
+            if ($appliedCoupon) {
+                $couponDiscount = $this->couponModel->calculateDiscount($appliedCoupon, $cartData['total']);
+            }
+
+            $finalTotal = $cartData['final_total'] - $couponDiscount;
+
+            // Handle file upload for bank transfer
+            $paymentScreenshotPath = null;
+            if ($_POST['payment_method_id'] == 2 && !empty($_FILES['payment_screenshot']['name'])) {
+                $uploadDir = 'uploads/payments/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $fileName = time() . '_' . $_FILES['payment_screenshot']['name'];
+                $uploadPath = $uploadDir . $fileName;
+                
+                if (move_uploaded_file($_FILES['payment_screenshot']['tmp_name'], $uploadPath)) {
+                    $paymentScreenshotPath = $fileName;
+                }
+            }
+
+            // Prepare order data
+            $orderData = [
+                'user_id' => Session::get('user_id'),
+                'total_amount' => $cartData['total'],
+                'tax_amount' => $cartData['tax'],
+                'discount_amount' => $couponDiscount,
+                'final_amount' => $finalTotal,
+                'payment_method_id' => $_POST['payment_method_id'],
+                'payment_status' => ($_POST['payment_method_id'] == 1) ? 'pending' : 'pending_verification',
+                'order_status' => 'pending',
+                'recipient_name' => $_POST['recipient_name'],
+                'phone' => $_POST['phone'],
+                'address_line1' => $_POST['address_line1'],
+                'address_line2' => $_POST['address_line2'] ?? '',
+                'city' => $_POST['city'],
+                'state' => $_POST['state'],
+                'postal_code' => $_POST['postal_code'],
+                'country' => 'Nepal',
+                'order_notes' => $_POST['order_notes'] ?? '',
+                'transaction_id' => $_POST['transaction_id'] ?? null,
+                'payment_screenshot' => $paymentScreenshotPath,
+                'coupon_code' => $appliedCoupon ? $appliedCoupon['code'] : null
+            ];
+
+            // Create order
+            $orderId = $this->orderModel->createOrder($orderData, $cartData['items']);
+
+            if ($orderId) {
+                // Clear cart and applied coupon
+                $this->cartModel->clearCart();
+                if (isset($_SESSION['applied_coupon'])) {
+                    unset($_SESSION['applied_coupon']);
+                }
+
+                $this->setFlash('success', 'Order placed successfully! Order ID: #' . $orderId);
+                $this->redirect('checkout/success/' . $orderId);
+            } else {
+                $this->setFlash('error', 'Failed to place order. Please try again.');
+                $this->redirect('checkout');
+            }
+
+        } catch (Exception $e) {
+            error_log('Checkout process error: ' . $e->getMessage());
+            $this->setFlash('error', 'An error occurred while processing your order. Please try again.');
+            $this->redirect('checkout');
         }
-        
-        // Clear the session variable
-        Session::remove('khalti_pidx');
-        Session::remove('khalti_order_id');
-        
-        // Redirect to order details
-        $this->redirect('orders/view/' . $orderId);
     }
 
     /**
-     * Process referral earnings for an order
-     *
-     * @param int $orderId
-     * @return bool
+     * SUCCESS METHOD - THIS WAS MISSING!
+     * Success page for completed orders
      */
-    public function processReferralEarnings($orderId)
+    public function success($orderId)
     {
-        // Get order details
-        $order = $this->orderModel->getOrderById($orderId);
-        if (!$order) {
-            error_log("Process referral earnings: Order not found - ID: $orderId");
-            return false;
-        }
-        
-        // Only process for paid orders
-        if ($order['status'] !== 'paid') {
-            error_log("Process referral earnings: Order not paid - ID: $orderId, Status: {$order['status']}");
-            return false;
-        }
-        
-        // Get user who placed the order
-        $user = $this->userModel->find($order['user_id']);
-        if (!$user) {
-            error_log("Process referral earnings: User not found - ID: {$order['user_id']}");
-            return false;
-        }
-        
-        // Log user details for debugging
-        error_log("Order placed by User ID: {$user['id']}, Name: {$user['first_name']} {$user['last_name']}, Referred by: " . ($user['referred_by'] ?? 'None'));
-        
-        // Check if user was referred by someone
-        if (empty($user['referred_by'])) {
-            error_log("Process referral earnings: User has no referrer - User ID: {$user['id']}");
-            return false;
-        }
-        
-        $referrerId = $user['referred_by'];
-        
-        // Get referrer details
-        $referrer = $this->userModel->find($referrerId);
-        if (!$referrer) {
-            error_log("Process referral earnings: Referrer not found - ID: $referrerId");
-            return false;
-        }
-        
-        // Log referrer details for debugging
-        error_log("Referrer found - ID: $referrerId, Name: {$referrer['first_name']} {$referrer['last_name']}");
-        
-        // Check if referral earning already exists for this order
-        $existingEarning = $this->referralEarningModel->findByOrderId($orderId);
-        if ($existingEarning) {
-            error_log("Process referral earnings: Earning already exists - Order ID: $orderId, Earning ID: {$existingEarning['id']}");
-            return false;
-        }
-        
-        // Get commission rate from settings or use default 5%
-        $commissionRate = 5;
-        if (method_exists($this->settingModel, 'get')) {
-            $commissionRate = $this->settingModel->get('commission_rate', 5);
-        }
-        
-        // Calculate commission (commission_rate% of total_amount, excluding delivery fee)
-        $deliveryFee = isset($order['delivery_fee']) ? (float)$order['delivery_fee'] : 0;
-        $orderTotal = (float)$order['total_amount'];
-        $commission = ($orderTotal - $deliveryFee) * ($commissionRate / 100);
-        
-        // Round to 2 decimal places
-        $commission = round($commission, 2);
-        
-        // Log commission calculation for debugging
-        error_log("Commission calculation: Order Total: $orderTotal, Delivery Fee: $deliveryFee, Commission Rate: $commissionRate%, Final Commission: $commission");
-        
-        if ($commission <= 0) {
-            error_log("Process referral earnings: Commission is zero or negative - Order ID: $orderId");
-            return false;
-        }
-        
         try {
-            // Create referral earning record with paid status
-            $earningData = [
-                'user_id' => $referrerId,
-                'order_id' => $orderId,
-                'amount' => $commission,
-                'status' => 'paid', // Set to paid immediately
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
+            error_log('=== CHECKOUT SUCCESS PAGE START ===');
+            error_log('Order ID: ' . $orderId);
             
-            // Log the data being inserted
-            error_log("Inserting referral earning: " . json_encode($earningData));
-            
-            $earningId = $this->referralEarningModel->create($earningData);
-            
-            if (!$earningId) {
-                throw new \Exception("Failed to create referral earning record for order: $orderId");
+            // Check if user is logged in
+            if (!Session::get('user_id')) {
+                $this->setFlash('error', 'Please login to view your order');
+                $this->redirect('auth/login');
+                return;
             }
-            
-            error_log("Created referral earning record - ID: $earningId");
-            
-            // Update referrer's balance
-            $currentEarnings = (float)($referrer['referral_earnings'] ?? 0);
-            $newEarnings = $currentEarnings + $commission;
-            
-            // Log the balance update
-            error_log("Updating referrer balance - Current: $currentEarnings, New: $newEarnings");
-            
-            $updateData = [
-                'referral_earnings' => $newEarnings,
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $result = $this->userModel->update($referrerId, $updateData);
-            
-            if (!$result) {
-                throw new \Exception("Failed to update referrer balance for user: $referrerId");
-            }
-            
-            error_log("Updated referrer ID: $referrerId earnings from $currentEarnings to $newEarnings");
-            
-            // Record transaction
-            $transactionData = [
-                'user_id' => $referrerId,
-                'amount' => $commission,
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'reference_type' => 'referral_earning',
-                'description' => "Referral commission from order #{$order['invoice']}",
-                'balance_after' => $newEarnings,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $transactionId = $this->transactionModel->create($transactionData);
-            
-            if (!$transactionId) {
-                error_log("Failed to create transaction record for referral earning: $earningId");
-            } else {
-                error_log("Created transaction record - ID: $transactionId");
-            }
-            
-            // Create notification for referrer
-            $notificationData = [
-                'user_id' => $referrerId,
-                'title' => 'New Referral Commission',
-                'message' => 'You earned ₹' . number_format($commission, 2) . ' commission from a referral purchase.',
-                'type' => 'referral_earning',
-                'reference_id' => $earningId,
-                'is_read' => 0,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $notificationId = $this->notificationModel->create($notificationData);
-            
-            if (!$notificationId) {
-                error_log("Failed to create notification for referral earning: $earningId");
-            } else {
-                error_log("Created notification - ID: $notificationId");
-            }
-            
-            error_log("Referral earnings processed successfully - Order ID: $orderId, Referrer ID: $referrerId, Amount: $commission");
-            return true;
-            
-        } catch (\Exception $e) {
-            // Log error
-            error_log('Error processing referral earnings: ' . $e->getMessage());
-            return false;
-        }
-    }
 
-    /**
-     * Display order success page
-     *
-     * @param int $orderId
-     * @return void
-     */
-    public function success($orderId = null)
-    {
-        $this->requireLogin();
-        
-        if (!$orderId) {
-            $this->redirect('');
-        }
-        
-        // Fetch order data synchronously
-        $order = $this->orderModel->getOrderById($orderId);
-        $orderItems = $this->orderItemModel->getByOrderId($orderId);
-        
-        if (!$order || $order['user_id'] != Session::get('user_id')) {
-            $this->redirect('');
-        }
-        
-        $this->view('checkout/success', [
-            'order' => $order,
-            'orderItems' => $orderItems,
-            'title' => 'Order Successful'
-        ]);
-    }
-
-    /**
-     * Get base URL for the application
-     * 
-     * @return string
-     */
-    private function getBaseUrl()
-    {
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-        $host = $_SERVER['HTTP_HOST'];
-        $script_name = dirname($_SERVER['SCRIPT_NAME']);
-        
-        // Fix for localhost - ensure the path is correct
-        if ($host === 'localhost' || strpos($host, '127.0.0.1') !== false) {
-            // For localhost, construct the path based on the current directory structure
-            $base_path = $protocol . "://" . $host;
+            // Get order details
+            $order = $this->orderModel->getOrderWithItems($orderId);
             
-            // If script_name is just a slash, don't add it to avoid double slashes
-            if ($script_name !== '/' && $script_name !== '\\') {
-                // Remove any trailing slashes
-                $script_name = rtrim($script_name, '/\\');
-                $base_path .= $script_name;
+            error_log('Order data retrieved: ' . json_encode($order ? 'Found' : 'Not found'));
+            
+            if (!$order) {
+                error_log('Order not found for ID: ' . $orderId);
+                $this->setFlash('error', 'Order not found');
+                $this->redirect('orders');
+                return;
             }
             
-            $base_url = $base_path;
-        } else {
-            // For production servers
-            $base_url = $protocol . "://" . $host . $script_name;
+            // Check if order belongs to current user
+            if ($order['user_id'] != Session::get('user_id')) {
+                error_log('Order access denied - User ID mismatch. Order user: ' . $order['user_id'] . ', Session user: ' . Session::get('user_id'));
+                $this->setFlash('error', 'Access denied');
+                $this->redirect('orders');
+                return;
+            }
+
+            error_log('=== CHECKOUT SUCCESS PAGE - DISPLAYING ORDER ===');
+            
+            $this->view('checkout/success', [
+                'order' => $order,
+                'title' => 'Order Confirmation - #' . $order['invoice']
+            ]);
+            
+        } catch (Exception $e) {
+            error_log('=== CHECKOUT SUCCESS PAGE ERROR ===');
+            error_log('Error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            $this->setFlash('error', 'An error occurred while loading the order confirmation page.');
+            $this->redirect('orders');
         }
-        
-        // Ensure base_url doesn't have a trailing slash
-        return rtrim($base_url, '/');
     }
 }

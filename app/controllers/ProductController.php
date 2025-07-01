@@ -4,9 +4,12 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Session;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Review;
 use App\Models\Wishlist;
 use App\Helpers\CacheHelper;
+// Add Spatie Async
+use Spatie\Async\Pool;
 
 /**
  * Product Controller
@@ -18,6 +21,8 @@ class ProductController extends Controller
      * @var Product
      */
     private $productModel;
+
+    private $productImageModel;
     
     /**
      * @var Review
@@ -33,6 +38,11 @@ class ProductController extends Controller
      * @var CacheHelper
      */
     private $cache;
+    
+    /**
+     * @var Pool|null
+     */
+    private $asyncPool;
 
     /**
      * Constructor
@@ -41,9 +51,23 @@ class ProductController extends Controller
     {
         parent::__construct();
         $this->productModel = new Product();
+        $this->productImageModel = new ProductImage();
         $this->reviewModel = new Review();
         $this->wishlistModel = new Wishlist();
         $this->cache = CacheHelper::getInstance();
+        
+        // Initialize Spatie Async Pool with fallback
+        if (class_exists('\\Spatie\\Async\\Pool')) {
+            try {
+                $this->asyncPool = Pool::create();
+            } catch (\Exception $e) {
+                error_log('Failed to create async pool: ' . $e->getMessage());
+                $this->asyncPool = null;
+            }
+        } else {
+            error_log('Spatie\\Async\\Pool class not found. Async processing disabled.');
+            $this->asyncPool = null;
+        }
     }
 
     /**
@@ -66,8 +90,45 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            $products = $this->productModel->getProducts($limit, $offset);
-            $totalProducts = $this->productModel->getProductCount();
+            // Use async to fetch products and count in parallel if available
+            if ($this->asyncPool) {
+                try {
+                    $productsPromise = $this->asyncPool->add(function() use ($limit, $offset) {
+                        return $this->productModel->getProductsWithImages($limit, $offset);
+                    });
+                    
+                    $totalProductsPromise = $this->asyncPool->add(function() {
+                        return $this->productModel->getProductCount();
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $products = $productsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($limit, $offset) {
+                        error_log('Error fetching products asynchronously: ' . $e->getMessage());
+                        return $this->productModel->getProductsWithImages($limit, $offset);
+                    });
+                    
+                    $totalProducts = $totalProductsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching product count asynchronously: ' . $e->getMessage());
+                        return $this->productModel->getProductCount();
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $products = $this->productModel->getProductsWithImages($limit, $offset);
+                    $totalProducts = $this->productModel->getProductCount();
+                }
+            } else {
+                // Standard approach without async
+                $products = $this->productModel->getProductsWithImages($limit, $offset);
+                $totalProducts = $this->productModel->getProductCount();
+            }
             
             $totalPages = ceil($totalProducts / $limit);
             
@@ -114,12 +175,13 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
+            
             // Try to find product by slug first
-            $product = $this->productModel->findBySlug($slug);
+            $product = $this->productModel->findBySlugWithImages($slug);
             
             // If not found by slug, try by ID (for backward compatibility)
             if (!$product && is_numeric($slug)) {
-                $product = $this->productModel->find($slug);
+                $product = $this->productModel->findWithImages($slug);
             }
             
             if (!$product) {
@@ -128,11 +190,71 @@ class ProductController extends Controller
                 return;
             }
             
-            // Fetch related data
-            $reviews = $this->reviewModel->getByProductId($product['id']);
-            $averageRating = $this->reviewModel->getAverageRating($product['id']);
-            $reviewCount = $this->reviewModel->getReviewCount($product['id']);
-            $relatedProducts = $this->getLocalRecommendations($product['id']);
+            // Use async to fetch reviews, ratings, and related products in parallel if available
+            if ($this->asyncPool) {
+                try {
+                    $reviewsPromise = $this->asyncPool->add(function() use ($product) {
+                        return $this->reviewModel->getByProductId($product['id']);
+                    });
+                    
+                    $ratingPromise = $this->asyncPool->add(function() use ($product) {
+                        return $this->reviewModel->getAverageRating($product['id']);
+                    });
+                    
+                    $reviewCountPromise = $this->asyncPool->add(function() use ($product) {
+                        return $this->reviewModel->getReviewCount($product['id']);
+                    });
+                    
+                    $relatedProductsPromise = $this->asyncPool->add(function() use ($product) {
+                        return $this->getLocalRecommendations($product['id']);
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $reviews = $reviewsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($product) {
+                        error_log('Error fetching reviews asynchronously: ' . $e->getMessage());
+                        return $this->reviewModel->getByProductId($product['id']);
+                    });
+                    
+                    $averageRating = $ratingPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($product) {
+                        error_log('Error fetching average rating asynchronously: ' . $e->getMessage());
+                        return $this->reviewModel->getAverageRating($product['id']);
+                    });
+                    
+                    $reviewCount = $reviewCountPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($product) {
+                        error_log('Error fetching review count asynchronously: ' . $e->getMessage());
+                        return $this->reviewModel->getReviewCount($product['id']);
+                    });
+                    
+                    $relatedProducts = $relatedProductsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($product) {
+                        error_log('Error fetching related products asynchronously: ' . $e->getMessage());
+                        return $this->getLocalRecommendations($product['id']);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $reviews = $this->reviewModel->getByProductId($product['id']);
+                    $averageRating = $this->reviewModel->getAverageRating($product['id']);
+                    $reviewCount = $this->reviewModel->getReviewCount($product['id']);
+                    $relatedProducts = $this->getLocalRecommendations($product['id']);
+                }
+            } else {
+                // Standard approach without async
+                $reviews = $this->reviewModel->getByProductId($product['id']);
+                $averageRating = $this->reviewModel->getAverageRating($product['id']);
+                $reviewCount = $this->reviewModel->getReviewCount($product['id']);
+                $relatedProducts = $this->getLocalRecommendations($product['id']);
+            }
             
             $viewData = [
                 'product' => $product,
@@ -149,8 +271,45 @@ class ProductController extends Controller
         }
         
         // Add dynamic data that shouldn't be cached
-        $inWishlist = Session::has('user_id') ? $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']) : false;
-        $hasReviewed = Session::has('user_id') ? $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']) : false;
+        // Use async to fetch user-specific data in parallel if available
+        if (Session::has('user_id') && $this->asyncPool) {
+            try {
+                $inWishlistPromise = $this->asyncPool->add(function() use ($viewData) {
+                    return $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']);
+                });
+                
+                $hasReviewedPromise = $this->asyncPool->add(function() use ($viewData) {
+                    return $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']);
+                });
+                
+                // Wait for async tasks to complete
+                $this->asyncPool->wait();
+                
+                // Get results
+                $inWishlist = $inWishlistPromise->then(function($result) {
+                    return $result;
+                })->catch(function(\Exception $e) use ($viewData) {
+                    error_log('Error checking wishlist asynchronously: ' . $e->getMessage());
+                    return $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']);
+                });
+                
+                $hasReviewed = $hasReviewedPromise->then(function($result) {
+                    return $result;
+                })->catch(function(\Exception $e) use ($viewData) {
+                    error_log('Error checking reviews asynchronously: ' . $e->getMessage());
+                    return $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']);
+                });
+            } catch (\Exception $e) {
+                error_log('Async processing error: ' . $e->getMessage());
+                // Fall back to standard approach
+                $inWishlist = $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']);
+                $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']);
+            }
+        } else {
+            // Standard approach without async
+            $inWishlist = Session::has('user_id') ? $this->wishlistModel->isInWishlist(Session::get('user_id'), $viewData['product']['id']) : false;
+            $hasReviewed = Session::has('user_id') ? $this->reviewModel->hasUserReviewed(Session::get('user_id'), $viewData['product']['id']) : false;
+        }
         
         // Generate QR code for product sharing
         $qrCode = $this->generateProductQRCode($viewData['product']['id'], $viewData['product']['slug'] ?? '');
@@ -226,7 +385,42 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            $products = $this->productModel->searchProducts($keyword);
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productsPromise = $this->asyncPool->add(function() use ($keyword) {
+                        return $this->productModel->searchProducts($keyword);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $products = $productsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($keyword) {
+                        error_log('Error searching products asynchronously: ' . $e->getMessage());
+                        return $this->productModel->searchProducts($keyword);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $products = $this->productModel->searchProducts($keyword);
+                }
+            } else {
+                // Standard approach without async
+                $products = $this->productModel->searchProducts($keyword);
+            }
+            
+            // Add images to each product
+            foreach ($products as &$product) {
+                $product['images'] = $this->productImageModel->getByProductId($product['id']);
+                $product['primary_image'] = $this->productImageModel->getPrimaryImage($product['id']);
+                
+                if ($product['primary_image']) {
+                    $product['image'] = $product['primary_image']['image_url'];
+                }
+            }
             
             $viewData = [
                 'products' => $products,
@@ -242,8 +436,51 @@ class ProductController extends Controller
         // Add dynamic data that shouldn't be cached
         // Check if products are in user's wishlist
         if (Session::has('user_id')) {
-            foreach ($viewData['products'] as &$product) {
-                $product['in_wishlist'] = $this->wishlistModel->isInWishlist(Session::get('user_id'), $product['id']);
+            // Use async to check wishlist status in parallel if available
+            if ($this->asyncPool && !empty($viewData['products'])) {
+                try {
+                    $wishlistPromises = [];
+                    $productIds = array_column($viewData['products'], 'id');
+                    
+                    foreach ($productIds as $index => $productId) {
+                        $wishlistPromises[$productId] = $this->asyncPool->add(function() use ($productId) {
+                            return [
+                                'id' => $productId,
+                                'in_wishlist' => $this->wishlistModel->isInWishlist(Session::get('user_id'), $productId)
+                            ];
+                        });
+                    }
+                    
+                    // Wait for all async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Process results
+                    $wishlistResults = [];
+                    foreach ($wishlistPromises as $productId => $promise) {
+                        $promise->then(function($result) use (&$wishlistResults) {
+                            $wishlistResults[$result['id']] = $result['in_wishlist'];
+                        })->catch(function(\Exception $e) use ($productId, &$wishlistResults) {
+                            error_log('Error checking wishlist asynchronously: ' . $e->getMessage());
+                            $wishlistResults[$productId] = false;
+                        });
+                    }
+                    
+                    // Update products with wishlist status
+                    foreach ($viewData['products'] as &$product) {
+                        $product['in_wishlist'] = $wishlistResults[$product['id']] ?? false;
+                    }
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    foreach ($viewData['products'] as &$product) {
+                        $product['in_wishlist'] = $this->wishlistModel->isInWishlist(Session::get('user_id'), $product['id']);
+                    }
+                }
+            } else {
+                // Standard approach without async
+                foreach ($viewData['products'] as &$product) {
+                    $product['in_wishlist'] = $this->wishlistModel->isInWishlist(Session::get('user_id'), $product['id']);
+                }
             }
         }
         
@@ -271,8 +508,36 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
-            $products = $this->productModel->query($sql, ['%' . $flavor . '%']);
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productsPromise = $this->asyncPool->add(function() use ($flavor) {
+                        $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
+                        return $this->productModel->query($sql, ['%' . $flavor . '%']);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $products = $productsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($flavor) {
+                        error_log('Error searching products by flavor asynchronously: ' . $e->getMessage());
+                        $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
+                        return $this->productModel->query($sql, ['%' . $flavor . '%']);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
+                    $products = $this->productModel->query($sql, ['%' . $flavor . '%']);
+                }
+            } else {
+                // Standard approach without async
+                $sql = "SELECT * FROM products WHERE flavor LIKE ? ORDER BY id DESC";
+                $products = $this->productModel->query($sql, ['%' . $flavor . '%']);
+            }
             
             $viewData = [
                 'products' => $products,
@@ -309,8 +574,36 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
-            $products = $this->productModel->query($sql, [$isCapsule]);
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productsPromise = $this->asyncPool->add(function() use ($isCapsule) {
+                        $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
+                        return $this->productModel->query($sql, [$isCapsule]);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $products = $productsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($isCapsule) {
+                        error_log('Error filtering products by capsule asynchronously: ' . $e->getMessage());
+                        $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
+                        return $this->productModel->query($sql, [$isCapsule]);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
+                    $products = $this->productModel->query($sql, [$isCapsule]);
+                }
+            } else {
+                // Standard approach without async
+                $sql = "SELECT * FROM products WHERE capsule = ? ORDER BY id DESC";
+                $products = $this->productModel->query($sql, [$isCapsule]);
+            }
             
             $viewData = [
                 'products' => $products,
@@ -356,7 +649,7 @@ class ProductController extends Controller
         
         $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
         $rating = isset($_POST['rating']) ? (int)$_POST['rating'] : 0;
-        $review = isset($_POST['review']) ? trim($_POST['review']) : '';
+        $review = isset($_POST['review_text']) ? trim($_POST['review_text']) : '';
         
         // Validate input
         $errors = [];
@@ -364,8 +657,45 @@ class ProductController extends Controller
         if (!$productId) {
             $errors['product_id'] = 'Invalid product';
         } else {
-            $product = $this->productModel->find($productId);
-            $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+            // Use async to fetch product if available
+            if ($this->asyncPool) {
+                try {
+                    $productPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    $hasReviewedPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $product = $productPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($productId) {
+                        error_log('Error fetching product asynchronously: ' . $e->getMessage());
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    $hasReviewed = $hasReviewedPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($productId) {
+                        error_log('Error checking review status asynchronously: ' . $e->getMessage());
+                        return $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $product = $this->productModel->find($productId);
+                    $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+                }
+            } else {
+                // Standard approach without async
+                $product = $this->productModel->find($productId);
+                $hasReviewed = $this->reviewModel->hasUserReviewed(Session::get('user_id'), $productId);
+            }
             
             if (!$product) {
                 $errors['product_id'] = 'Product not found';
@@ -402,8 +732,21 @@ class ProductController extends Controller
         try {
             $result = $this->reviewModel->create($data);
             if ($result) {
-                // Invalidate cache for this product
-                $this->invalidateProductCache($productId, $product['slug'] ?? '');
+                // Invalidate cache for this product asynchronously
+                if ($this->asyncPool) {
+                    $this->asyncPool->add(function() use ($productId, $product) {
+                        $this->invalidateProductCache($productId, $product['slug'] ?? '');
+                        return true;
+                    })->then(function($result) {
+                        error_log('Product cache invalidated asynchronously');
+                    })->catch(function(\Exception $e) {
+                        error_log('Error invalidating product cache asynchronously: ' . $e->getMessage());
+                    });
+                } else {
+                    // Synchronous cache invalidation
+                    $this->invalidateProductCache($productId, $product['slug'] ?? '');
+                }
+                
                 $this->setFlash('success', 'Your review has been submitted successfully');
             } else {
                 $this->setFlash('error', 'Failed to submit your review');
@@ -444,12 +787,80 @@ class ProductController extends Controller
         
         if ($viewData === null) {
             // Cache miss - fetch from database
-            $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
-            $products = $this->productModel->query($sql, [$category, $limit, $offset]);
-            
-            $sql = "SELECT COUNT(*) as count FROM products WHERE category = ?";
-            $result = $this->productModel->querySingle($sql, [$category]);
-            $totalProducts = $result ? (int)$result['count'] : 0;
+            // Use async to fetch products and count in parallel if available
+            if ($this->asyncPool) {
+                try {
+                    $productsPromise = $this->asyncPool->add(function() use ($category, $limit, $offset) {
+                        $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
+                        return $this->productModel->getProductsByCategory($category, $limit, $offset);
+                    });
+                    
+                    $totalProductsPromise = $this->asyncPool->add(function() use ($category) {
+                        return $this->productModel->getProductCountByCategory($category);
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results
+                    $products = $productsPromise->then(function($result) {
+                        // Add images to each product
+                        foreach ($result as &$product) {
+                            $product['images'] = $this->productImageModel->getByProductId($product['id']);
+                            $product['primary_image'] = $this->productImageModel->getPrimaryImage($product['id']);
+                            
+                            if ($product['primary_image']) {
+                                $product['image'] = $product['primary_image']['image_url'];
+                            }
+                        }
+                        return $result;
+                    })->catch(function(\Exception $e) use ($category, $limit, $offset) {
+                        error_log('Error fetching category products asynchronously: ' . $e->getMessage());
+                        $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
+                        return $this->productModel->getProductsByCategory($category, $limit, $offset);
+                    });
+                    
+                    $totalProducts = $totalProductsPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($category) {
+                        error_log('Error fetching category product count asynchronously: ' . $e->getMessage());
+                        return $this->productModel->getProductCountByCategory($category);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
+                    $products = $this->productModel->getProductsByCategory($category, $limit, $offset);
+                    
+                    // Add images to each product
+                    foreach ($products as &$product) {
+                        $product['images'] = $this->productImageModel->getByProductId($product['id']);
+                        $product['primary_image'] = $this->productImageModel->getPrimaryImage($product['id']);
+                        
+                        if ($product['primary_image']) {
+                            $product['image'] = $product['primary_image']['image_url'];
+                        }
+                    }
+                    
+                    $totalProducts = $this->productModel->getProductCountByCategory($category);
+                }
+            } else {
+                // Standard approach without async
+                $sql = "SELECT * FROM products WHERE category = ? ORDER BY id DESC LIMIT ? OFFSET ?";
+                $products = $this->productModel->getProductsByCategory($category, $limit, $offset);
+                
+                // Add images to each product
+                foreach ($products as &$product) {
+                    $product['images'] = $this->productImageModel->getByProductId($product['id']);
+                    $product['primary_image'] = $this->productImageModel->getPrimaryImage($product['id']);
+                    
+                    if ($product['primary_image']) {
+                        $product['image'] = $product['primary_image']['image_url'];
+                    }
+                }
+                
+                $totalProducts = $this->productModel->getProductCountByCategory($category);
+            }
             
             $totalPages = ceil($totalProducts / $limit);
             
@@ -493,16 +904,86 @@ class ProductController extends Controller
         
         if ($recommendations === null) {
             // Cache miss - fetch from API or database
-            $recommendations = $this->fetchWithGuzzle('recommendations', ['product_id' => $productId]);
-            
-            if ($recommendations === null) {
-                // Fallback to cURL if Guzzle fails
-                $recommendations = $this->fetchWithCurl('recommendations', ['product_id' => $productId]);
-            }
-            
-            if (empty($recommendations)) {
-                // If both methods fail or return empty, use local fallback
-                $recommendations = $this->getLocalRecommendations($productId);
+            // Use async to try multiple fetching methods in parallel if available
+            if ($this->asyncPool) {
+                try {
+                    $guzzlePromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->fetchWithGuzzle('recommendations', ['product_id' => $productId]);
+                    });
+                    
+                    $curlPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->fetchWithCurl('recommendations', ['product_id' => $productId]);
+                    });
+                    
+                    $localPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->getLocalRecommendations($productId);
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results and use the first successful one
+                    $guzzleResult = null;
+                    $curlResult = null;
+                    $localResult = null;
+                    
+                    $guzzlePromise->then(function($result) use (&$guzzleResult) {
+                        $guzzleResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching recommendations with Guzzle asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    $curlPromise->then(function($result) use (&$curlResult) {
+                        $curlResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching recommendations with cURL asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    $localPromise->then(function($result) use (&$localResult) {
+                        $localResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching local recommendations asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    // Use the first available result
+                    if (!empty($guzzleResult)) {
+                        $recommendations = $guzzleResult;
+                    } elseif (!empty($curlResult)) {
+                        $recommendations = $curlResult;
+                    } elseif (!empty($localResult)) {
+                        $recommendations = $localResult;
+                    } else {
+                        // Fallback to empty array if all methods fail
+                        $recommendations = [];
+                    }
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $recommendations = $this->fetchWithGuzzle('recommendations', ['product_id' => $productId]);
+                    
+                    if ($recommendations === null) {
+                        // Fallback to cURL if Guzzle fails
+                        $recommendations = $this->fetchWithCurl('recommendations', ['product_id' => $productId]);
+                    }
+                    
+                    if (empty($recommendations)) {
+                        // If both methods fail or return empty, use local fallback
+                        $recommendations = $this->getLocalRecommendations($productId);
+                    }
+                }
+            } else {
+                // Standard approach without async
+                $recommendations = $this->fetchWithGuzzle('recommendations', ['product_id' => $productId]);
+                
+                if ($recommendations === null) {
+                    // Fallback to cURL if Guzzle fails
+                    $recommendations = $this->fetchWithCurl('recommendations', ['product_id' => $productId]);
+                }
+                
+                if (empty($recommendations)) {
+                    // If both methods fail or return empty, use local fallback
+                    $recommendations = $this->getLocalRecommendations($productId);
+                }
             }
             
             // Store in cache for 6 hours
@@ -532,20 +1013,111 @@ class ProductController extends Controller
         
         if ($recommendations === null) {
             // Cache miss - fetch from database
-            $product = $this->productModel->find($productId);
-            
-            if (!$product) {
-                return [];
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get product result
+                    $product = $productPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($productId) {
+                        error_log('Error fetching product asynchronously: ' . $e->getMessage());
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    if (!$product) {
+                        return [];
+                    }
+                    
+                    $category = $product['category'] ?? '';
+                    
+                    if (empty($category)) {
+                        return [];
+                    }
+                    
+                    // Now fetch related products
+                    $relatedPromise = $this->asyncPool->add(function() use ($category, $productId, $limit) {
+                        return $this->productModel->getRelatedProducts($productId, $category, $limit);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get related products result
+                    $results = $relatedPromise->then(function($result) {
+                        // Add images to each product
+                        foreach ($result as &$relatedProduct) {
+                            $relatedProduct['images'] = $this->productImageModel->getByProductId($relatedProduct['id']);
+                            $relatedProduct['primary_image'] = $this->productImageModel->getPrimaryImage($relatedProduct['id']);
+                            
+                            if ($relatedProduct['primary_image']) {
+                                $relatedProduct['image'] = $relatedProduct['primary_image']['image_url'];
+                            }
+                        }
+                        return $result;
+                    })->catch(function(\Exception $e) use ($category, $productId, $limit) {
+                        error_log('Error fetching related products asynchronously: ' . $e->getMessage());
+                        return $this->productModel->getRelatedProducts($productId, $category, $limit);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $product = $this->productModel->find($productId);
+                    
+                    if (!$product) {
+                        return [];
+                    }
+                    
+                    $category = $product['category'] ?? '';
+                    
+                    if (empty($category)) {
+                        return [];
+                    }
+                    
+                    $results = $this->productModel->getRelatedProducts($productId, $category, $limit);
+                    
+                    // Add images to each product
+                    foreach ($results as &$relatedProduct) {
+                        $relatedProduct['images'] = $this->productImageModel->getByProductId($relatedProduct['id']);
+                        $relatedProduct['primary_image'] = $this->productImageModel->getPrimaryImage($relatedProduct['id']);
+                        
+                        if ($relatedProduct['primary_image']) {
+                            $relatedProduct['image'] = $relatedProduct['primary_image']['image_url'];
+                        }
+                    }
+                }
+            } else {
+                // Standard approach without async
+                $product = $this->productModel->find($productId);
+                
+                if (!$product) {
+                    return [];
+                }
+                
+                $category = $product['category'] ?? '';
+                
+                if (empty($category)) {
+                    return [];
+                }
+                
+                $results = $this->productModel->getRelatedProducts($productId, $category, $limit);
+                
+                // Add images to each product
+                foreach ($results as &$relatedProduct) {
+                    $relatedProduct['images'] = $this->productImageModel->getByProductId($relatedProduct['id']);
+                    $relatedProduct['primary_image'] = $this->productImageModel->getPrimaryImage($relatedProduct['id']);
+                    
+                    if ($relatedProduct['primary_image']) {
+                        $relatedProduct['image'] = $relatedProduct['primary_image']['image_url'];
+                    }
+                }
             }
-            
-            $category = $product['category'] ?? '';
-            
-            if (empty($category)) {
-                return [];
-            }
-            
-            $sql = "SELECT * FROM products WHERE category = ? AND id != ? ORDER BY RAND() LIMIT ?";
-            $results = $this->productModel->query($sql, [$category, $productId, $limit]);
             
             // Ensure we return an array
             $recommendations = is_array($results) ? $results : [];
@@ -577,14 +1149,68 @@ class ProductController extends Controller
         
         if ($similarProducts === null) {
             // Cache miss - fetch from database
-            $product = $this->productModel->find($productId);
-            
-            if (!$product || empty($product['flavor'])) {
-                return [];
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productPromise = $this->asyncPool->add(function() use ($productId) {
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get product result
+                    $product = $productPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($productId) {
+                        error_log('Error fetching product asynchronously: ' . $e->getMessage());
+                        return $this->productModel->find($productId);
+                    });
+                    
+                    if (!$product || empty($product['flavor'])) {
+                        return [];
+                    }
+                    
+                    // Now fetch similar flavor products
+                    $similarPromise = $this->asyncPool->add(function() use ($product, $productId, $limit) {
+                        $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
+                        return $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get similar products result
+                    $results = $similarPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($product, $productId, $limit) {
+                        error_log('Error fetching similar flavor products asynchronously: ' . $e->getMessage());
+                        $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
+                        return $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $product = $this->productModel->find($productId);
+                    
+                    if (!$product || empty($product['flavor'])) {
+                        return [];
+                    }
+                    
+                    $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
+                    $results = $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
+                }
+            } else {
+                // Standard approach without async
+                $product = $this->productModel->find($productId);
+                
+                if (!$product || empty($product['flavor'])) {
+                    return [];
+                }
+                
+                $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
+                $results = $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
             }
-            
-            $sql = "SELECT * FROM products WHERE flavor LIKE ? AND id != ? ORDER BY RAND() LIMIT ?";
-            $results = $this->productModel->query($sql, ['%' . $product['flavor'] . '%', $productId, $limit]);
             
             // Ensure we return an array
             $similarProducts = is_array($results) ? $results : [];
@@ -612,16 +1238,86 @@ class ProductController extends Controller
         
         if ($trending === null) {
             // Cache miss - fetch from API or database
-            $trending = $this->fetchWithGuzzle('trending', ['limit' => $limit]);
-            
-            if ($trending === null) {
-                // Fallback to cURL if Guzzle fails
-                $trending = $this->fetchWithCurl('trending', ['limit' => $limit]);
-            }
-            
-            if (empty($trending)) {
-                // If both methods fail or return empty, use local fallback
-                $trending = $this->productModel->getFeaturedProducts($limit);
+            // Use async to try multiple fetching methods in parallel if available
+            if ($this->asyncPool) {
+                try {
+                    $guzzlePromise = $this->asyncPool->add(function() use ($limit) {
+                        return $this->fetchWithGuzzle('trending', ['limit' => $limit]);
+                    });
+                    
+                    $curlPromise = $this->asyncPool->add(function() use ($limit) {
+                        return $this->fetchWithCurl('trending', ['limit' => $limit]);
+                    });
+                    
+                    $featuredPromise = $this->asyncPool->add(function() use ($limit) {
+                        return $this->productModel->getFeaturedProducts($limit);
+                    });
+                    
+                    // Wait for async tasks to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get results and use the first successful one
+                    $guzzleResult = null;
+                    $curlResult = null;
+                    $featuredResult = null;
+                    
+                    $guzzlePromise->then(function($result) use (&$guzzleResult) {
+                        $guzzleResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching trending products with Guzzle asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    $curlPromise->then(function($result) use (&$curlResult) {
+                        $curlResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching trending products with cURL asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    $featuredPromise->then(function($result) use (&$featuredResult) {
+                        $featuredResult = $result;
+                    })->catch(function(\Exception $e) {
+                        error_log('Error fetching featured products asynchronously: ' . $e->getMessage());
+                    });
+                    
+                    // Use the first available result
+                    if (!empty($guzzleResult)) {
+                        $trending = $guzzleResult;
+                    } elseif (!empty($curlResult)) {
+                        $trending = $curlResult;
+                    } elseif (!empty($featuredResult)) {
+                        $trending = $featuredResult;
+                    } else {
+                        // Fallback to empty array if all methods fail
+                        $trending = [];
+                    }
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $trending = $this->fetchWithGuzzle('trending', ['limit' => $limit]);
+                    
+                    if ($trending === null) {
+                        // Fallback to cURL if Guzzle fails
+                        $trending = $this->fetchWithCurl('trending', ['limit' => $limit]);
+                    }
+                    
+                    if (empty($trending)) {
+                        // If both methods fail or return empty, use local fallback
+                        $trending = $this->productModel->getFeaturedProducts($limit);
+                    }
+                }
+            } else {
+                // Standard approach without async
+                $trending = $this->fetchWithGuzzle('trending', ['limit' => $limit]);
+                
+                if ($trending === null) {
+                    // Fallback to cURL if Guzzle fails
+                    $trending = $this->fetchWithCurl('trending', ['limit' => $limit]);
+                }
+                
+                if (empty($trending)) {
+                    // If both methods fail or return empty, use local fallback
+                    $trending = $this->productModel->getFeaturedProducts($limit);
+                }
             }
             
             // Store in cache for 3 hours
@@ -652,7 +1348,32 @@ class ProductController extends Controller
         
         if ($response === null) {
             // Cache miss - fetch from database
-            $product = $this->productModel->find($id);
+            // Use async if available
+            if ($this->asyncPool) {
+                try {
+                    $productPromise = $this->asyncPool->add(function() use ($id) {
+                        return $this->productModel->find($id);
+                    });
+                    
+                    // Wait for async task to complete
+                    $this->asyncPool->wait();
+                    
+                    // Get product result
+                    $product = $productPromise->then(function($result) {
+                        return $result;
+                    })->catch(function(\Exception $e) use ($id) {
+                        error_log('Error fetching product asynchronously: ' . $e->getMessage());
+                        return $this->productModel->find($id);
+                    });
+                } catch (\Exception $e) {
+                    error_log('Async processing error: ' . $e->getMessage());
+                    // Fall back to standard approach
+                    $product = $this->productModel->find($id);
+                }
+            } else {
+                // Standard approach without async
+                $product = $this->productModel->find($id);
+            }
             
             if (!$product) {
                 echo json_encode(['error' => 'Product not found']);
@@ -688,17 +1409,74 @@ class ProductController extends Controller
             return false;
         }
         
-        // Try syncing with Guzzle first
-        $synced = $this->syncWithGuzzle();
-        
-        if (!$synced) {
-            // Fallback to cURL if Guzzle fails
-            $synced = $this->syncWithCurl();
+        // Use async to try multiple syncing methods in parallel if available
+        if ($this->asyncPool) {
+            try {
+                $guzzlePromise = $this->asyncPool->add(function() {
+                    return $this->syncWithGuzzle();
+                });
+                
+                $curlPromise = $this->asyncPool->add(function() {
+                    return $this->syncWithCurl();
+                });
+                
+                // Wait for async tasks to complete
+                $this->asyncPool->wait();
+                
+                // Get results and use the first successful one
+                $guzzleResult = false;
+                $curlResult = false;
+                
+                $guzzlePromise->then(function($result) use (&$guzzleResult) {
+                    $guzzleResult = $result;
+                })->catch(function(\Exception $e) {
+                    error_log('Error syncing products with Guzzle asynchronously: ' . $e->getMessage());
+                });
+                
+                $curlPromise->then(function($result) use (&$curlResult) {
+                    $curlResult = $result;
+                })->catch(function(\Exception $e) {
+                    error_log('Error syncing products with cURL asynchronously: ' . $e->getMessage());
+                });
+                
+                // Use the first successful result
+                $synced = $guzzleResult || $curlResult;
+            } catch (\Exception $e) {
+                error_log('Async processing error: ' . $e->getMessage());
+                // Fall back to standard approach
+                $synced = $this->syncWithGuzzle();
+                
+                if (!$synced) {
+                    // Fallback to cURL if Guzzle fails
+                    $synced = $this->syncWithCurl();
+                }
+            }
+        } else {
+            // Standard approach without async
+            $synced = $this->syncWithGuzzle();
+            
+            if (!$synced) {
+                // Fallback to cURL if Guzzle fails
+                $synced = $this->syncWithCurl();
+            }
         }
         
         if ($synced) {
-            // Clear all product-related caches
-            $this->clearAllProductCache();
+            // Clear all product-related caches asynchronously
+            if ($this->asyncPool) {
+                $this->asyncPool->add(function() {
+                    $this->clearAllProductCache();
+                    return true;
+                })->then(function($result) {
+                    error_log('Product cache cleared asynchronously');
+                })->catch(function(\Exception $e) {
+                    error_log('Error clearing product cache asynchronously: ' . $e->getMessage());
+                });
+            } else {
+                // Synchronous cache clearing
+                $this->clearAllProductCache();
+            }
+            
             $this->setFlash('success', 'Products synchronized successfully');
         } else {
             $this->setFlash('error', 'Failed to synchronize products');
@@ -729,6 +1507,7 @@ class ProductController extends Controller
         $this->cache->delete($this->cache->generateKey('similar_flavor_products', ['product_id' => $productId]));
         
         // Clear category and product listing caches
+        // Note: This is a bit aggressive but ensures data consistency
         $this->clearListingCaches();
     }
     
@@ -751,6 +1530,9 @@ class ProductController extends Controller
         
         // Clear capsule filter cache
         $this->cache->delete($this->cache->generateKey('product_capsule_filter', []));
+        
+        // Note: For a more sophisticated approach, we would need to
+        // track all cache keys or use a cache tag system
     }
     
     /**
@@ -758,7 +1540,8 @@ class ProductController extends Controller
      */
     private function clearAllProductCache()
     {
-        // Clear all caches
+        // This is a simple but effective approach to clear all caches
+        // In a production environment, you might want to use a more targeted approach
         $this->cache->clear();
     }
     
@@ -869,6 +1652,7 @@ class ProductController extends Controller
     private function getApiKey()
     {
         // Return API key from configuration or environment variable
+        // Use defined() to check if the constant exists
         return defined('API_KEY') ? API_KEY : 'default-api-key';
     }
     

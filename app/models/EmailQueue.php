@@ -1,208 +1,187 @@
 <?php
 namespace App\Models;
 
-use App\Core\Database;
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+use App\Core\Model;
+use App\Helpers\EmailHelper;
+use Exception;
 
-class EmailQueue
+class EmailQueue extends Model
 {
-    private $db;
-
-    public function __construct()
-    {
-        $this->db = new Database();
-    }
+    protected $table = 'email_queue';
+    protected $primaryKey = 'id';
 
     /**
      * Add an email to the queue
-     * 
-     * @param string $toEmail Recipient email
-     * @param string $subject Email subject
-     * @param string $body Email body (HTML)
-     * @param string $toName Recipient name (optional)
-     * @param int $priority Priority (1-10, lower is higher priority)
-     * @param array $metadata Additional metadata (optional)
-     * @param string|null $scheduledAt When to send the email (null for immediate)
-     * @return int|bool The ID of the queued email or false on failure
      */
     public function queueEmail($toEmail, $subject, $body, $toName = '', $priority = 5, $metadata = [], $scheduledAt = null)
     {
-        $this->db->query('INSERT INTO email_queue (to_email, to_name, subject, body, priority, metadata, scheduled_at) 
-                          VALUES (:to_email, :to_name, :subject, :body, :priority, :metadata, :scheduled_at)');
-        
-        $this->db->bind(':to_email', $toEmail);
-        $this->db->bind(':to_name', $toName);
-        $this->db->bind(':subject', $subject);
-        $this->db->bind(':body', $body);
-        $this->db->bind(':priority', $priority);
-        $this->db->bind(':metadata', json_encode($metadata));
-        $this->db->bind(':scheduled_at', $scheduledAt);
-        
-        if ($this->db->execute()) {
-            return $this->db->lastInsertId();
-        } else {
+        try {
+            $data = [
+                'to_email' => $toEmail,
+                'to_name' => $toName,
+                'subject' => $subject,
+                'body' => $body,
+                'priority' => $priority,
+                'metadata' => json_encode($metadata),
+                'scheduled_at' => $scheduledAt,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $emailId = $this->create($data);
+            
+            if ($emailId) {
+                // Process immediately if high priority
+                if ($priority <= 2) {
+                    $this->processEmail($emailId);
+                }
+                return $emailId;
+            }
+            
+            return false;
+        } catch (Exception $e) {
+            error_log('Failed to queue email: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Queue template email
+     */
+    public function queueTemplateEmail($toEmail, $toName, $subject, $template, $data = [], $priority = 5)
+    {
+        try {
+            // Load and process template
+            $templatePath = $this->findTemplatePath($template);
+            
+            if (!$templatePath || !file_exists($templatePath)) {
+                error_log("Email template not found: " . $template);
+                return false;
+            }
+            
+            // Get template content
+            $body = file_get_contents($templatePath);
+            
+            if ($body === false) {
+                error_log("Failed to read email template: " . $templatePath);
+                return false;
+            }
+            
+            // Replace placeholders with data
+            foreach ($data as $key => $value) {
+                $body = str_replace('{{' . $key . '}}', htmlspecialchars($value), $body);
+            }
+            
+            return $this->queueEmail($toEmail, $subject, $body, $toName, $priority, $data);
+            
+        } catch (Exception $e) {
+            error_log('Failed to queue template email: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Process a specific email by ID
+     */
+    public function processEmail($id)
+    {
+        try {
+            // Get the email from the queue
+            $email = $this->find($id);
+            
+            if (!$email) {
+                return false;
+            }
+            
+            // Mark as processing
+            $this->markAsProcessing($id);
+            
+            // Send the email using EmailHelper
+            $success = EmailHelper::send(
+                $email['to_email'],
+                $email['subject'],
+                $email['body']
+            );
+            
+            if ($success) {
+                // Mark as sent
+                $this->markAsSent($id);
+                return true;
+            } else {
+                // Mark as failed
+                $this->markAsFailed($id, 'Failed to send email');
+                return false;
+            }
+        } catch (Exception $e) {
+            // Mark as failed with error message
+            $this->markAsFailed($id, $e->getMessage());
+            error_log('Error processing email ID ' . $id . ': ' . $e->getMessage());
             return false;
         }
     }
 
     /**
      * Get pending emails from the queue
-     * 
-     * @param int $limit Maximum number of emails to retrieve
-     * @return array Array of pending emails
      */
     public function getPendingEmails($limit = 10)
     {
         $now = date('Y-m-d H:i:s');
         
-        $this->db->query('SELECT * FROM email_queue 
-                          WHERE status = :pending 
-                          AND (scheduled_at IS NULL OR scheduled_at <= :now)
-                          AND attempts < max_attempts
-                          ORDER BY priority ASC, created_at ASC
-                          LIMIT :limit');
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE status = 'pending' 
+                AND (scheduled_at IS NULL OR scheduled_at <= ?)
+                AND attempts < max_attempts
+                ORDER BY priority ASC, created_at ASC
+                LIMIT ?";
         
-        $this->db->bind(':pending', 'pending');
-        $this->db->bind(':now', $now);
-        $this->db->bind(':limit', $limit, \PDO::PARAM_INT);
-        
-        return $this->db->resultSet();
+        return $this->db->query($sql)->bind([$now, $limit])->all();
     }
 
     /**
      * Mark an email as processing
-     * 
-     * @param int $id Email ID
-     * @return bool Success or failure
      */
     public function markAsProcessing($id)
     {
-        $this->db->query('UPDATE email_queue 
-                          SET status = :status, 
-                              attempts = attempts + 1,
-                              last_attempt = NOW()
-                          WHERE id = :id');
+        $sql = "UPDATE {$this->table} 
+                SET status = 'processing', 
+                    attempts = attempts + 1,
+                    last_attempt = NOW(),
+                    updated_at = NOW()
+                WHERE id = ?";
         
-        $this->db->bind(':status', 'processing');
-        $this->db->bind(':id', $id);
-        
-        return $this->db->execute();
+        return $this->db->query($sql)->bind([$id])->execute();
     }
 
     /**
      * Mark an email as sent
-     * 
-     * @param int $id Email ID
-     * @return bool Success or failure
      */
     public function markAsSent($id)
     {
-        $this->db->query('UPDATE email_queue 
-                          SET status = :status, 
-                              sent_at = NOW()
-                          WHERE id = :id');
+        $sql = "UPDATE {$this->table} 
+                SET status = 'sent', 
+                    sent_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = ?";
         
-        $this->db->bind(':status', 'sent');
-        $this->db->bind(':id', $id);
-        
-        return $this->db->execute();
+        return $this->db->query($sql)->bind([$id])->execute();
     }
 
     /**
      * Mark an email as failed
-     * 
-     * @param int $id Email ID
-     * @param string $errorMessage Error message
-     * @return bool Success or failure
      */
     public function markAsFailed($id, $errorMessage)
     {
-        $this->db->query('UPDATE email_queue 
-                          SET status = :status, 
-                              error_message = :error_message
-                          WHERE id = :id');
+        $sql = "UPDATE {$this->table} 
+                SET status = 'failed', 
+                    error_message = ?,
+                    updated_at = NOW()
+                WHERE id = ?";
         
-        $this->db->bind(':status', 'failed');
-        $this->db->bind(':error_message', $errorMessage);
-        $this->db->bind(':id', $id);
-        
-        return $this->db->execute();
-    }
-
-    /**
-     * Reset failed emails to pending for retry
-     * 
-     * @param int $olderThanHours Only reset emails older than this many hours
-     * @param int $maxAttempts Only reset emails with fewer than this many attempts
-     * @return int Number of emails reset
-     */
-    public function resetFailedEmails($olderThanHours = 1, $maxAttempts = 3)
-    {
-        $cutoffTime = date('Y-m-d H:i:s', strtotime("-{$olderThanHours} hours"));
-        
-        $this->db->query('UPDATE email_queue 
-                          SET status = :pending_status
-                          WHERE status = :failed_status
-                          AND last_attempt < :cutoff_time
-                          AND attempts < :max_attempts');
-        
-        $this->db->bind(':pending_status', 'pending');
-        $this->db->bind(':failed_status', 'failed');
-        $this->db->bind(':cutoff_time', $cutoffTime);
-        $this->db->bind(':max_attempts', $maxAttempts);
-        
-        $this->db->execute();
-        
-        return $this->db->rowCount();
-    }
-
-    /**
-     * Get email queue statistics
-     * 
-     * @return array Statistics about the email queue
-     */
-    public function getStatistics()
-    {
-        $this->db->query('SELECT 
-                            COUNT(*) as total,
-                            SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending,
-                            SUM(CASE WHEN status = "processing" THEN 1 ELSE 0 END) as processing,
-                            SUM(CASE WHEN status = "sent" THEN 1 ELSE 0 END) as sent,
-                            SUM(CASE WHEN status = "failed" THEN 1 ELSE 0 END) as failed,
-                            SUM(CASE WHEN status = "failed" AND attempts >= max_attempts THEN 1 ELSE 0 END) as max_attempts_reached
-                          FROM email_queue');
-        
-        return $this->db->single();
-    }
-
-    /**
-     * Clean up old sent emails
-     * 
-     * @param int $olderThanDays Delete sent emails older than this many days
-     * @return int Number of emails deleted
-     */
-    public function cleanupOldEmails($olderThanDays = 30)
-    {
-        $cutoffTime = date('Y-m-d H:i:s', strtotime("-{$olderThanDays} days"));
-        
-        $this->db->query('DELETE FROM email_queue 
-                          WHERE status = :sent_status
-                          AND sent_at < :cutoff_time');
-        
-        $this->db->bind(':sent_status', 'sent');
-        $this->db->bind(':cutoff_time', $cutoffTime);
-        
-        $this->db->execute();
-        
-        return $this->db->rowCount();
+        return $this->db->query($sql)->bind([$errorMessage, $id])->execute();
     }
 
     /**
      * Process the email queue
-     * 
-     * @param int $limit Maximum number of emails to process
-     * @return array Processing results
      */
     public function processQueue($limit = 10)
     {
@@ -223,26 +202,16 @@ class EmailQueue
         foreach ($pendingEmails as $email) {
             $results['processed']++;
             
-            // Mark as processing
-            $this->markAsProcessing($email['id']);
-            
             try {
-                // Send the email
-                $success = $this->sendEmail($email);
+                $success = $this->processEmail($email['id']);
                 
                 if ($success) {
-                    // Mark as sent
-                    $this->markAsSent($email['id']);
                     $results['success']++;
                 } else {
-                    // Mark as failed
-                    $this->markAsFailed($email['id'], 'Failed to send email');
                     $results['failed']++;
                     $results['errors'][] = "Email ID {$email['id']}: Failed to send email";
                 }
-            } catch (\Exception $e) {
-                // Mark as failed with error message
-                $this->markAsFailed($email['id'], $e->getMessage());
+            } catch (Exception $e) {
                 $results['failed']++;
                 $results['errors'][] = "Email ID {$email['id']}: {$e->getMessage()}";
             }
@@ -252,71 +221,57 @@ class EmailQueue
     }
 
     /**
-     * Send an email using PHPMailer
-     * 
-     * @param array $emailData Email data from the queue
-     * @return bool Success or failure
+     * Get email queue statistics
      */
-    private function sendEmail($emailData)
+    public function getStatistics()
     {
-        try {
-            // Create a new PHPMailer instance
-            $mail = new PHPMailer(true);
-            
-            // Server settings
-            if (defined('MAIL_DEBUG') && MAIL_DEBUG > 0) {
-                $mail->SMTPDebug = MAIL_DEBUG;
+        $sql = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                    SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                    SUM(CASE WHEN status = 'failed' AND attempts >= max_attempts THEN 1 ELSE 0 END) as max_attempts_reached
+                FROM {$this->table}";
+        
+        return $this->db->query($sql)->single();
+    }
+
+    /**
+     * Clean up old sent emails
+     */
+    public function cleanupOldEmails($olderThanDays = 30)
+    {
+        $cutoffTime = date('Y-m-d H:i:s', strtotime("-{$olderThanDays} days"));
+        
+        $sql = "DELETE FROM {$this->table} 
+                WHERE status = 'sent'
+                AND sent_at < ?";
+        
+        $this->db->query($sql)->bind([$cutoffTime])->execute();
+        
+        return $this->db->rowCount();
+    }
+
+    /**
+     * Find template path
+     */
+    private function findTemplatePath($template)
+    {
+        $possiblePaths = [
+            defined('APPROOT') ? APPROOT . '/assets/templates/' . $template . '.html' : null,
+            dirname(dirname(__DIR__)) . '/assets/templates/' . $template . '.html',
+            dirname(dirname(dirname(__DIR__))) . '/assets/templates/' . $template . '.html',
+            $_SERVER['DOCUMENT_ROOT'] . '/assets/templates/' . $template . '.html',
+            __DIR__ . '/../../assets/templates/' . $template . '.html'
+        ];
+
+        foreach ($possiblePaths as $path) {
+            if ($path && file_exists($path)) {
+                return $path;
             }
-            
-            $mail->isSMTP();
-            $mail->Host       = MAIL_HOST;
-            $mail->SMTPAuth   = true;
-            $mail->Username   = MAIL_USERNAME;
-            $mail->Password   = MAIL_PASSWORD;
-            
-            // Set encryption based on configuration
-            if (defined('MAIL_ENCRYPTION') && MAIL_ENCRYPTION === 'ssl') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            } else {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            }
-            
-            $mail->Port = MAIL_PORT;
-            
-            // Sender
-            $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
-            $mail->addReplyTo(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
-            
-            // Recipient
-            $mail->addAddress($emailData['to_email'], $emailData['to_name']);
-            
-            // Content
-            $mail->isHTML(true);
-            $mail->Subject = $emailData['subject'];
-            $mail->Body    = $emailData['body'];
-            $mail->CharSet = 'UTF-8';
-            
-            // Add attachments if any (from metadata)
-            $metadata = json_decode($emailData['metadata'], true);
-            if (isset($metadata['attachments']) && is_array($metadata['attachments'])) {
-                foreach ($metadata['attachments'] as $attachment) {
-                    if (isset($attachment['path']) && file_exists($attachment['path'])) {
-                        $mail->addAttachment(
-                            $attachment['path'],
-                            $attachment['name'] ?? basename($attachment['path']),
-                            $attachment['encoding'] ?? 'base64',
-                            $attachment['type'] ?? ''
-                        );
-                    }
-                }
-            }
-            
-            // Send the email
-            return $mail->send();
-            
-        } catch (\Exception $e) {
-            error_log('Error sending email from queue: ' . $e->getMessage());
-            throw $e;
         }
+
+        return null;
     }
 }
