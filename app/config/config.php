@@ -7,13 +7,13 @@
 define('ENVIRONMENT', 'development');
 
 // Base URL of the application
-define('BASE_URL', 'http://192.168.1.74:8000');
+define('BASE_URL', 'http://violet-beaver-129911.hostingersite.com');
 
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'nutrinexas'); // Make sure this matches your database name
-define('DB_USER', 'root'); 
-define('DB_PASS', '');
+define('DB_NAME', 'u852370365_ecom_store'); // Make sure this matches your database name
+define('DB_USER', 'u852370365_root'); 
+define('DB_PASS', 'Y1]r&ePF~/k');
 
 // App Root
 if (!defined('APPROOT')) {
