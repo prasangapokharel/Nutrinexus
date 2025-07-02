@@ -71,6 +71,36 @@ class ProductController extends Controller
     }
 
     /**
+ * Get the URL for a product's image with fallback to default
+ * 
+ * @param array $product The product data array
+ * @return string The image URL
+ */
+public function getProductImageUrl($product)
+{
+    // First check for direct image in the product array
+    if (!empty($product['image'])) {
+        return $product['image'];
+    }
+    
+    // Then check for product['product']['image'] structure
+    if (!empty($product['product']['image'])) {
+        return $product['product']['image'];
+    }
+    
+    // Check for primary image from product images
+    if (!empty($product['id'])) {
+        $primaryImage = $this->productImageModel->getPrimaryImage($product['id']);
+        if ($primaryImage) {
+            return $primaryImage['image_url'];
+        }
+    }
+    
+    // Fallback to default image
+    return \App\Core\View::asset('images/products/default.jpg');
+}
+
+    /**
      * Display all products with caching
      */
     public function index()

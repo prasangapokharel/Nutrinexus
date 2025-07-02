@@ -25,19 +25,19 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white rounded-none shadow-sm p-6">
                     <h2 class="text-lg font-medium text-primary mb-2">Available Balance</h2>
-                    <div class="text-3xl font-bold text-accent">₹<?= number_format($balance['available_balance'] ?? 0, 2) ?></div>
+                    <div class="text-3xl font-bold text-accent">Rs<?= number_format($balance['available_balance'] ?? 0, 2) ?></div>
                     <p class="text-sm text-gray-600 mt-2">Amount available for withdrawal</p>
                 </div>
                 
                 <div class="bg-white rounded-none shadow-sm p-6">
                     <h2 class="text-lg font-medium text-primary mb-2">Pending Withdrawals</h2>
-                    <div class="text-3xl font-bold text-yellow-600">₹<?= number_format($balance['pending_withdrawals'] ?? 0, 2) ?></div>
+                    <div class="text-3xl font-bold text-yellow-600">Rs<?= number_format($balance['pending_withdrawals'] ?? 0, 2) ?></div>
                     <p class="text-sm text-gray-600 mt-2">Amount currently being processed</p>
                 </div>
                 
                 <div class="bg-white rounded-none shadow-sm p-6">
                     <h2 class="text-lg font-medium text-primary mb-2">Total Withdrawn</h2>
-                    <div class="text-3xl font-bold text-green-600">₹<?= number_format($balance['total_withdrawn'] ?? 0, 2) ?></div>
+                    <div class="text-3xl font-bold text-green-600">Rs<?= number_format($balance['total_withdrawn'] ?? 0, 2) ?></div>
                     <p class="text-sm text-gray-600 mt-2">Total amount withdrawn to date</p>
                 </div>
             </div>
@@ -49,14 +49,14 @@
                 
                 <form action="<?= \App\Core\View::url('user/requestWithdrawal') ?>" method="post" class="p-6">
                     <div class="mb-6">
-                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount (₹)</label>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount (Rs)</label>
                         <div class="relative">
-                            <span class="absolute left-3 top-3 text-gray-500">₹</span>
+                            <span class="absolute left-3 top-3 text-gray-500">Rs</span>
                             <input type="number" name="amount" id="amount" min="100" max="<?= $balance['available_balance'] ?? 0 ?>" step="1" 
                                 class="w-full px-4 py-3 pl-8 border border-gray-300 rounded-none focus:ring-primary focus:border-primary"
-                                placeholder="Enter amount (minimum ₹100)" required>
+                                placeholder="Enter amount (minimum Rs100)" required>
                         </div>
-                        <p class="text-sm text-gray-500 mt-1">Minimum withdrawal amount: ₹100</p>
+                        <p class="text-sm text-gray-500 mt-1">Minimum withdrawal amount: Rs500</p>
                     </div>
                     
                     <div class="mb-6">
@@ -65,8 +65,8 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-none focus:ring-primary focus:border-primary" required>
                             <option value="">Select payment method</option>
                             <option value="bank_transfer">Bank Transfer</option>
-                            <option value="upi">UPI</option>
-                            <option value="paytm">Paytm</option>
+                            <option value="Esewa">ESEWA</option>
+                            <option value="paytm">Khalti</option>
                         </select>
                     </div>
                     
@@ -102,14 +102,14 @@
                         </div>
                     </div>
                     
-                    <div id="upi_details" class="mb-6 hidden">
-                        <h3 class="text-md font-medium text-primary mb-4">UPI Details</h3>
+                    <div id="Esewa_details" class="mb-6 hidden">
+                        <h3 class="text-md font-medium text-primary mb-4">Esewa Details</h3>
                         
                         <div>
-                            <label for="upi_id" class="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
-                            <input type="text" name="upi_id" id="upi_id" 
+                            <label for="Esewa_id" class="block text-sm font-medium text-gray-700 mb-1">Esewa ID</label>
+                            <input type="text" name="Esewa_id" id="Esewa_id" 
                                    class="w-full px-4 py-3 border border-gray-300 rounded-none focus:ring-primary focus:border-primary"
-                                   placeholder="example@upi">
+                                   placeholder="98******29">
                         </div>
                     </div>
                     
@@ -130,7 +130,7 @@
                             Request Withdrawal
                         </button>
                         <?php if (($balance['available_balance'] ?? 0) < 100): ?>
-                            <p class="text-red-600 text-sm mt-2">You need at least ₹100 to request a withdrawal.</p>
+                            <p class="text-red-600 text-sm mt-2">You need at least Rs100 to request a withdrawal.</p>
                         <?php endif; ?>
                     </div>
                     
@@ -176,7 +176,7 @@
                                             <?= date('M j, Y', strtotime($withdrawal['created_at'])) ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            ₹<?= number_format($withdrawal['amount'], 2) ?>
+                                            Rs<?= number_format($withdrawal['amount'], 2) ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <?= ucfirst(str_replace('_', ' ', $withdrawal['payment_method'])) ?>
@@ -206,20 +206,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     const paymentMethodSelect = document.getElementById('payment_method');
     const bankDetails = document.getElementById('bank_details');
-    const upiDetails = document.getElementById('upi_details');
+    const EsewaDetails = document.getElementById('Esewa_details');
     const paytmDetails = document.getElementById('paytm_details');
     
     paymentMethodSelect.addEventListener('change', function() {
         // Hide all payment details sections
         bankDetails.classList.add('hidden');
-        upiDetails.classList.add('hidden');
+        EsewaDetails.classList.add('hidden');
         paytmDetails.classList.add('hidden');
         
         // Show the selected payment details section
         if (this.value === 'bank_transfer') {
             bankDetails.classList.remove('hidden');
-        } else if (this.value === 'upi') {
-            upiDetails.classList.remove('hidden');
+        } else if (this.value === 'Esewa') {
+            EsewaDetails.classList.remove('hidden');
         } else if (this.value === 'paytm') {
             paytmDetails.classList.remove('hidden');
         }

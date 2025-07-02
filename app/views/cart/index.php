@@ -108,10 +108,10 @@ function getProductImageUrl($product) {
                                                 <!-- Price Display -->
                                                 <div class="mt-2">
                                                     <?php if (isset($item['product']['sale_price']) && $item['product']['sale_price'] && $item['product']['sale_price'] < $item['product']['price']): ?>
-                                                        <span class="text-lg font-bold text-accent">₹<?= number_format($item['product']['sale_price'], 2) ?></span>
-                                                        <span class="text-sm text-gray-500 line-through ml-2">₹<?= number_format($item['product']['price'], 2) ?></span>
+                                                        <span class="text-lg font-bold text-accent">Rs<?= number_format($item['product']['sale_price'], 2) ?></span>
+                                                        <span class="text-sm text-gray-500 line-through ml-2">Rs<?= number_format($item['product']['price'], 2) ?></span>
                                                     <?php else: ?>
-                                                        <span class="text-lg font-bold text-accent">₹<?= number_format($item['product']['price'], 2) ?></span>
+                                                        <span class="text-lg font-bold text-accent">Rs<?= number_format($item['product']['price'], 2) ?></span>
                                                     <?php endif; ?>
                                                 </div>
                                                 
@@ -137,7 +137,7 @@ function getProductImageUrl($product) {
                                                     </div>
                                                     <div class="text-right">
                                                         <div class="text-sm text-gray-500">Subtotal</div>
-                                                        <span class="text-lg font-bold text-accent subtotal-display" data-product-id="<?= $item['product']['id'] ?>">₹<?= number_format($item['subtotal'], 2) ?></span>
+                                                        <span class="text-lg font-bold text-accent subtotal-display" data-product-id="<?= $item['product']['id'] ?>">Rs<?= number_format($item['subtotal'], 2) ?></span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -176,11 +176,11 @@ function getProductImageUrl($product) {
                                 <div class="space-y-4">
                                     <div class="flex justify-between">
                                         <span class="text-gray-600">Subtotal</span>
-                                        <span class="font-medium text-primary">₹<span id="subtotal"><?= number_format($total, 2) ?></span></span>
+                                        <span class="font-medium text-primary">Rs<span id="subtotal"><?= number_format($total, 2) ?></span></span>
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-600">Tax (<?= defined('TAX_RATE') ? TAX_RATE : 18 ?>%)</span>
-                                        <span class="font-medium text-primary">₹<span id="tax"><?= number_format($tax, 2) ?></span></span>
+                                        <span class="font-medium text-primary">Rs<span id="tax"><?= number_format($tax, 2) ?></span></span>
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-600">Shipping</span>
@@ -189,7 +189,7 @@ function getProductImageUrl($product) {
                                     <div class="border-t border-gray-200 pt-4">
                                         <div class="flex justify-between">
                                             <span class="text-lg font-medium text-gray-900">Total</span>
-                                            <span class="text-xl font-bold text-accent">₹<span id="final-total"><?= number_format($finalTotal, 2) ?></span></span>
+                                            <span class="text-xl font-bold text-accent">Rs<span id="final-total"><?= number_format($finalTotal, 2) ?></span></span>
                                         </div>
                                     </div>
                                 </div>
@@ -343,7 +343,7 @@ function updateCartItem(productId, action) {
             // Update subtotal display
             const subtotalDisplay = document.querySelector(`.subtotal-display[data-product-id="${productId}"]`);
             if (subtotalDisplay) {
-                subtotalDisplay.textContent = `₹${parseFloat(data.item_subtotal).toFixed(2)}`;
+                subtotalDisplay.textContent = `Rs${parseFloat(data.item_subtotal).toFixed(2)}`;
                 subtotalDisplay.classList.add('animate-pulse');
                 setTimeout(() => subtotalDisplay.classList.remove('animate-pulse'), 500);
             }

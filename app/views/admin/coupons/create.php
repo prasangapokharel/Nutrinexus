@@ -43,7 +43,7 @@ ob_start();
                                 required onchange="updateDiscountLabel()">
                             <option value="">Select discount type</option>
                             <option value="percentage" <?= (isset($data['discount_type']) && $data['discount_type'] === 'percentage') ? 'selected' : '' ?>>Percentage (%)</option>
-                            <option value="fixed" <?= (isset($data['discount_type']) && $data['discount_type'] === 'fixed') ? 'selected' : '' ?>>Fixed Amount (₹)</option>
+                            <option value="fixed" <?= (isset($data['discount_type']) && $data['discount_type'] === 'fixed') ? 'selected' : '' ?>>Fixed Amount (Rs)</option>
                         </select>
                         <?php if (isset($errors['discount_type'])): ?>
                             <p class="text-red-500 text-sm mt-1"><?= htmlspecialchars($errors['discount_type']) ?></p>
@@ -67,7 +67,7 @@ ob_start();
                 <!-- Order Constraints -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="min_order_amount" class="block text-sm font-medium text-gray-700 mb-2">Minimum Order Amount (₹)</label>
+                        <label for="min_order_amount" class="block text-sm font-medium text-gray-700 mb-2">Minimum Order Amount (Rs)</label>
                         <input type="number" id="min_order_amount" name="min_order_amount" step="0.01" min="0"
                                value="<?= htmlspecialchars($data['min_order_amount'] ?? '') ?>"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -79,7 +79,7 @@ ob_start();
                     </div>
                     
                     <div>
-                        <label for="max_discount_amount" class="block text-sm font-medium text-gray-700 mb-2">Maximum Discount Amount (₹)</label>
+                        <label for="max_discount_amount" class="block text-sm font-medium text-gray-700 mb-2">Maximum Discount Amount (Rs)</label>
                         <input type="number" id="max_discount_amount" name="max_discount_amount" step="0.01" min="0"
                                value="<?= htmlspecialchars($data['max_discount_amount'] ?? '') ?>"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -137,7 +137,7 @@ ob_start();
                             <?php foreach ($products as $product): ?>
                                 <option value="<?= $product['id'] ?>"
                                         <?= (isset($data['applicable_products']) && in_array($product['id'], explode(',', $data['applicable_products']))) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($product['product_name']) ?> - ₹<?= number_format($product['price'], 2) ?>
+                                    <?= htmlspecialchars($product['product_name']) ?> - Rs<?= number_format($product['price'], 2) ?>
                                 </option>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -177,7 +177,7 @@ function updateDiscountLabel() {
     if (discountType === 'percentage') {
         label.textContent = 'Discount Percentage (%) *';
     } else if (discountType === 'fixed') {
-        label.textContent = 'Discount Amount (₹) *';
+        label.textContent = 'Discount Amount (Rs) *';
     } else {
         label.textContent = 'Discount Value *';
     }

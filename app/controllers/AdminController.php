@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -7,11 +8,13 @@ use App\Models\ProductImage;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\PaymentMethod;
-use App\Models\Payment;
 use App\Models\OrderItem;
 use App\Models\ReferralEarning;
 use App\Models\Withdrawal;
 use App\Models\Coupon;
+use App\Models\KhaltiPayment;
+use App\Models\EsewaPayment;
+use App\Helpers\EmailHelper;
 use Exception;
 
 class AdminController extends Controller
@@ -21,11 +24,12 @@ class AdminController extends Controller
     private $orderModel;
     private $userModel;
     private $paymentMethodModel;
-    private $paymentModel;
     private $orderItemModel;
     private $referralEarningModel;
     private $withdrawalModel;
     private $couponModel;
+    private $khaltiPaymentModel;
+    private $esewaPaymentModel;
 
     public function __construct()
     {
@@ -35,11 +39,12 @@ class AdminController extends Controller
         $this->orderModel = new Order();
         $this->userModel = new User();
         $this->paymentMethodModel = new PaymentMethod();
-        $this->paymentModel = new Payment();
         $this->orderItemModel = new OrderItem();
         $this->referralEarningModel = new ReferralEarning();
         $this->withdrawalModel = new Withdrawal();
         $this->couponModel = new Coupon();
+        $this->khaltiPaymentModel = new KhaltiPayment();
+        $this->esewaPaymentModel = new EsewaPayment();
         
         // Check if user is admin
         $this->requireAdmin();
@@ -572,7 +577,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Update order status
+     * Update order status with referral processing and email notifications
      */
     public function updateOrderStatus($id = null)
     {
@@ -593,21 +598,188 @@ class AdminController extends Controller
             $this->redirect('admin/orders');
         }
         
-        // Use the new method that handles referral processing
-        $result = $this->orderModel->updateStatusAndProcessReferral($id, $status);
-        
-        if ($result) {
-            // Also update payment status if payment model exists
-            if (method_exists($this->paymentModel, 'updateStatusByOrderId')) {
-                $this->paymentModel->updateStatusByOrderId($id, $status);
-            }
+        try {
+            // Update order status using the existing method
+            $result = $this->orderModel->updateOrderStatus($id, $status);
             
-            $this->setFlash('success', 'Order status updated successfully');
-        } else {
-            $this->setFlash('error', 'Failed to update order status');
+            if ($result) {
+                // Update payment status based on payment method
+                $this->updatePaymentStatus($order, $status);
+                
+                // Process referral earnings if order is marked as paid
+                if ($status === 'paid' && $order['status'] !== 'paid') {
+                    $this->processReferralEarning($order);
+                }
+                
+                // Cancel referral earnings if order is cancelled
+                if ($status === 'cancelled' && $order['status'] !== 'cancelled') {
+                    $this->cancelReferralEarning($order);
+                }
+                
+                $this->setFlash('success', 'Order status updated successfully');
+            } else {
+                $this->setFlash('error', 'Failed to update order status');
+            }
+        } catch (Exception $e) {
+            error_log('Update order status error: ' . $e->getMessage());
+            $this->setFlash('error', 'Error updating order status: ' . $e->getMessage());
         }
         
         $this->redirect('admin/orders');
+    }
+
+    /**
+     * Update payment status based on payment method
+     */
+    private function updatePaymentStatus($order, $status)
+    {
+        try {
+            $paymentMethodId = $order['payment_method_id'];
+            
+            // Convert order status to payment status
+            $paymentStatus = $this->getPaymentStatusFromOrderStatus($status);
+            
+            switch ($paymentMethodId) {
+                case 2: // Khalti
+                    $this->khaltiPaymentModel->updateStatusByOrderId($order['id'], $paymentStatus);
+                    break;
+                    
+                case 3: // eSewa
+                    $this->esewaPaymentModel->updateStatusByOrderId($order['id'], $paymentStatus);
+                    break;
+                    
+                case 1: // Cash on Delivery
+                case 4: // Bank Transfer
+                default:
+                    // For COD and Bank Transfer, payment info is stored in orders table
+                    // No additional payment table update needed
+                    break;
+            }
+            
+            error_log("Payment status updated for order {$order['id']} with payment method {$paymentMethodId}");
+            
+        } catch (Exception $e) {
+            error_log('Error updating payment status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Convert order status to payment status
+     */
+    private function getPaymentStatusFromOrderStatus($orderStatus)
+    {
+        switch ($orderStatus) {
+            case 'paid':
+                return 'completed';
+            case 'cancelled':
+                return 'failed';
+            case 'pending':
+            case 'processing':
+            case 'shipped':
+            case 'delivered':
+            default:
+                return 'pending';
+        }
+    }
+
+    /**
+     * Process referral earning for an order with email notification
+     */
+    private function processReferralEarning($order)
+    {
+        try {
+            // Get the user who placed the order
+            $orderUser = $this->userModel->find($order['user_id']);
+            
+            if (!$orderUser || empty($orderUser['referred_by'])) {
+                return; // No referrer, nothing to process
+            }
+            
+            // Check if referral earning already exists for this order
+            $existingEarning = $this->referralEarningModel->findByOrderId($order['id']);
+            if ($existingEarning) {
+                return; // Already processed
+            }
+            
+            // Get the referrer
+            $referrer = $this->userModel->find($orderUser['referred_by']);
+            if (!$referrer) {
+                return; // Referrer not found
+            }
+            
+            // Calculate referral amount using the config constant (convert percentage to decimal)
+            $referralAmount = $order['total_amount'] * (REFERRAL_COMMISSION / 100);
+            
+            // Create referral earning record
+            $earningData = [
+                'user_id' => $referrer['id'],
+                'order_id' => $order['id'],
+                'amount' => $referralAmount,
+                'status' => 'paid',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $earningId = $this->referralEarningModel->create($earningData);
+            
+            if ($earningId) {
+                // Add to user's referral balance
+                $this->userModel->addReferralEarnings($referrer['id'], $referralAmount);
+                
+                // Send referral income notification email
+                if (!empty($referrer['email'])) {
+                    try {
+                        error_log("AdminController: Sending referral income notification to: " . $referrer['email']);
+                        $emailResult = EmailHelper::sendReferralIncomeNotification(
+                            $referrer['email'],
+                            $referrer['first_name'] ?? 'User',
+                            $referralAmount,
+                            $order['invoice'] ?? $order['id'],
+                            $orderUser['first_name'] ?? 'Someone'
+                        );
+                        
+                        if ($emailResult) {
+                            error_log("AdminController: Referral income notification sent successfully");
+                        } else {
+                            error_log("AdminController: Failed to send referral income notification");
+                        }
+                    } catch (Exception $e) {
+                        error_log('AdminController: Error sending referral income notification: ' . $e->getMessage());
+                    }
+                }
+                
+                error_log("Referral earning processed: User {$referrer['id']} earned {$referralAmount} from order {$order['id']}");
+            }
+            
+        } catch (Exception $e) {
+            error_log('Error processing referral earning: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel referral earning for an order
+     */
+    private function cancelReferralEarning($order)
+    {
+        try {
+            // Find existing referral earning for this order
+            $earning = $this->referralEarningModel->findByOrderId($order['id']);
+            
+            if (!$earning || $earning['status'] === 'cancelled') {
+                return; // No earning to cancel
+            }
+            
+            // Update earning status to cancelled
+            $this->referralEarningModel->update($earning['id'], ['status' => 'cancelled']);
+            
+            // Deduct from user's referral balance
+            $this->userModel->deductReferralEarnings($earning['user_id'], $earning['amount']);
+            
+            error_log("Referral earning cancelled: User {$earning['user_id']} lost {$earning['amount']} from order {$order['id']}");
+            
+        } catch (Exception $e) {
+            error_log('Error cancelling referral earning: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -757,7 +929,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Update withdrawal status
+     * Update withdrawal status with email notification
      */
     public function updateWithdrawalStatus($id = null)
     {
@@ -780,9 +952,11 @@ class AdminController extends Controller
             $this->redirect('admin/withdrawals');
         }
         
+        // Get user details for email notification
+        $user = $this->userModel->find($withdrawal['user_id']);
+        
         // If rejecting a withdrawal, return the amount to user's balance
         if ($status === 'rejected' && $withdrawal['status'] !== 'rejected') {
-            $user = $this->userModel->find($withdrawal['user_id']);
             if ($user) {
                 $newBalance = ($user['referral_earnings'] ?? 0) + $withdrawal['amount'];
                 $this->userModel->update($withdrawal['user_id'], ['referral_earnings' => $newBalance]);
@@ -791,7 +965,6 @@ class AdminController extends Controller
         
         // If un-rejecting a withdrawal, deduct the amount from user's balance again
         if ($withdrawal['status'] === 'rejected' && $status !== 'rejected') {
-            $user = $this->userModel->find($withdrawal['user_id']);
             if ($user) {
                 $newBalance = max(0, ($user['referral_earnings'] ?? 0) - $withdrawal['amount']);
                 $this->userModel->update($withdrawal['user_id'], ['referral_earnings' => $newBalance]);
@@ -806,6 +979,28 @@ class AdminController extends Controller
         $result = $this->withdrawalModel->update($id, $data);
         
         if ($result) {
+            // Send email notification when withdrawal is completed
+            if ($status === 'completed' && $withdrawal['status'] !== 'completed' && $user && !empty($user['email'])) {
+                try {
+                    error_log("AdminController: Sending withdrawal completed notification to: " . $user['email']);
+                    $emailResult = EmailHelper::sendWithdrawalCompletedNotification(
+                        $user['email'],
+                        $user['first_name'] ?? 'User',
+                        $withdrawal['amount'],
+                        $withdrawal['id'],
+                        $withdrawal['payment_method'] ?? 'Bank Transfer'
+                    );
+                    
+                    if ($emailResult) {
+                        error_log("AdminController: Withdrawal completed notification sent successfully");
+                    } else {
+                        error_log("AdminController: Failed to send withdrawal completed notification");
+                    }
+                } catch (Exception $e) {
+                    error_log('AdminController: Error sending withdrawal completed notification: ' . $e->getMessage());
+                }
+            }
+            
             $this->setFlash('success', 'Withdrawal status updated successfully');
         } else {
             $this->setFlash('error', 'Failed to update withdrawal status');

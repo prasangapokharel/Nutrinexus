@@ -92,13 +92,13 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">₹<?= number_format($item['price'], 2) ?></div>
+                                        <div class="text-sm text-gray-900">Rs<?= number_format($item['price'], 2) ?></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900"><?= $item['quantity'] ?></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">₹<?= number_format($item['total'], 2) ?></div>
+                                        <div class="text-sm text-gray-900">Rs<?= number_format($item['total'], 2) ?></div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -109,7 +109,7 @@
                                     Subtotal
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ₹<?= number_format($order['total_amount'] - $order['delivery_fee'], 2) ?>
+                                    Rs<?= number_format($order['total_amount'] - $order['delivery_fee'], 2) ?>
                                 </td>
                             </tr>
                             <tr class="bg-gray-50">
@@ -117,7 +117,7 @@
                                     Delivery Fee
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ₹<?= number_format($order['delivery_fee'], 2) ?>
+                                    Rs<?= number_format($order['delivery_fee'], 2) ?>
                                 </td>
                             </tr>
                             <tr class="bg-gray-50">
@@ -125,7 +125,7 @@
                                     Total
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                    ₹<?= number_format($order['total_amount'], 2) ?>
+                                    Rs<?= number_format($order['total_amount'], 2) ?>
                                 </td>
                             </tr>
                         </tfoot>

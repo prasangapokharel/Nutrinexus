@@ -1,277 +1,138 @@
 <?php ob_start(); ?>
-<?php
-// Debug: Log what data we have
-error_log('=== SUCCESS PAGE DEBUG ===');
-error_log('Order data keys: ' . json_encode(array_keys($data['order'] ?? [])));
-error_log('Order items: ' . json_encode($data['order']['items'] ?? 'NOT SET'));
-?>
-<div class="container mx-auto px-4 py-8 md:py-12 min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-3xl w-full">
+
+<div class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
         <!-- Success Header -->
-        <div class="flex flex-col items-center mb-6 md:mb-8">
-            <!-- Success Animation -->
-            <div class="rounded-full bg-green-100 p-3 mb-4 animate-pulse">
-                <svg class="w-12 h-12 md:w-16 md:h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
             </div>
-            <h1 class="text-2xl md:text-4xl font-bold text-gray-900 text-center mb-2 md:mb-3">Thank You!</h1>
-            <p class="text-gray-600 text-base md:text-lg text-center max-w-lg">Your order has been placed successfully. We'll send a confirmation email shortly.</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h1>
+            <p class="text-gray-600">Thank you for your order. We'll send you a confirmation email shortly.</p>
         </div>
 
-        <!-- Order Details -->
-        <div class="mb-6 md:mb-8">
-            <h2 class="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m-9 8h10l1 12H4L5 9z"></path>
-                </svg>
-                Order Summary
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 bg-gray-50 p-4 md:p-6 rounded-lg">
-                <div class="flex items-start space-x-2">
-                    <svg class="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                    </svg>
+        <!-- Order Details Card -->
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden mb-6">
+            <div class="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Order Number</p>
-                        <p class="text-gray-900 font-medium break-all">#<?= htmlspecialchars($data['order']['invoice']) ?></p>
+                        <h2 class="text-xl font-semibold text-gray-900">Order #<?= htmlspecialchars($data['order']['invoice']) ?></h2>
+                        <p class="text-sm text-gray-600 mt-1">Placed on <?= date('F j, Y \a\t g:i A', strtotime($data['order']['created_at'])) ?></p>
                     </div>
-                </div>
-                <div class="flex items-start space-x-2">
-                    <svg class="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <div>
-                        <p class="text-sm text-gray-500 font-medium">Order Date</p>
-                        <p class="text-gray-900 font-medium"><?= date('F j, Y', strtotime($data['order']['created_at'])) ?></p>
-                    </div>
-                </div>
-                <div class="flex items-start space-x-2">
-                    <svg class="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                    </svg>
-                    <div>
-                        <p class="text-sm text-gray-500 font-medium">Payment Method</p>
-                        <p class="text-gray-900 font-medium">
-                            <?php
-                            $paymentMethods = [
-                                1 => 'Cash on Delivery',
-                                2 => 'Khalti',
-                                3 => 'eSewa', 
-                                4 => 'Bank Transfer'
-                            ];
-                            echo $paymentMethods[$data['order']['payment_method_id']] ?? 'Unknown';
-                            ?>
-                        </p>
-                    </div>
-                </div>
-                <div class="flex items-start space-x-2">
-                    <svg class="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>
-                        <p class="text-sm text-gray-500 font-medium">Total Amount</p>
-                        <p class="text-gray-900 font-semibold">₹<?= number_format($data['order']['total_amount'], 2) ?></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Order Items -->
-        <div class="mb-6 md:mb-8">
-            <h3 class="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                </svg>
-                Order Items
-            </h3>
-            <div class="space-y-4 bg-white border border-gray-100 rounded-lg overflow-hidden">
-                <?php 
-                // FIXED: Use the correct data path - order items are in $data['order']['items']
-                $orderItems = $data['order']['items'] ?? [];
-                error_log('Order items count: ' . count($orderItems));
-                ?>
-                
-                <?php if (!empty($orderItems)): ?>
-                    <?php foreach ($orderItems as $index => $item): ?>
-                        <?php
-                        // Debug each item
-                        error_log('Order item ' . $index . ': ' . json_encode($item));
-                        
-                        // FIXED: Handle image URL properly - order items don't have nested product structure
-                        $imageUrl = '';
-                        if (!empty($item['image'])) {
-                            // Direct image field from order_items table (joined from products)
-                            $imageUrl = filter_var($item['image'], FILTER_VALIDATE_URL) 
-                                ? $item['image'] 
-                                : URLROOT . '/uploads/images/' . $item['image'];
-                        } else {
-                            // Fallback to default image
-                            $imageUrl = URLROOT . '/uploads/products/default.jpg';
-                        }
-                        
-                        // FIXED: Get product data from order_items table directly (not nested)
-                        $productName = $item['product_name'] ?? 'Product';
-                        $quantity = $item['quantity'] ?? 1;
-                        $price = $item['price'] ?? 0;
-                        $total = $item['total'] ?? ($price * $quantity);
-                        ?>
-                        <div class="flex justify-between items-center p-4 <?= $index !== count($orderItems) - 1 ? 'border-b border-gray-100' : '' ?>">
-                            <div class="flex items-center">
-                                <!-- Product Image -->
-                                <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 mr-4 flex-shrink-0">
-                                    <img src="<?= htmlspecialchars($imageUrl) ?>" 
-                                         alt="<?= htmlspecialchars($productName) ?>" 
-                                         class="w-full h-full object-cover"
-                                         onerror="this.onerror=null; this.src='<?= URLROOT ?>/uploads/products/default.jpg';">
-                                </div>
-                                <div>
-                                    <p class="text-gray-900 font-medium"><?= htmlspecialchars($productName) ?></p>
-                                    <p class="text-gray-500 text-sm">Quantity: <?= $quantity ?></p>
-                                    <p class="text-gray-500 text-sm">Unit Price: ₹<?= number_format($price, 2) ?></p>
-                                    <p class="text-gray-500 text-sm md:hidden mt-1">Total: ₹<?= number_format($total, 2) ?></p>
-                                </div>
-                            </div>
-                            <p class="text-gray-900 font-medium hidden md:block">₹<?= number_format($total, 2) ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                    
-                    <!-- Order Total Summary -->
-                    <div class="p-4 bg-gray-50 border-t border-gray-200">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-semibold text-gray-900">Order Total:</span>
-                            <span class="text-lg font-bold text-green-600">₹<?= number_format($data['order']['total_amount'], 2) ?></span>
-                        </div>
-                        <?php if (!empty($data['order']['delivery_fee']) && $data['order']['delivery_fee'] > 0): ?>
-                        <div class="flex justify-between items-center text-sm text-gray-600 mt-1">
-                            <span>Delivery Fee:</span>
-                            <span>₹<?= number_format($data['order']['delivery_fee'], 2) ?></span>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                <?php else: ?>
-                    <div class="p-8 text-center">
-                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414a1 1 0 00-.707-.293H8"></path>
-                        </svg>
-                        <p class="text-gray-500 text-lg">No order items found</p>
-                        <p class="text-gray-400 text-sm mt-2">There might be an issue loading your order details.</p>
-                        <a href="<?= URLROOT ?>/orders" class="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium">
-                            View All Orders →
+                    <div class="mt-4 sm:mt-0 flex space-x-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                            <?= ucfirst(htmlspecialchars($data['order']['status'])) ?>
+                        </span>
+                        <a href="<?= URLROOT ?>/receipt/download/<?= $data['order']['id'] ?>" 
+                           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download Receipt
                         </a>
                     </div>
-                <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Order Items -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Order Items</h3>
+                    <div class="space-y-4">
+                        <?php if (!empty($data['order']['items'])): ?>
+                            <?php foreach ($data['order']['items'] as $item): ?>
+                                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 truncate">
+                                            <?= htmlspecialchars($item['product_name'] ?? 'Product') ?>
+                                        </p>
+                                        <p class="text-sm text-gray-500">
+                                            Quantity: <?= htmlspecialchars($item['quantity']) ?> × Rs<?= number_format($item['price'], 2) ?>
+                                        </p>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        Rs<?= number_format($item['total'], 2) ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p class="text-gray-500">No items found for this order.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-base font-medium text-gray-900">Total Amount</span>
+                        <span class="text-xl font-bold text-blue-600">Rs<?= number_format($data['order']['total_amount'], 2) ?></span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-gray-600">
+                        <span>Payment Method</span>
+                        <span><?= htmlspecialchars($data['order']['payment_method'] ?? 'Cash on Delivery') ?></span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Delivery Information -->
-        <?php if (!empty($data['order']['address'])): ?>
-        <div class="mb-6 md:mb-8 bg-blue-50 p-4 rounded-lg">
-            <h4 class="font-semibold text-blue-900 mb-2 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                Delivery Address
-            </h4>
-            <p class="text-blue-800"><?= htmlspecialchars($data['order']['customer_name']) ?></p>
-            <p class="text-blue-700"><?= htmlspecialchars($data['order']['contact_no']) ?></p>
-            <p class="text-blue-700"><?= htmlspecialchars($data['order']['address']) ?></p>
-        </div>
-        <?php endif; ?>
-
-        <!-- Estimated Delivery -->
-        <div class="mb-6 md:mb-8 bg-green-50 p-4 rounded-lg flex items-start space-x-3">
-            <svg class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"></path>
-                <path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"></path>
-            </svg>
-            <div>
-                <p class="text-green-800 font-medium">Estimated Delivery</p>
-                <p class="text-green-600 text-sm">Your order will be delivered within 3-5 business days</p>
-                <p class="text-green-600 text-sm">Order Status: <span class="font-medium capitalize"><?= htmlspecialchars($data['order']['status']) ?></span></p>
+        <!-- Shipping Information -->
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Shipping Information</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-900 mb-2">Delivery Address</h4>
+                        <div class="text-sm text-gray-600">
+                            <p class="font-medium"><?= htmlspecialchars($data['order']['customer_name']) ?></p>
+                            <p><?= htmlspecialchars($data['order']['contact_no']) ?></p>
+                            <p><?= htmlspecialchars($data['order']['address']) ?></p>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-900 mb-2">Estimated Delivery</h4>
+                        <p class="text-sm text-gray-600">3-5 business days</p>
+                        <p class="text-xs text-gray-500 mt-1">You'll receive tracking information via email</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mt-6 md:mt-8">
-            <a href="<?= URLROOT ?>/products" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-medium py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
-                Continue Shopping
-                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                </svg>
-            </a>
-            <a href="<?= URLROOT ?>/orders" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="<?= URLROOT ?>/orders" 
+               class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
                 View All Orders
             </a>
+            <a href="<?= URLROOT ?>/products" 
+               class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                </svg>
+                Continue Shopping
+            </a>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-8 text-center">
+            <p class="text-sm text-gray-600">
+                Need help with your order? 
+                <a href="<?= URLROOT ?>/contact" class="text-blue-600 hover:text-blue-800 font-medium">Contact our support team</a>
+            </p>
         </div>
     </div>
 </div>
-
-<script>
-    // Add confetti effect on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Simple confetti effect
-        const confettiColors = ['#34D399', '#3B82F6', '#F59E0B', '#EC4899'];
-        const confettiContainer = document.createElement('div');
-        confettiContainer.style.position = 'fixed';
-        confettiContainer.style.top = '0';
-        confettiContainer.style.left = '0';
-        confettiContainer.style.width = '100%';
-        confettiContainer.style.height = '100%';
-        confettiContainer.style.pointerEvents = 'none';
-        confettiContainer.style.zIndex = '1000';
-        document.body.appendChild(confettiContainer);
-        
-        // Create confetti pieces
-        for (let i = 0; i < 100; i++) {
-            setTimeout(() => {
-                const confetti = document.createElement('div');
-                confetti.style.position = 'absolute';
-                confetti.style.width = Math.random() * 10 + 5 + 'px';
-                confetti.style.height = Math.random() * 10 + 5 + 'px';
-                confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
-                confetti.style.borderRadius = '50%';
-                confetti.style.opacity = Math.random() * 0.7 + 0.3;
-                confetti.style.left = Math.random() * 100 + 'vw';
-                confetti.style.top = '-20px';
-                
-                const animationDuration = Math.random() * 3 + 2;
-                confetti.style.animation = `fall ${animationDuration}s linear forwards`;
-                
-                confettiContainer.appendChild(confetti);
-                
-                setTimeout(() => {
-                    confetti.remove();
-                }, animationDuration * 1000);
-            }, i * 50);
-        }
-        
-        // Add keyframe animation
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes fall {
-                0% {
-                    transform: translateY(-20px) rotate(0deg);
-                }
-                100% {
-                    transform: translateY(100vh) rotate(360deg);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Remove confetti container after animation
-        setTimeout(() => {
-            confettiContainer.remove();
-            style.remove();
-        }, 6000);
-    });
-</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php include dirname(dirname(__FILE__)) . '/layouts/main.php'; ?>

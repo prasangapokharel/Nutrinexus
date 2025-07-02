@@ -14,7 +14,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Available Balance</h2>
-                <div class="text-3xl font-bold text-primary">₹<?= number_format($balance['available_balance'] ?? 0, 2) ?></div>
+                <div class="text-3xl font-bold text-primary">Rs<?= number_format($balance['available_balance'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Amount available for withdrawal</p>
                 
                 <div class="mt-6">
@@ -26,7 +26,7 @@
             
             <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Total Earnings</h2>
-                <div class="text-3xl font-bold text-green-600">₹<?= number_format($balance['total_earnings'] ?? 0, 2) ?></div>
+                <div class="text-3xl font-bold text-green-600">Rs<?= number_format($balance['total_earnings'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Total earnings from referrals</p>
                 
                 <div class="mt-6">
@@ -40,13 +40,13 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Pending Withdrawals</h2>
-                <div class="text-3xl font-bold text-yellow-600">₹<?= number_format($balance['pending_withdrawals'] ?? 0, 2) ?></div>
+                <div class="text-3xl font-bold text-yellow-600">Rs<?= number_format($balance['pending_withdrawals'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Amount currently being processed</p>
             </div>
             
             <div class="bg-white rounded-none shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-2">Total Withdrawn</h2>
-                <div class="text-3xl font-bold text-blue-600">₹<?= number_format($balance['total_withdrawn'] ?? 0, 2) ?></div>
+                <div class="text-3xl font-bold text-blue-600">Rs<?= number_format($balance['total_withdrawn'] ?? 0, 2) ?></div>
                 <p class="text-sm text-gray-600 mt-2">Total amount withdrawn to date</p>
             </div>
         </div>
@@ -99,7 +99,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">₹<?= number_format($transaction['balance_after'], 2) ?></div>
+                                        <div class="text-sm text-gray-900">Rs<?= number_format($transaction['balance_after'], 2) ?></div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -157,10 +157,10 @@
                                                 <?= $earning['invoice'] ?>
                                             </a>
                                         </div>
-                                        <div class="text-sm text-gray-500">Order Total: ₹<?= number_format($earning['total_amount'], 2) ?></div>
+                                        <div class="text-sm text-gray-500">Order Total: Rs<?= number_format($earning['total_amount'], 2) ?></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-green-600">₹<?= number_format($earning['amount'], 2) ?></div>
+                                        <div class="text-sm font-medium text-green-600">Rs<?= number_format($earning['amount'], 2) ?></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 

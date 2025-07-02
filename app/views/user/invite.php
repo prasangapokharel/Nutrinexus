@@ -44,7 +44,7 @@
                         <i class="fas fa-money-bill-wave text-green-600"></i>
                     </div>
                     <h3 class="text-lg font-medium text-primary mb-2">Total Earnings</h3>
-                    <p class="text-3xl font-bold text-accent">₹<?= number_format($stats['total_earnings'] ?? 0, 2) ?></p>
+                    <p class="text-3xl font-bold text-accent">Rs<?= number_format($stats['total_earnings'] ?? 0, 2) ?></p>
                 </div>
                 
                 <div class="bg-white rounded-none shadow-sm p-6 text-center">

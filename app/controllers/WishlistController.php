@@ -5,41 +5,73 @@ use App\Core\Controller;
 use App\Models\Wishlist;
 use App\Models\Product;
 use App\Core\Session;
+use App\Models\ProductImage;
 
 class WishlistController extends Controller
 {
     private $wishlistModel;
     private $productModel;
+    private $productImageModel;
 
     public function __construct()
     {
         parent::__construct();
         $this->wishlistModel = new Wishlist();
         $this->productModel = new Product();
+        $this->productImageModel = new ProductImage();
     }
 
-    /**
-     * Display user's wishlist
-     */
-    public function index()
-    {
-        // Check if user is logged in
-        if (!Session::has('user_id')) {
-            $this->setFlash('error', 'Please login to view your wishlist');
-            $this->redirect('auth/login');
+ // In WishlistController.php
+public function index()
+{
+    // Check if user is logged in
+    if (!Session::has('user_id')) {
+        $this->setFlash('error', 'Please login to view your wishlist');
+        $this->redirect('auth/login');
+    }
+
+    $userId = Session::get('user_id');
+    $wishlistItems = $this->wishlistModel->getByUserId($userId);
+    
+    // Update wishlist count in session
+    Session::set('wishlist_count', count($wishlistItems));
+    
+    $this->view('wishlist/index', [
+        'wishlistItems' => $wishlistItems,
+        'title' => 'My Wishlist',
+        'getProductImageUrl' => [$this, 'getProductImageUrl'] // Pass the method as callable
+    ]);
+}
+
+/**
+ * Get the URL for a product's image with fallback to default
+ * 
+ * @param array $product The product data array
+ * @return string The image URL
+ */
+public function getProductImageUrl($product)
+{
+    // First check for direct image in the product array
+    if (!empty($product['image'])) {
+        return $product['image'];
+    }
+    
+    // Then check for product['product']['image'] structure
+    if (!empty($product['product']['image'])) {
+        return $product['product']['image'];
+    }
+    
+    // Check for primary image from product images
+    if (!empty($product['id'])) {
+        $primaryImage = $this->productImageModel->getPrimaryImage($product['id']);
+        if ($primaryImage) {
+            return $primaryImage['image_url'];
         }
-
-        $userId = Session::get('user_id');
-        $wishlistItems = $this->wishlistModel->getByUserId($userId);
-        
-        // Update wishlist count in session
-        Session::set('wishlist_count', count($wishlistItems));
-        
-        $this->view('wishlist/index', [
-            'wishlistItems' => $wishlistItems,
-            'title' => 'My Wishlist'
-        ]);
     }
+    
+    // Fallback to default image
+    return \App\Core\View::asset('images/products/default.jpg');
+}
 
     /**
      * Add product to wishlist

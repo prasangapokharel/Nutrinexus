@@ -28,10 +28,25 @@ function getProductImageUrl($product) {
     return $mainImageUrl;
 }
 
-// Get discount percentage
-function getDiscountPercent($originalPrice, $currentPrice) {
-    if ($originalPrice <= 0 || $currentPrice <= 0) return 0;
-    return round((($originalPrice - $currentPrice) / $originalPrice) * 100);
+// Get discount percentage - Updated to use actual sale_price
+function getDiscountPercent($product) {
+    $originalPrice = $product['price'] ?? 0;
+    $salePrice = $product['sale_price'] ?? 0;
+    
+    // If there's a real sale price, use it
+    if ($salePrice > 0 && $salePrice < $originalPrice) {
+        return round((($originalPrice - $salePrice) / $originalPrice) * 100);
+    }
+    
+    return 0; // No discount if no sale price
+}
+
+// Get effective price (sale price if available, otherwise regular price)
+function getEffectivePrice($product) {
+    $salePrice = $product['sale_price'] ?? 0;
+    $regularPrice = $product['price'] ?? 0;
+    
+    return ($salePrice > 0 && $salePrice < $regularPrice) ? $salePrice : $regularPrice;
 }
 
 // Get category image
@@ -39,12 +54,12 @@ function getCategoryImage($category) {
     $categoryImages = [
         'Protein' => 'https://m.media-amazon.com/images/I/716ruiQM3mL._AC_SL1500_.jpg',
         'Vitamins' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-        'Pre-Workout' => 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
+        'Pre-Workout' => 'https://media.bodyandfit.com/i/bodyandfit/c4-extreme-pre-workout_Image_08?$TTL_PRODUCT_IMAGES$&locale=en-gb,*',
         'Mass Gainer' => 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=100&h=100&fit=crop',
-        'Creatine' => 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
+        'Creatine' => 'https://nutriride.com/cdn/shop/files/486.webp?v=1733311938&width=600',
         'BCAA' => 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?w=100&h=100&fit=crop',
         'Fat Burner' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-        'Multivitamin' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop'
+        'Multivitamin' => 'https://asitisnutrition.com/cdn/shop/products/ProductImage.jpg?v=1639026431&width=600'
     ];
     
     return $categoryImages[$category] ?? 'https://m.media-amazon.com/images/I/716ruiQM3mL._AC_SL1500_.jpg';
@@ -52,16 +67,16 @@ function getCategoryImage($category) {
 
 // Promotional banners
 $promotionalBanners = [
-        [
+    [
         'type' => 'image',
-        'src' => 'https://img.lazcdn.com/us/domino/5f1ef282-3dc5-4729-8493-6340fcd7d612_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
+        'src' => 'https://i.magecdn.com/de164a/dc931b_untitled_design22',
         'title' => 'PROTEIN POWER',
         'subtitle' => 'BUILD MUSCLE',
         'description' => 'High-quality protein supplements for serious athletes',
         'button_text' => 'Explore',
         'button_link' => \App\Core\View::url('products/category/protein')
     ],
-        [
+    [
         'type' => 'image',
         'src' => 'https://img.lazcdn.com/us/domino/c6aeb09c-a6ac-47b7-99cb-0782cbbcb43a_NP-1976-688.jpg_2200x2200q80.jpg_.webp',
         'title' => 'PROTEIN POWER',
@@ -100,23 +115,27 @@ $promotionalBanners = [
 ];
 ?>
 
+<script src="https://app.embed.im/whatsapp.js" data-phone="9779811388848" data-theme="3" defer></script>
+
 <div class="min-h-screen bg-gray-50">
-    <!-- Promotional Banner Carousel -->
+    <!-- Promotional Banner Carousel - UPDATED FOR PERFECT FIT -->
     <div class="relative overflow-hidden mx-4 mt-4">
         <div class="banner-carousel flex transition-transform duration-500 ease-in-out" id="bannerCarousel">
             <?php foreach ($promotionalBanners as $index => $banner): ?>
                 <div class="w-full flex-shrink-0 relative">
-                    <div class="relative h-48 md:h-64 rounded-xl overflow-hidden">
-                        <!-- Background Image -->
+                    <!-- Updated container with proper aspect ratio and object-fit -->
+                    <div class="relative w-full rounded-xl overflow-hidden banner-container">
+                        <!-- Background Image with perfect fit -->
                         <img src="<?= htmlspecialchars($banner['src']) ?>" 
                              alt="Promotional Banner" 
-                             class="absolute inset-0 w-full h-full object-fit ">
+                             class="w-full h-full object-cover banner-image">
                         
-                        <!-- Overlay -->
-                        <!-- <div class="absolute inset-0 bg-black bg-opacity-40"></div> -->
+                        <!-- Optional overlay for better text readability -->
+                        <!-- <div class="absolute inset-0 bg-black bg-opacity-20"></div> -->
                         
-                        <!-- Content -->
-                        <!-- <div class="relative z-10 h-full flex items-center px-4 md:px-8">
+                        <!-- Content overlay (uncomment if you want text on banners) -->
+                        <!--
+                        <div class="absolute inset-0 flex items-center justify-start px-6 md:px-12">
                             <div class="text-white max-w-md">
                                 <h2 class="text-xl md:text-3xl font-bold mb-2"><?= htmlspecialchars($banner['title']) ?></h2>
                                 <p class="text-sm md:text-lg mb-1 opacity-90"><?= htmlspecialchars($banner['subtitle']) ?></p>
@@ -126,7 +145,8 @@ $promotionalBanners = [
                                     <?= htmlspecialchars($banner['button_text']) ?>
                                 </a>
                             </div>
-                        </div> -->
+                        </div>
+                        -->
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -134,7 +154,7 @@ $promotionalBanners = [
         
         <!-- Navigation Arrows -->
         <?php if (count($promotionalBanners) > 1): ?>
-            <!-- <button class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all z-20" 
+            <button class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all z-20" 
                     onclick="CarouselManager.previousSlide()" id="prevBtn">
                 <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -145,7 +165,7 @@ $promotionalBanners = [
                 <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
-            </button> -->
+            </button>
         <?php endif; ?>
         
         <!-- Carousel Dots -->
@@ -176,12 +196,11 @@ $promotionalBanners = [
                 <?php 
                 $flashProducts = array_slice($popular_products, 0, 6);
                 foreach ($flashProducts as $index => $product): 
-                    // Calculate discount with proper original price
-                    $currentPrice = $product['price'] ?? 0;
-                    $originalPrice = $currentPrice * 1.4; // 40% markup for original price
-                    $discountPercent = getDiscountPercent($originalPrice, $currentPrice);
+                    $currentPrice = getEffectivePrice($product);
+                    $originalPrice = $product['price'] ?? 0;
+                    $discountPercent = getDiscountPercent($product);
                 ?>
-                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group">
+                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group relative">
                         <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
                             <div class="relative aspect-square bg-gray-50 p-2">
                                 <img src="<?= htmlspecialchars(getProductImageUrl($product)) ?>" 
@@ -214,6 +233,23 @@ $promotionalBanners = [
                                 <?php endif; ?>
                             </div>
                         </a>
+                        
+                        <!-- Wishlist Button -->
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <?php if (isset($product['in_wishlist']) && $product['in_wishlist']): ?>
+                                <button onclick="removeFromWishlist(<?= $product['id'] ?>)" 
+                                        class="bg-white p-1.5 rounded-full shadow-md text-red-500 hover:text-red-700 wishlist-btn wishlist-active"
+                                        data-product-id="<?= $product['id'] ?>">
+                                    <i class="fas fa-heart text-xs"></i>
+                                </button>
+                            <?php else: ?>
+                                <button onclick="addToWishlist(<?= $product['id'] ?>)" 
+                                        class="bg-white p-1.5 rounded-full shadow-md text-gray-400 hover:text-red-500 wishlist-btn"
+                                        data-product-id="<?= $product['id'] ?>">
+                                    <i class="far fa-heart text-xs"></i>
+                                </button>
+                            <?php endif; ?>
+                        </div>
                         
                         <div class="p-2">
                             <!-- Product Name -->
@@ -296,12 +332,11 @@ $promotionalBanners = [
                 <?php 
                 $latestProducts = array_slice($products, 0, 8);
                 foreach ($latestProducts as $product): 
-                    // Calculate discount
-                    $currentPrice = $product['price'] ?? 0;
-                    $originalPrice = $currentPrice * 1.3; // 30% markup for original price
-                    $discountPercent = getDiscountPercent($originalPrice, $currentPrice);
+                    $currentPrice = getEffectivePrice($product);
+                    $originalPrice = $product['price'] ?? 0;
+                    $discountPercent = getDiscountPercent($product);
                 ?>
-                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group">
+                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group relative">
                         <a href="<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>">
                             <div class="relative aspect-square bg-gray-50 p-3">
                                 <img src="<?= htmlspecialchars(getProductImageUrl($product)) ?>" 
@@ -336,19 +371,25 @@ $promotionalBanners = [
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
-                                
-                                <!-- Wishlist Button -->
-                                <div class="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button class="bg-white p-1.5 rounded-full shadow-md hover:bg-red-50 wishlist-btn" 
-                                            data-product-id="<?= $product['id'] ?>"
-                                            onclick="event.preventDefault(); WishlistManager.toggle(<?= $product['id'] ?>)">
-                                        <svg class="w-3 h-3 text-gray-600 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                        </svg>
-                                    </button>
-                                </div>
                             </div>
                         </a>
+                        
+                        <!-- Wishlist Button -->
+                        <div class="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <?php if (isset($product['in_wishlist']) && $product['in_wishlist']): ?>
+                                <button onclick="removeFromWishlist(<?= $product['id'] ?>)" 
+                                        class="bg-white p-1.5 rounded-full shadow-md text-red-500 hover:text-red-700 wishlist-btn wishlist-active"
+                                        data-product-id="<?= $product['id'] ?>">
+                                    <i class="fas fa-heart text-xs"></i>
+                                </button>
+                            <?php else: ?>
+                                <button onclick="addToWishlist(<?= $product['id'] ?>)" 
+                                        class="bg-white p-1.5 rounded-full shadow-md text-gray-400 hover:text-red-500 wishlist-btn"
+                                        data-product-id="<?= $product['id'] ?>">
+                                    <i class="far fa-heart text-xs"></i>
+                                </button>
+                            <?php endif; ?>
+                        </div>
                         
                         <div class="p-3">
                             <!-- Category -->
@@ -366,14 +407,14 @@ $promotionalBanners = [
                             <!-- Price -->
                             <div class="mb-2">
                                 <span class="text-lg font-bold text-blue-900">
-                                    ₹<?= number_format($currentPrice, 0) ?>
+                                    Rs<?= number_format($currentPrice, 0) ?>
                                 </span>
                                 <?php if ($discountPercent > 0): ?>
                                     <span class="text-xs text-gray-500 line-through ml-1">
-                                        ₹<?= number_format($originalPrice, 0) ?>
+                                        Rs<?= number_format($originalPrice, 0) ?>
                                     </span>
                                     <div class="text-xs text-green-600 font-medium">
-                                        You save ₹<?= number_format($originalPrice - $currentPrice, 0) ?> (<?= $discountPercent ?>%)
+                                        You save Rs<?= number_format($originalPrice - $currentPrice, 0) ?> (<?= $discountPercent ?>%)
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -457,6 +498,38 @@ $promotionalBanners = [
 </div>
 
 <style>
+/* Banner Container Responsive Heights */
+.banner-container {
+    height: 200px; /* Mobile default */
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .banner-container {
+        height: 280px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .banner-container {
+        height: 320px;
+    }
+}
+
+/* Large Desktop */
+@media (min-width: 1280px) {
+    .banner-container {
+        height: 360px;
+    }
+}
+
+/* Banner Image Perfect Fit */
+.banner-image {
+    object-fit: cover;
+    object-position: center;
+}
+
 .toast-show {
     transform: translateX(0);
     opacity: 1;
@@ -478,9 +551,12 @@ $promotionalBanners = [
     opacity: 0.7;
 }
 
-.wishlist-active svg {
-    fill: #ef4444;
-    color: #ef4444;
+.wishlist-active i {
+    color: #ef4444 !important;
+}
+
+.wishlist-active .fa-heart:before {
+    content: "\f004"; /* Solid heart */
 }
 
 .add-to-cart-btn.loading {
@@ -516,94 +592,6 @@ window.totalSlides = <?= count($promotionalBanners) ?>;
 window.autoSlideInterval = null;
 window.isUserInteracting = false;
 
-// Cookie utility functions
-window.CookieManager = {
-    set: function(name, value, days) {
-        days = days || 30;
-        var expires = new Date();
-        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-        var valueStr = typeof value === 'object' ? JSON.stringify(value) : value;
-        document.cookie = name + '=' + valueStr + ';expires=' + expires.toUTCString() + ';path=/';
-    },
-    
-    get: function(name) {
-        var nameEQ = name + "=";
-        var ca = document.cookie.split(';');
-        for(var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) {
-                try {
-                    return JSON.parse(c.substring(nameEQ.length, c.length));
-                } catch(e) {
-                    return c.substring(nameEQ.length, c.length);
-                }
-            }
-        }
-        return null;
-    },
-    
-    remove: function(name) {
-        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
-    }
-};
-
-// Cart management with cookies
-window.CartManager = {
-    getCart: function() {
-        return CookieManager.get('cart_items') || [];
-    },
-    
-    addToCart: function(productId, quantity) {
-        quantity = quantity || 1;
-        var cart = this.getCart();
-        var existingItem = cart.find(function(item) {
-            return item.product_id == productId;
-        });
-        
-        if (existingItem) {
-            existingItem.quantity += quantity;
-        } else {
-            cart.push({
-                product_id: productId,
-                quantity: quantity,
-                added_at: new Date().toISOString()
-            });
-        }
-        
-        CookieManager.set('cart_items', cart);
-        this.updateCartCount();
-        return cart;
-    },
-    
-    updateCartCount: function() {
-        var cart = this.getCart();
-        var totalItems = cart.reduce(function(sum, item) {
-            return sum + item.quantity;
-        }, 0);
-        
-        // Update cart count in header if element exists
-        var cartCountElements = document.querySelectorAll('.cart-count');
-        cartCountElements.forEach(function(element) {
-            element.textContent = totalItems;
-            if (totalItems > 0) {
-                element.classList.remove('hidden');
-            } else {
-                element.classList.add('hidden');
-            }
-        });
-        
-        // Store count in cookie for server-side access
-        CookieManager.set('cart_count', totalItems);
-    },
-    
-    clearCart: function() {
-        CookieManager.remove('cart_items');
-        CookieManager.remove('cart_count');
-        this.updateCartCount();
-    }
-};
-
 // Enhanced Carousel functionality
 window.CarouselManager = {
     goToSlide: function(slideIndex) {
@@ -612,7 +600,6 @@ window.CarouselManager = {
         this.updateDots();
         this.resetAutoSlide();
     },
-
     nextSlide: function() {
         window.currentSlide = (window.currentSlide + 1) % window.totalSlides;
         this.updateCarousel();
@@ -621,21 +608,18 @@ window.CarouselManager = {
             this.resetAutoSlide();
         }
     },
-
     previousSlide: function() {
         window.currentSlide = (window.currentSlide - 1 + window.totalSlides) % window.totalSlides;
         this.updateCarousel();
         this.updateDots();
         this.resetAutoSlide();
     },
-
     updateCarousel: function() {
         var carousel = document.getElementById('bannerCarousel');
         if (carousel) {
             carousel.style.transform = 'translateX(-' + (window.currentSlide * 100) + '%)';
         }
     },
-
     updateDots: function() {
         var dots = document.querySelectorAll('[data-slide]');
         dots.forEach(function(dot, index) {
@@ -648,7 +632,6 @@ window.CarouselManager = {
             }
         });
     },
-
     startAutoSlide: function() {
         if (window.totalSlides > 1) {
             window.autoSlideInterval = setInterval(function() {
@@ -658,7 +641,6 @@ window.CarouselManager = {
             }, 4000); // Auto slide every 4 seconds
         }
     },
-
     resetAutoSlide: function() {
         clearInterval(window.autoSlideInterval);
         var self = this;
@@ -666,58 +648,13 @@ window.CarouselManager = {
             self.startAutoSlide();
         }, 1000); // Restart after 1 second
     },
-
     pauseAutoSlide: function() {
         window.isUserInteracting = true;
         clearInterval(window.autoSlideInterval);
     },
-
     resumeAutoSlide: function() {
         window.isUserInteracting = false;
         this.startAutoSlide();
-    }
-};
-
-// Wishlist functionality
-window.WishlistManager = {
-    toggle: function(productId) {
-        var button = document.querySelector('[data-product-id="' + productId + '"].wishlist-btn');
-        
-        // Toggle visual state
-        button.classList.toggle('wishlist-active');
-        
-        // Show toast notification
-        var isAdded = button.classList.contains('wishlist-active');
-        ToastManager.show(
-            isAdded ? 'Added to Wishlist' : 'Removed from Wishlist',
-            isAdded ? 'Product saved to your wishlist' : 'Product removed from wishlist',
-            isAdded ? 'success' : 'info'
-        );
-        
-        // Make API call to update wishlist
-        fetch('/wishlist/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: 'product_id=' + productId
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (!data.success) {
-                // Revert visual state if API call failed
-                button.classList.toggle('wishlist-active');
-                ToastManager.show('Error', data.error || 'Failed to update wishlist', 'error');
-            }
-        })
-        .catch(function(error) {
-            console.error('Error:', error);
-            button.classList.toggle('wishlist-active');
-            ToastManager.show('Error', 'Failed to update wishlist', 'error');
-        });
     }
 };
 
@@ -762,7 +699,6 @@ window.ToastManager = {
             ToastManager.hide();
         }, 3000);
     },
-
     hide: function() {
         var toast = document.getElementById('toast');
         toast.classList.remove('toast-show');
@@ -783,7 +719,6 @@ window.NotificationManager = {
             }, 3000);
         }
     },
-
     hide: function() {
         var notification = document.getElementById('addToCartNotification');
         if (notification) {
@@ -793,44 +728,78 @@ window.NotificationManager = {
     }
 };
 
-// Global functions for backward compatibility
-function goToSlide(slideIndex) {
-    CarouselManager.goToSlide(slideIndex);
+// Wishlist functions
+function addToWishlist(productId) {
+    fetch('<?= \App\Core\View::url('wishlist/add') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `product_id=${productId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update button state
+            var button = document.querySelector('[data-product-id="' + productId + '"].wishlist-btn');
+            if (button) {
+                button.classList.add('wishlist-active');
+                button.innerHTML = '<i class="fas fa-heart text-xs"></i>';
+                button.setAttribute('onclick', 'removeFromWishlist(' + productId + ')');
+            }
+            ToastManager.show('Added to Wishlist', 'Product saved to your wishlist', 'success');
+        } else {
+            if (data.error === 'Please login to add items to your wishlist') {
+                window.location.href = '<?= \App\Core\View::url('auth/login') ?>';
+            } else {
+                ToastManager.show('Error', data.error || 'An error occurred', 'error');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        ToastManager.show('Error', 'Failed to add to wishlist', 'error');
+    });
 }
 
-function nextSlide() {
-    CarouselManager.nextSlide();
-}
-
-function previousSlide() {
-    CarouselManager.previousSlide();
-}
-
-function toggleWishlist(productId) {
-    WishlistManager.toggle(productId);
-}
-
-function showToast(title, message, type) {
-    ToastManager.show(title, message, type);
-}
-
-function hideToast() {
-    ToastManager.hide();
-}
-
-function showNotification() {
-    NotificationManager.show();
-}
-
-function hideNotification() {
-    NotificationManager.hide();
+function removeFromWishlist(productId) {
+    fetch('<?= \App\Core\View::url('wishlist/remove') ?>' + '/' + productId, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.success) {
+            // Update button state
+            var button = document.querySelector('[data-product-id="' + productId + '"].wishlist-btn');
+            if (button) {
+                button.classList.remove('wishlist-active');
+                button.innerHTML = '<i class="far fa-heart text-xs"></i>';
+                button.setAttribute('onclick', 'addToWishlist(' + productId + ')');
+            }
+            ToastManager.show('Removed from Wishlist', 'Product removed from wishlist', 'info');
+        } else if (data && data.error) {
+            ToastManager.show('Error', data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        ToastManager.show('Error', 'Failed to remove from wishlist', 'error');
+    });
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize cart count on page load
-    CartManager.updateCartCount();
-    
     // Start auto slide
     CarouselManager.startAutoSlide();
     
@@ -899,17 +868,12 @@ document.addEventListener('DOMContentLoaded', function() {
             var button = form.querySelector('.add-to-cart-btn');
             var btnText = button.querySelector('.btn-text');
             var btnLoading = button.querySelector('.btn-loading');
-            var productId = form.querySelector('input[name="product_id"]').value;
-            var quantity = parseInt(form.querySelector('input[name="quantity"]').value);
             
             // Show loading state
             button.classList.add('loading');
             btnText.classList.add('hidden');
             btnLoading.classList.remove('hidden');
             button.disabled = true;
-            
-            // Add to cookie cart
-            CartManager.addToCart(productId, quantity);
             
             // Submit form to server
             var formData = new FormData(form);

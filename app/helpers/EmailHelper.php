@@ -1,9 +1,10 @@
 <?php
+
 namespace App\Helpers;
 
 /**
  * EmailHelper - PHPMailer Exclusive with Proper Error Handling
- * Ensures PHPMailer is loaded and works perfectly
+ * Ensures PHPMailer is loaded and works perfectly with HTML templates
  */
 class EmailHelper
 {
@@ -29,7 +30,6 @@ class EmailHelper
             return self::$phpmailerLoaded;
         }
 
-        // Try to load PHPMailer classes
         try {
             // Check if Composer autoloader is loaded
             if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
@@ -219,6 +219,60 @@ class EmailHelper
     }
 
     /**
+     * Send referral income notification email
+     */
+    public static function sendReferralIncomeNotification($to, $referrerName, $amount, $orderNumber, $referredUserName)
+    {
+        try {
+            $templateData = [
+                'referrer_name' => $referrerName,
+                'amount' => number_format($amount, 2),
+                'order_number' => $orderNumber,
+                'referred_user_name' => $referredUserName,
+                'site_name' => 'NutriNexus',
+                'date' => date('F j, Y'),
+                'time' => date('g:i A')
+            ];
+
+            $subject = '🎉 Referral Income Added - Rs. ' . number_format($amount, 2) . ' Earned!';
+            
+            return self::sendTemplate($to, $subject, 'referincomeadded', $templateData, $referrerName);
+            
+        } catch (\Exception $e) {
+            error_log('Failed to send referral income notification: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send withdrawal completed notification email
+     */
+    public static function sendWithdrawalCompletedNotification($to, $userName, $amount, $withdrawalId, $paymentMethod)
+    {
+        try {
+            $templateData = [
+                'user_name' => $userName,
+                'amount' => number_format($amount, 2),
+                'withdrawal_id' => $withdrawalId,
+                'payment_method' => $paymentMethod,
+                'site_name' => 'NutriNexus',
+                'completion_date' => date('F j, Y'),
+                'completion_time' => date('g:i A'),
+                'support_email' => 'support@nutrinexus.com',
+                'support_phone' => '+977-1-4567890'
+            ];
+
+            $subject = '✅ Withdrawal Completed - Rs. ' . number_format($amount, 2) . ' Processed';
+            
+            return self::sendTemplate($to, $subject, 'withdrawcompleted', $templateData, $userName);
+            
+        } catch (\Exception $e) {
+            error_log('Failed to send withdrawal completed notification: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Create fallback email templates when template files are not found
      */
     private static function createFallbackTemplate($template, $data)
@@ -232,9 +286,88 @@ class EmailHelper
                 return self::createPasswordResetTemplate($data);
             case 'password-changed':
                 return self::createPasswordChangedTemplate($data);
+            case 'order':
+                return self::createOrderTemplate($data);
+            case 'referincomeadded':
+                return self::createReferralIncomeTemplate($data);
+            case 'withdrawcompleted':
+                return self::createWithdrawalCompletedTemplate($data);
             default:
                 return self::createGenericTemplate($template, $data);
         }
+    }
+
+    /**
+     * Create referral income notification template
+     */
+    private static function createReferralIncomeTemplate($data)
+    {
+        $referrerName = self::getSafeValue($data, 'referrer_name', 'User');
+        $amount = self::getSafeValue($data, 'amount', '0.00');
+        $orderNumber = self::getSafeValue($data, 'order_number', 'N/A');
+        $referredUserName = self::getSafeValue($data, 'referred_user_name', 'Someone');
+        $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
+        $date = self::getSafeValue($data, 'date', date('F j, Y'));
+
+        return self::getMinimalTemplate('🎉 Referral Income Added!', $siteName, "
+            <div class='greeting'>Hello <strong>{$referrerName}</strong>,</div>
+            <div class='success-box'>
+                <h3>🎉 Great News! You've Earned Referral Income</h3>
+                <p class='amount-highlight'>Rs. {$amount}</p>
+                <p>has been added to your account balance!</p>
+            </div>
+            <div class='info-card'>
+                <h3>📋 Transaction Details</h3>
+                <p><strong>Referred User:</strong> {$referredUserName}</p>
+                <p><strong>Order Number:</strong> #{$orderNumber}</p>
+                <p><strong>Date:</strong> {$date}</p>
+                <p><strong>Amount Earned:</strong> Rs. {$amount}</p>
+            </div>
+            <div class='message'>
+                This referral income has been automatically added to your account balance. You can request a withdrawal anytime from your dashboard.
+            </div>
+            <div class='cta-section'>
+                <a href='#' class='cta-button'>View My Balance</a>
+                <a href='#' class='cta-button-secondary'>Request Withdrawal</a>
+            </div>
+        ");
+    }
+
+    /**
+     * Create withdrawal completed notification template
+     */
+    private static function createWithdrawalCompletedTemplate($data)
+    {
+        $userName = self::getSafeValue($data, 'user_name', 'User');
+        $amount = self::getSafeValue($data, 'amount', '0.00');
+        $withdrawalId = self::getSafeValue($data, 'withdrawal_id', 'N/A');
+        $paymentMethod = self::getSafeValue($data, 'payment_method', 'Bank Transfer');
+        $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
+        $completionDate = self::getSafeValue($data, 'completion_date', date('F j, Y'));
+        $completionTime = self::getSafeValue($data, 'completion_time', date('g:i A'));
+
+        return self::getMinimalTemplate('✅ Withdrawal Completed', $siteName, "
+            <div class='greeting'>Hello <strong>{$userName}</strong>,</div>
+            <div class='success-box'>
+                <h3>✅ Withdrawal Successfully Completed</h3>
+                <p class='amount-highlight'>Rs. {$amount}</p>
+                <p>has been processed and sent to your account!</p>
+            </div>
+            <div class='info-card'>
+                <h3>📋 Withdrawal Details</h3>
+                <p><strong>Withdrawal ID:</strong> #{$withdrawalId}</p>
+                <p><strong>Amount:</strong> Rs. {$amount}</p>
+                <p><strong>Payment Method:</strong> {$paymentMethod}</p>
+                <p><strong>Completion Date:</strong> {$completionDate}</p>
+                <p><strong>Completion Time:</strong> {$completionTime}</p>
+            </div>
+            <div class='message'>
+                Your withdrawal has been successfully processed. The amount should reflect in your account within 1-3 business days depending on your bank.
+            </div>
+            <div class='security-notice'>
+                <strong>📞 Need Help?</strong> If you don't receive the payment within the expected timeframe, please contact our support team.
+            </div>
+        ");
     }
 
     /**
@@ -246,47 +379,21 @@ class EmailHelper
         $loginTime = self::getSafeValue($data, 'login_time', date('Y-m-d H:i:s'));
         $ipAddress = self::getSafeValue($data, 'ip_address', 'Unknown');
         $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
+        $userAgent = self::getSafeValue($data, 'user_agent', 'Unknown Device');
 
-        return '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Notification - ' . htmlspecialchars($siteName) . '</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background: #0a3167; color: white; padding: 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
-        .info-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0a3167; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔐 Login Notification</h1>
-            <p>New login to your ' . htmlspecialchars($siteName) . ' account</p>
-        </div>
-        
-        <p>Hello <strong>' . htmlspecialchars($firstName) . '</strong>,</p>
-        <p>We wanted to let you know that someone just logged into your ' . htmlspecialchars($siteName) . ' account.</p>
-        
-        <div class="info-box">
-            <h3>Login Details</h3>
-            <p><strong>Time:</strong> ' . htmlspecialchars($loginTime) . '</p>
-            <p><strong>IP Address:</strong> ' . htmlspecialchars($ipAddress) . '</p>
-        </div>
-        
-        <p>If this was you, you can safely ignore this email. If you didn\'t log in, please contact our support team immediately.</p>
-        
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($siteName) . '</strong></p>
-            <p>This is an automated security notification. Please do not reply to this email.</p>
-            <p>© 2025 ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>';
+        return self::getMinimalTemplate('Login Notification', $siteName, "
+            <div class='greeting'>Hello <strong>{$firstName}</strong>,</div>
+            <div class='message'>We wanted to let you know that someone just logged into your {$siteName} account.</div>
+            <div class='info-card'>
+                <h3>Login Details</h3>
+                <p><strong>Time:</strong> {$loginTime}</p>
+                <p><strong>IP Address:</strong> {$ipAddress}</p>
+                <p><strong>Device:</strong> {$userAgent}</p>
+            </div>
+            <div class='security-notice'>
+                <strong>Security Notice:</strong> If this was you, you can safely ignore this email. If you didn't log in, please contact our support team immediately.
+            </div>
+        ");
     }
 
     /**
@@ -298,47 +405,16 @@ class EmailHelper
         $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
         $siteUrl = self::getSafeValue($data, 'site_url', 'http://localhost');
 
-        return '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to ' . htmlspecialchars($siteName) . '</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #0a3167 0%, #082850 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
-        .welcome-box { background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
-        .cta-button { display: inline-block; background: #C5A572; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎉 Welcome to ' . htmlspecialchars($siteName) . '!</h1>
-            <p>Your journey to better nutrition starts here</p>
-        </div>
-        
-        <p>Hello <strong>' . htmlspecialchars($firstName) . '</strong>,</p>
-        <p>Welcome to ' . htmlspecialchars($siteName) . '! We\'re thrilled to have you join our community of health-conscious individuals.</p>
-        
-        <div class="welcome-box">
-            <h3>🌟 What\'s Next?</h3>
-            <p>Explore our premium nutrition supplements and start your wellness journey today!</p>
-            <a href="' . htmlspecialchars($siteUrl) . '" class="cta-button">Start Shopping</a>
-        </div>
-        
-        <p>If you have any questions, our support team is here to help. Feel free to reach out anytime!</p>
-        
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($siteName) . '</strong></p>
-            <p>Thank you for choosing us for your nutrition needs.</p>
-            <p>© 2025 ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>';
+        return self::getMinimalTemplate('🎉 Welcome to ' . $siteName, $siteName, "
+            <div class='greeting'>Hello <strong>{$firstName}</strong>,</div>
+            <div class='message'>Welcome to {$siteName}! We're thrilled to have you join our community of health-conscious individuals.</div>
+            <div class='welcome-box'>
+                <h3>🌟 What's Next?</h3>
+                <p>Explore our premium nutrition supplements and start your wellness journey today!</p>
+                <a href='{$siteUrl}' class='cta-button'>Start Shopping</a>
+            </div>
+            <div class='message'>If you have any questions, our support team is here to help. Feel free to reach out anytime!</div>
+        ");
     }
 
     /**
@@ -350,54 +426,22 @@ class EmailHelper
         $resetUrl = self::getSafeValue($data, 'reset_url', '#');
         $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
 
-        return '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your Password - ' . htmlspecialchars($siteName) . '</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #0A3167 0%, #082850 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
-        .reset-box { background: #f8f9fa; border-left: 4px solid #C5A572; padding: 25px; margin: 25px 0; border-radius: 0 8px 8px 0; text-align: center; }
-        .reset-button { display: inline-block; background: linear-gradient(135deg, #C5A572 0%, #B89355 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-        .security-info { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 4px; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
-        .link-text { background-color: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 12px; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔑 Reset Your Password</h1>
-            <p>' . htmlspecialchars($siteName) . ' Password Recovery</p>
-        </div>
-        
-        <p>Hello <strong>' . htmlspecialchars($firstName) . '</strong>,</p>
-        <p>We received a request to reset your password for your ' . htmlspecialchars($siteName) . ' account. If you didn\'t make this request, you can safely ignore this email.</p>
-        
-        <div class="reset-box">
-            <h3>Reset Your Password</h3>
-            <p>Click the button below to create a new password:</p>
-            <a href="' . htmlspecialchars($resetUrl) . '" class="reset-button">Reset Password</a>
-        </div>
-        
-        <p>If the button doesn\'t work, you can copy and paste this link into your browser:</p>
-        <div class="link-text">' . htmlspecialchars($resetUrl) . '</div>
-        
-        <div class="security-info">
-            <p><strong>⏰ Important:</strong></p>
-            <p>This password reset link will expire in 1 hour for security reasons. If you need to reset your password after this time, please request a new reset link.</p>
-        </div>
-        
-        <div class="footer">
-            <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
-            <p>© 2025 ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>';
+        return self::getMinimalTemplate('🔑 Reset Your Password', $siteName, "
+            <div class='greeting'>Hello <strong>{$firstName}</strong>,</div>
+            <div class='message'>We received a request to reset your password for your {$siteName} account. If you didn't make this request, you can safely ignore this email.</div>
+            <div class='reset-box'>
+                <h3>Reset Your Password</h3>
+                <p>Click the button below to create a new password:</p>
+                <a href='{$resetUrl}' class='reset-button'>Reset Password</a>
+            </div>
+            <div class='link-section'>
+                <p>If the button doesn't work, copy and paste this link:</p>
+                <div class='link-text'>{$resetUrl}</div>
+            </div>
+            <div class='security-info'>
+                <p><strong>⏰ Important:</strong> This password reset link will expire in 1 hour for security reasons.</p>
+            </div>
+        ");
     }
 
     /**
@@ -407,45 +451,47 @@ class EmailHelper
     {
         $firstName = self::getSafeValue($data, 'first_name', 'User');
         $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
+        $changeDate = self::getSafeValue($data, 'change_date', date('Y-m-d H:i:s'));
+        $ipAddress = self::getSafeValue($data, 'ip_address', 'Unknown');
 
-        return '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Changed - ' . htmlspecialchars($siteName) . '</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background: #0a3167; color: white; padding: 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
-        .success-box { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>✅ Password Changed</h1>
-            <p>Your ' . htmlspecialchars($siteName) . ' password has been updated</p>
-        </div>
-        
-        <p>Hello <strong>' . htmlspecialchars($firstName) . '</strong>,</p>
-        
-        <div class="success-box">
-            <h3>Password Successfully Changed</h3>
-            <p>Your password has been successfully updated. You can now use your new password to log in to your account.</p>
-        </div>
-        
-        <p>If you did not make this change, please contact our support team immediately.</p>
-        
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($siteName) . '</strong></p>
-            <p>This is an automated security notification. Please do not reply to this email.</p>
-            <p>© 2025 ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>';
+        return self::getMinimalTemplate('✅ Password Changed', $siteName, "
+            <div class='greeting'>Hello <strong>{$firstName}</strong>,</div>
+            <div class='success-box'>
+                <h3>Password Successfully Changed</h3>
+                <p>Your password has been successfully updated on {$changeDate} from IP: {$ipAddress}</p>
+            </div>
+            <div class='security-notice'>
+                <strong>⚠️ Important:</strong> If you did not make this change, please contact our support team immediately.
+            </div>
+        ");
+    }
+
+    /**
+     * Create order confirmation template
+     */
+    private static function createOrderTemplate($data)
+    {
+        $customerName = self::getSafeValue($data, 'customer_name', 'Customer');
+        $orderNumber = self::getSafeValue($data, 'order_number', 'N/A');
+        $orderDate = self::getSafeValue($data, 'order_date', date('Y-m-d'));
+        $totalAmount = self::getSafeValue($data, 'total_amount', '0.00');
+        $orderItems = self::getSafeValue($data, 'order_items', '<tr><td colspan="4">No items</td></tr>');
+        $companyName = self::getSafeValue($data, 'company_name', 'NutriNexus');
+
+        return self::getMinimalTemplate('🎉 Order Confirmation', $companyName, "
+            <div class='greeting'>Hello <strong>{$customerName}</strong>,</div>
+            <div class='message'>Thank you for your order! We're processing it now.</div>
+            <div class='order-summary'>
+                <h3>Order #{$orderNumber}</h3>
+                <p>Placed on {$orderDate}</p>
+                <p class='total'>Total: ₹{$totalAmount}</p>
+            </div>
+            <table class='order-table'>
+                <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                <tbody>{$orderItems}</tbody>
+            </table>
+            <div class='message'>You'll receive tracking information once your order ships.</div>
+        ");
     }
 
     /**
@@ -455,35 +501,60 @@ class EmailHelper
     {
         $siteName = self::getSafeValue($data, 'site_name', 'NutriNexus');
         
-        return '<!DOCTYPE html>
-<html lang="en">
+        return self::getMinimalTemplate('Notification', $siteName, "
+            <div class='message'>You have received a notification from {$siteName}.</div>
+            <div class='info-card'>
+                <p>Template: {$template}</p>
+            </div>
+        ");
+    }
+
+    /**
+     * Get minimal template structure
+     */
+    private static function getMinimalTemplate($title, $siteName, $content)
+    {
+        return "<!DOCTYPE html>
+<html lang='en'>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notification - ' . htmlspecialchars($siteName) . '</title>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>{$title} - {$siteName}</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .header { background: #0a3167; color: white; padding: 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
+        .greeting { font-size: 18px; margin-bottom: 20px; color: #2c3e50; }
+        .message { font-size: 16px; margin-bottom: 20px; color: #555; line-height: 1.7; }
+        .info-card { background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0a3167; }
+        .welcome-box, .reset-box, .success-box, .order-summary { background: #C5A572; color: white; padding: 25px; border-radius: 8px; text-align: center; margin: 20px 0; }
+        .cta-button, .reset-button { display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 5px; }
+        .cta-button-secondary { display: inline-block; background: rgba(255,255,255,0.1); color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 10px 5px; border: 1px solid rgba(255,255,255,0.3); }
+        .amount-highlight { font-size: 32px; font-weight: bold; color: #fff; margin: 15px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .cta-section { text-align: center; margin: 25px 0; }
+        .link-section { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .link-text { background: #e9ecef; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; word-break: break-all; }
+        .security-notice, .security-info { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .order-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .order-table th, .order-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .order-table th { background-color: #0a3167; color: white; }
+        .total { font-weight: bold; font-size: 18px; }
         .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Notification from ' . htmlspecialchars($siteName) . '</h1>
+    <div class='container'>
+        <div class='header'>
+            <h1>{$title}</h1>
         </div>
-        
-        <p>You have received a notification from ' . htmlspecialchars($siteName) . '.</p>
-        <p>Template: ' . htmlspecialchars($template) . '</p>
-        
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($siteName) . '</strong></p>
-            <p>© 2025 ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
+        {$content}
+        <div class='footer'>
+            <p><strong>{$siteName}</strong></p>
+            <p>© 2025 {$siteName}. All rights reserved.</p>
         </div>
     </div>
 </body>
-</html>';
+</html>";
     }
 
     /**
@@ -524,12 +595,9 @@ class EmailHelper
             $orderItemsHtml = self::generateOrderItemsHtml($orderItems);
             $templateData['order_items'] = $orderItemsHtml;
 
-            // Get email template
-            $emailBody = self::getEmailTemplate($templateData);
-
-            // Send email using PHPMailer
+            // Send email using template
             $subject = 'Order Confirmation - #' . $templateData['order_number'];
-            $result = self::send($user['email'], $subject, $emailBody, $templateData['customer_name']);
+            $result = self::sendTemplate($user['email'], $subject, 'order', $templateData, $templateData['customer_name']);
 
             if ($result) {
                 error_log('Order confirmation email sent successfully via PHPMailer for order: ' . $templateData['order_number']);
@@ -604,10 +672,14 @@ class EmailHelper
     public static function sendTestEmail($toEmail, $toName = 'Test User')
     {
         try {
+            $templateData = [
+                'first_name' => $toName,
+                'site_name' => 'NutriNexus',
+                'test_time' => date('Y-m-d H:i:s')
+            ];
+
             $subject = 'Test Email from NutriNexus - PHPMailer';
-            $body = self::createTestEmailTemplate();
-            
-            $result = self::send($toEmail, $subject, $body, $toName);
+            $result = self::sendTemplate($toEmail, $subject, 'test', $templateData, $toName);
             
             if ($result) {
                 error_log('Test email sent successfully via PHPMailer to: ' . $toEmail);
@@ -621,115 +693,6 @@ class EmailHelper
             error_log('Test email error: ' . $e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * Get email template or create HTML email
-     */
-    private static function getEmailTemplate($templateData)
-    {
-        // Try to load template file first
-        $templatePath = self::getTemplatePath('order');
-        
-        if ($templatePath && file_exists($templatePath)) {
-            $emailBody = file_get_contents($templatePath);
-            
-            if ($emailBody !== false) {
-                // Replace placeholders
-                foreach ($templateData as $key => $value) {
-                    $emailBody = str_replace('{{' . $key . '}}', htmlspecialchars($value, ENT_QUOTES, 'UTF-8'), $emailBody);
-                }
-                error_log('Using email template from: ' . $templatePath);
-                return $emailBody;
-            }
-        }
-        
-        // Fallback to built-in HTML template
-        error_log('Template file not found, using built-in template');
-        return self::createBuiltInEmailTemplate($templateData);
-    }
-
-    /**
-     * Create built-in HTML email template
-     */
-    private static function createBuiltInEmailTemplate($data)
-    {
-        $html = '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Confirmation - ' . htmlspecialchars($data['company_name']) . '</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background: #0a3167; color: white; padding: 20px; text-align: center; border-radius: 5px; margin-bottom: 20px; }
-        .order-info { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .order-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .order-table th, .order-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        .order-table th { background-color: #0a3167; color: white; }
-        .total { font-weight: bold; font-size: 18px; color: #0a3167; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Order Confirmation</h1>
-            <p>Thank you for your purchase!</p>
-        </div>
-        
-        <p>Hello ' . htmlspecialchars($data['customer_name']) . ',</p>
-        <p>We\'re excited to confirm that we\'ve received your order and it\'s being processed.</p>
-        
-        <div class="order-info">
-            <h3>Order Information</h3>
-            <p><strong>Order Number:</strong> #' . htmlspecialchars($data['order_number']) . '</p>
-            <p><strong>Order Date:</strong> ' . htmlspecialchars($data['order_date']) . '</p>
-            <p><strong>Payment Method:</strong> ' . htmlspecialchars($data['payment_method']) . '</p>
-            <p><strong>Status:</strong> ' . htmlspecialchars($data['order_status']) . '</p>
-        </div>
-
-        <h3>Order Items</h3>
-        <table class="order-table">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ' . $data['order_items'] . '
-            </tbody>
-        </table>
-
-        <div class="order-info">
-            <h3>Order Summary</h3>
-            <p><strong>Subtotal:</strong> ₹' . htmlspecialchars($data['subtotal']) . '</p>
-            <p><strong>Delivery Fee:</strong> ₹' . htmlspecialchars($data['delivery_fee']) . '</p>
-            <p class="total"><strong>Total Amount:</strong> ₹' . htmlspecialchars($data['total_amount']) . '</p>
-        </div>
-
-        <div class="order-info">
-            <h3>Delivery Address</h3>
-            <p>' . htmlspecialchars($data['delivery_address']) . '</p>
-        </div>
-
-        <p><strong>Estimated Delivery:</strong> 3-5 business days</p>
-        <p>You\'ll receive a tracking notification once your order ships.</p>
-
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($data['company_name']) . '</strong></p>
-            <p>Email: ' . htmlspecialchars($data['company_email']) . ' | Phone: ' . htmlspecialchars($data['company_phone']) . '</p>
-            <p>© 2025 ' . htmlspecialchars($data['company_name']) . '. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>';
-
-        return $html;
     }
 
     /**
@@ -749,57 +712,14 @@ class EmailHelper
             $total = self::getSafeValue($item, 'total', 0);
 
             $html .= '<tr>';
-            $html .= '<td>' . htmlspecialchars($productName, ENT_QUOTES, 'UTF-8') . '</td>';
+            $html .= '<td class="product-name">' . htmlspecialchars($productName, ENT_QUOTES, 'UTF-8') . '</td>';
             $html .= '<td>' . $quantity . '</td>';
-            $html .= '<td>₹' . number_format($price, 2) . '</td>';
-            $html .= '<td>₹' . number_format($total, 2) . '</td>';
+            $html .= '<td class="price">₹' . number_format($price, 2) . '</td>';
+            $html .= '<td class="price">₹' . number_format($total, 2) . '</td>';
             $html .= '</tr>';
         }
 
         return $html;
-    }
-
-    /**
-     * Create test email template
-     */
-    private static function createTestEmailTemplate()
-    {
-        return '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Test Email</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px; }
-        .header { background: #0a3167; color: white; padding: 20px; text-align: center; border-radius: 5px; }
-        .content { padding: 20px; background: white; border-radius: 5px; margin-top: 10px; }
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>PHPMailer Test Email</h1>
-        </div>
-        <div class="content">
-            <div class="success">
-                ✅ <strong>Success!</strong> PHPMailer is working correctly.
-            </div>
-            <p>This is a test email sent from NutriNexus using PHPMailer.</p>
-            <p><strong>Email Configuration:</strong></p>
-            <ul>
-                <li>SMTP Host: ' . self::getConfig('host') . '</li>
-                <li>SMTP Port: ' . self::getConfig('port') . '</li>
-                <li>Encryption: SSL/TLS</li>
-                <li>From: ' . self::getConfig('from_email') . '</li>
-            </ul>
-            <p>If you received this email, your email configuration is working properly!</p>
-            <p><strong>Sent at:</strong> ' . date('Y-m-d H:i:s') . '</p>
-        </div>
-    </div>
-</body>
-</html>';
     }
 
     /**
@@ -831,7 +751,7 @@ class EmailHelper
             return $protocol . $host;
         } catch (\Exception $e) {
             error_log('Error getting base URL: ' . $e->getMessage());
-            return 'http://localhost';
+            return 'http://192.168.1.74:8000';
         }
     }
 
@@ -850,6 +770,7 @@ class EmailHelper
                 return $path;
             }
         }
+
         return null;
     }
 

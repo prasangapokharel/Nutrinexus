@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -10,15 +11,20 @@ use Exception;
 class AuthController extends Controller
 {
     private $userModel;
-
+    private $loginAttempts = [];
+    private $attemptFile = 'login_attempts.dat';
+    
     public function __construct()
     {
         parent::__construct();
         $this->userModel = new User();
+        
+        // Initialize login attempts tracking
+        $this->loadLoginAttempts();
     }
-
+    
     /**
-     * Display login form
+     * Display login form with high concurrency support
      */
     public function login()
     {
@@ -26,17 +32,31 @@ class AuthController extends Controller
         if (Session::has('user_id')) {
             $this->redirect('');
         }
-
+        
+        // Apply rate limiting for login attempts
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $currentTime = time();
+        
+        // Check if user is rate limited
+        if ($this->isRateLimited($clientIp)) {
+            $remainingTime = $this->getRemainingLockoutTime($clientIp);
+            $this->setFlash('error', "Too many login attempts. Please try again in {$remainingTime} minutes.");
+            $this->view('auth/login', [
+                'title' => 'Login'
+            ]);
+            return;
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Process login form
-            $username = trim($_POST['username']);
+            // Process login form - now using phone number
+            $phone = trim($_POST['phone']);
             $password = $_POST['password'];
             
             // Validate input
             $errors = [];
             
-            if (empty($username)) {
-                $errors['username'] = 'Username is required';
+            if (empty($phone)) {
+                $errors['phone'] = 'Phone number is required';
             }
             
             if (empty($password)) {
@@ -44,10 +64,16 @@ class AuthController extends Controller
             }
             
             if (empty($errors)) {
-                // Attempt to authenticate user - try multiple methods
-                $user = $this->authenticateUser($username, $password);
+                // Track login attempt
+                $this->recordLoginAttempt($clientIp, $phone, $currentTime);
+                
+                // Attempt to authenticate user by phone
+                $user = $this->authenticateUserByPhone($phone, $password);
                 
                 if ($user) {
+                    // Reset failed attempts on successful login
+                    $this->resetLoginAttempts($clientIp);
+                    
                     // Set session variables with null coalescing for safety
                     Session::set('user_id', $user['id']);
                     Session::set('user_name', $user['first_name'] ?? '');
@@ -68,8 +94,6 @@ class AuthController extends Controller
                             // Log error but continue with login
                             error_log('AuthController: Failed to send login notification: ' . $e->getMessage());
                         }
-                    } else {
-                        error_log("AuthController: No email address for user, skipping login notification");
                     }
                     
                     // Redirect to appropriate page
@@ -82,12 +106,12 @@ class AuthController extends Controller
                         $this->redirect($redirectUrl ?: '');
                     }
                 } else {
-                    $errors['login'] = 'Invalid username or password';
+                    $errors['login'] = 'Invalid phone number or password';
                 }
             }
             
             $this->view('auth/login', [
-                'username' => $username,
+                'phone' => $phone,
                 'errors' => $errors,
                 'title' => 'Login'
             ]);
@@ -97,7 +121,7 @@ class AuthController extends Controller
             ]);
         }
     }
-
+    
     /**
      * Display registration form
      */
@@ -107,7 +131,7 @@ class AuthController extends Controller
         if (Session::has('user_id')) {
             $this->redirect('');
         }
-
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Process registration form
             $data = [
@@ -120,7 +144,6 @@ class AuthController extends Controller
             
             // Validate input
             $errors = [];
-
             if (empty($data['full_name'])) {
                 $errors['full_name'] = 'Full name is required';
             }
@@ -187,25 +210,27 @@ class AuthController extends Controller
                     Session::set('user_email', $user['email'] ?? '');
                     Session::set('user_role', 'customer');
                     
-                    // Send welcome email if email is provided
+                    // Send welcome email if email is provided - FIXED
                     if (!empty($user['email'])) {
                         try {
                             error_log("AuthController: Attempting to send welcome email to: " . $user['email']);
                             $emailResult = $this->sendWelcomeEmail($user['email'], $user['first_name'] ?? '', $user['last_name'] ?? '');
                             if ($emailResult) {
                                 error_log("AuthController: Welcome email sent successfully");
+                                $this->setFlash('success', 'Registration successful! Welcome to ' . $this->getSiteName() . '. A welcome email has been sent to your email address.');
                             } else {
                                 error_log("AuthController: Welcome email failed to send");
+                                $this->setFlash('success', 'Registration successful! Welcome to ' . $this->getSiteName() . '.');
                             }
                         } catch (Exception $e) {
                             // Log error but continue with registration
                             error_log('AuthController: Failed to send welcome email: ' . $e->getMessage());
+                            $this->setFlash('success', 'Registration successful! Welcome to ' . $this->getSiteName() . '.');
                         }
                     } else {
-                        error_log("AuthController: No email address provided, skipping welcome email");
+                        $this->setFlash('success', 'Registration successful! Welcome to ' . $this->getSiteName() . '.');
                     }
                     
-                    $this->setFlash('success', 'Registration successful! Welcome to ' . $this->getSiteName() . '.');
                     $this->redirect('');
                 } else {
                     $this->setFlash('error', 'Registration failed. Please try again.');
@@ -227,7 +252,7 @@ class AuthController extends Controller
             ]);
         }
     }
-
+    
     /**
      * Display forgot password form
      */
@@ -302,7 +327,7 @@ class AuthController extends Controller
             ]);
         }
     }
-
+    
     /**
      * Display reset password form
      */
@@ -332,7 +357,6 @@ class AuthController extends Controller
             } elseif (strlen($password) < 6) {
                 $errors['password'] = 'Password must be at least 6 characters';
             }
-
             if ($password !== $confirmPassword) {
                 $errors['confirm_password'] = 'Passwords do not match';
             }
@@ -376,7 +400,7 @@ class AuthController extends Controller
             ]);
         }
     }
-
+    
     /**
      * Logout user
      */
@@ -386,9 +410,23 @@ class AuthController extends Controller
         Session::destroy();
         $this->redirect('auth/login');
     }
-
+    
     /**
-     * Authenticate user by trying multiple methods
+     * Authenticate user by phone number and password
+     */
+    private function authenticateUserByPhone($phone, $password)
+    {
+        // Find user by phone
+        $user = $this->userModel->findByPhone($phone);
+        if ($user && password_verify($password, $user['password'])) {
+            return $user;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Authenticate user by trying multiple methods (for forgot password)
      * This works with your existing User model methods
      */
     private function authenticateUser($identifier, $password)
@@ -413,7 +451,7 @@ class AuthController extends Controller
         
         return false;
     }
-
+    
     /**
      * Send login notification email
      */
@@ -424,27 +462,26 @@ class AuthController extends Controller
                 'first_name' => $firstName,
                 'login_time' => date('Y-m-d H:i:s'),
                 'ip_address' => $ipAddress,
-                'site_name' => $this->getSiteName()
+                'site_name' => $this->getSiteName(),
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Device'
             ];
-
-            // Debug email configuration
-            error_log("AuthController: Email config status: " . json_encode(EmailHelper::getConfigStatus()));
-
+            
             // Send email directly using EmailHelper
             return EmailHelper::sendTemplate(
                 $email,
                 'New Login to Your ' . $this->getSiteName() . ' Account',
                 'login',
-                $templateData
+                $templateData,
+                $firstName
             );
         } catch (Exception $e) {
             error_log('AuthController: Failed to send login notification email: ' . $e->getMessage());
             throw $e;
         }
     }
-
+    
     /**
-     * Send welcome email
+     * Send welcome email - FIXED
      */
     private function sendWelcomeEmail($email, $firstName, $lastName)
     {
@@ -456,20 +493,31 @@ class AuthController extends Controller
                 'site_name' => $this->getSiteName(),
                 'site_url' => $this->getBaseUrl()
             ];
-
+            
+            error_log('AuthController: Sending welcome email with data: ' . json_encode($templateData));
+            
             // Send email directly using EmailHelper
-            return EmailHelper::sendTemplate(
+            $result = EmailHelper::sendTemplate(
                 $email,
                 'Welcome to ' . $this->getSiteName() . '!',
                 'register',
-                $templateData
+                $templateData,
+                $firstName
             );
+            
+            if ($result) {
+                error_log('AuthController: Welcome email sent successfully to: ' . $email);
+            } else {
+                error_log('AuthController: Welcome email failed to send to: ' . $email);
+            }
+            
+            return $result;
         } catch (Exception $e) {
             error_log('AuthController: Failed to send welcome email: ' . $e->getMessage());
             throw $e;
         }
     }
-
+    
     /**
      * Send password reset email
      */
@@ -483,20 +531,21 @@ class AuthController extends Controller
                 'reset_url' => $resetUrl,
                 'site_name' => $this->getSiteName()
             ];
-
+            
             // Send email directly using EmailHelper
             return EmailHelper::sendTemplate(
                 $email,
                 'Reset Your ' . $this->getSiteName() . ' Password',
                 'forgot-password',
-                $templateData
+                $templateData,
+                $firstName
             );
         } catch (Exception $e) {
             error_log('AuthController: Failed to send password reset email: ' . $e->getMessage());
             throw $e;
         }
     }
-
+    
     /**
      * Send password changed confirmation email
      */
@@ -505,22 +554,25 @@ class AuthController extends Controller
         try {
             $templateData = [
                 'first_name' => $firstName,
-                'site_name' => $this->getSiteName()
+                'site_name' => $this->getSiteName(),
+                'change_date' => date('Y-m-d H:i:s'),
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown'
             ];
-
+            
             // Send email directly using EmailHelper
             return EmailHelper::sendTemplate(
                 $email,
                 'Your ' . $this->getSiteName() . ' Password Has Been Changed',
                 'password-changed',
-                $templateData
+                $templateData,
+                $firstName
             );
         } catch (Exception $e) {
             error_log('AuthController: Failed to send password changed email: ' . $e->getMessage());
             throw $e;
         }
     }
-
+    
     /**
      * Get site name with fallback
      */
@@ -531,18 +583,107 @@ class AuthController extends Controller
         }
         return 'NutriNexus';
     }
-
+    
     /**
      * Get base URL with fallback
      */
     private function getBaseUrl()
     {
         if (defined('BASE_URL')) {
-            return BASE_URL;
+            return BASE_URL ?: 'http://localhost';
         }
         
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         return $protocol . "://" . $host;
+    }
+    
+    /**
+     * Record a login attempt
+     */
+    private function recordLoginAttempt($ip, $username, $time)
+    {
+        $this->loginAttempts[] = [
+            'ip' => $ip,
+            'username' => $username,
+            'time' => $time,
+            'success' => false
+        ];
+        
+        $this->saveLoginAttempts();
+    }
+    
+    /**
+     * Reset login attempts for an IP
+     */
+    private function resetLoginAttempts($ip)
+    {
+        $this->loginAttempts = array_filter($this->loginAttempts, function($attempt) use ($ip) {
+            return $attempt['ip'] !== $ip;
+        });
+        
+        $this->saveLoginAttempts();
+    }
+    
+    /**
+     * Check if an IP is rate limited
+     */
+    private function isRateLimited($ip)
+    {
+        $now = time();
+        $attempts = array_filter($this->loginAttempts, function($attempt) use ($ip, $now) {
+            return $attempt['ip'] === $ip && ($now - $attempt['time']) < 3600; // 1 hour window
+        });
+        
+        if (count($attempts) >= 5) { // 5 attempts allowed
+            // Check if last attempt was more than 15 minutes ago
+            $lastAttempt = end($attempts);
+            if (($now - $lastAttempt['time']) > 900) { // 15 minutes
+                return false;
+            }
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get remaining lockout time in minutes
+     */
+    private function getRemainingLockoutTime($ip)
+    {
+        $now = time();
+        $attempts = array_filter($this->loginAttempts, function($attempt) use ($ip, $now) {
+            return $attempt['ip'] === $ip && ($now - $attempt['time']) < 3600; // 1 hour window
+        });
+        
+        if (count($attempts) >= 5) {
+            $lastAttempt = end($attempts);
+            $remainingSeconds = 900 - ($now - $lastAttempt['time']); // 15 minutes lockout
+            return ceil($remainingSeconds / 60);
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Load login attempts from file
+     */
+    private function loadLoginAttempts()
+    {
+        if (file_exists($this->attemptFile)) {
+            $content = file_get_contents($this->attemptFile);
+            if ($content) {
+                $this->loginAttempts = unserialize($content);
+            }
+        }
+    }
+    
+    /**
+     * Save login attempts to file
+     */
+    private function saveLoginAttempts()
+    {
+        file_put_contents($this->attemptFile, serialize($this->loginAttempts));
     }
 }

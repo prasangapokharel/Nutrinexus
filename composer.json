@@ -12,7 +12,8 @@
     "symfony/cache": "^7.2",
     "spatie/async": "^1.6",
     "bacon/bacon-qr-code": "^3.0",
-    "dompdf/dompdf": "^3.1"
+    "dompdf/dompdf": "^3.1",
+    "mpdf/mpdf": "^8.2"
   },
   "autoload": {
     "psr-4": {

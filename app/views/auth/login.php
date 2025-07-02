@@ -1,4 +1,5 @@
 <?php ob_start(); ?>
+
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-12">
     <div class="max-w-md w-full">
         <div class="bg-white shadow-2xl overflow-hidden">
@@ -32,10 +33,10 @@
 
             <form action="<?= \App\Core\View::url('auth/login') ?>" method="post" class="px-8 py-8 space-y-6">
                 <div>
-                    <label for="username" class="block text-sm font-semibold text-[#0A3167] mb-2">Username</label>
-                    <input type="text" name="username" id="username" value="<?= isset($username) ? htmlspecialchars($username) : '' ?>" 
+                    <label for="phone" class="block text-sm font-semibold text-[#0A3167] mb-2">Phone Number</label>
+                    <input type="tel" name="phone" id="phone" value="<?= isset($phone) ? htmlspecialchars($phone) : '' ?>" 
                            class="w-full px-4 py-3 border-2 border-gray-200 focus:border-[#C5A572] focus:outline-none text-gray-900 placeholder-gray-500" 
-                           placeholder="Enter your username" required>
+                           placeholder="Enter your phone number" required>
                 </div>
 
                 <div>
@@ -71,5 +72,6 @@
         </div>
     </div>
 </div>
+
 <?php $content = ob_get_clean(); ?>
 <?php include dirname(dirname(__FILE__)) . '/layouts/main.php'; ?>

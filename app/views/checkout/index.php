@@ -1,10 +1,9 @@
 <?php ob_start(); ?>
+
 <?php
-// Get main image URL function (enhanced with debugging)
 function getProductImageUrl($product) {
     $mainImageUrl = '';
     if (!empty($product['images'])) {
-        // Use primary image or first image
         $primaryImage = null;
         foreach ($product['images'] as $img) {
             if ($img['is_primary']) {
@@ -16,94 +15,110 @@ function getProductImageUrl($product) {
         $mainImageUrl = filter_var($imageData['image_url'], FILTER_VALIDATE_URL) 
             ? $imageData['image_url'] 
             : \App\Core\View::asset('uploads/images/' . $imageData['image_url']);
-        // Debugging: Log the selected image URL
-        error_log("Primary image URL for product ID {$product['id']}: " . $mainImageUrl);
     } else {
-        // Fallback to old image field
         $image = $product['image'] ?? '';
         $mainImageUrl = filter_var($image, FILTER_VALIDATE_URL) 
             ? $image 
             : ($image ? \App\Core\View::asset('uploads/images/' . $image) : \App\Core\View::asset('images/products/default.jpg'));
-        error_log("Fallback image URL for product ID {$product['id']}: " . $mainImageUrl);
     }
     return $mainImageUrl;
 }
+
+// Get default address values for pre-filling
+$defaultName = $data['defaultAddress']['recipient_name'] ?? '';
+$defaultPhone = $data['defaultAddress']['phone'] ?? '';
+$defaultAddress = $data['defaultAddress']['address_line1'] ?? '';
+$defaultCity = $data['defaultAddress']['city'] ?? '';
+$defaultState = $data['defaultAddress']['state'] ?? '';
 ?>
+
 <div class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
-        <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-primary mb-2">Checkout</h1>
             <p class="text-gray-600">Complete your order and get your supplements delivered</p>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Checkout Form -->
             <div class="lg:w-2/3">
                 <div class="bg-white shadow-sm p-8">
-                    <!-- TRADITIONAL FORM SUBMISSION - NO AJAX -->
                     <form id="checkout-form" class="space-y-8" method="POST" action="<?= URLROOT ?>/checkout/process" enctype="multipart/form-data">
+                        
                         <!-- Shipping Information -->
                         <div class="form-section">
-                            <div class="flex items-center mb-6">
-                                <div class="w-8 h-8 bg-primary text-white flex items-center justify-center text-sm font-medium mr-3">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-primary text-white flex items-center justify-center text-sm font-medium mr-3">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <h2 class="text-xl font-semibold text-primary">Shipping Information</h2>
                                 </div>
-                                <h2 class="text-xl font-semibold text-primary">Shipping Information</h2>
+                                <?php if ($data['defaultAddress']): ?>
+                                    <div class="text-sm text-green-600 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Default address loaded
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="form-group">
                                     <label for="recipient_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                                     <input type="text" name="recipient_name" id="recipient_name" required 
+                                           value="<?= htmlspecialchars($defaultName) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Enter your full name">
                                 </div>
                                 <div class="form-group">
                                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                                     <input type="tel" name="phone" id="phone" required 
+                                           value="<?= htmlspecialchars($defaultPhone) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Enter your phone number">
                                 </div>
                                 <div class="md:col-span-2 form-group">
                                     <label for="address_line1" class="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                                     <input type="text" name="address_line1" id="address_line1" required 
+                                           value="<?= htmlspecialchars($defaultAddress) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Street address, P.O. Box, company name">
-                                </div>
-                                <div class="md:col-span-2 form-group">
-                                    <label for="address_line2" class="block text-sm font-medium text-gray-700 mb-2">Address Line 2 (Optional)</label>
-                                    <input type="text" name="address_line2" id="address_line2" 
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Apartment, suite, unit, building, floor, etc.">
                                 </div>
                                 <div class="form-group">
                                     <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City *</label>
                                     <input type="text" name="city" id="city" required 
+                                           value="<?= htmlspecialchars($defaultCity) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Enter your city">
                                 </div>
                                 <div class="form-group">
                                     <label for="state" class="block text-sm font-medium text-gray-700 mb-2">State/Province *</label>
                                     <input type="text" name="state" id="state" required 
+                                           value="<?= htmlspecialchars($defaultState) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Enter your state">
                                 </div>
-                                <div class="form-group">
-                                    <label for="postal_code" class="block text-sm font-medium text-gray-700 mb-2">Postal Code *</label>
-                                    <input type="text" name="postal_code" id="postal_code" required 
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Enter postal code">
-                                </div>
-                                <div class="form-group">
-                                    <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                                    <input type="text" name="country" id="country" value="Nepal" readonly
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
-                                </div>
+                                <!-- Hidden country field with default Nepal -->
+                                <input type="hidden" name="country" id="country" value="Nepal">
                             </div>
+
+                            <?php if (!$data['defaultAddress']): ?>
+                                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-yellow-800">No default address found</p>
+                                            <p class="text-xs text-yellow-600">Please fill in your shipping information manually</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Payment Method -->
@@ -250,17 +265,16 @@ function getProductImageUrl($product) {
                         <?php foreach ($data['cartItems'] as $item): ?>
                             <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg transition-colors duration-200">
                                 <div class="w-16 h-16 overflow-hidden bg-gray-100 rounded-lg">
-                                    <?php 
-                                    $imageUrl = htmlspecialchars(getProductImageUrl($item['product']));
-                                    ?>
-                                 <img src="<?= $imageUrl ?>" 
-                                                 alt="<?= htmlspecialchars($item['product']['product_name']) ?>" 
-                                                 class="w-20 h-20 object-cover">                                </div>
+                                    <?php $imageUrl = htmlspecialchars(getProductImageUrl($item['product'])); ?>
+                                    <img src="<?= $imageUrl ?>" 
+                                         alt="<?= htmlspecialchars($item['product']['product_name']) ?>" 
+                                         class="w-16 h-16 object-cover">
+                                </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($item['product']['product_name']) ?></p>
-                                    <p class="text-sm text-gray-500">Qty: <?= $item['quantity'] ?> × ₹<?= number_format($item['product']['price'], 2) ?></p>
+                                    <p class="text-sm text-gray-500">Qty: <?= $item['quantity'] ?> × Rs<?= number_format($item['product']['price'], 2) ?></p>
                                 </div>
-                                <p class="text-sm font-medium text-blue-600">₹<?= number_format($item['subtotal'], 2) ?></p>
+                                <p class="text-sm font-medium text-blue-600">Rs<?= number_format($item['subtotal'], 2) ?></p>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -275,7 +289,6 @@ function getProductImageUrl($product) {
                         </div>
                         
                         <?php if (isset($data['appliedCoupon']) && $data['appliedCoupon']): ?>
-                            <!-- Applied Coupon Display -->
                             <div id="applied-coupon" class="flex items-center justify-between p-3 bg-green-100 border border-green-300 rounded-md">
                                 <div class="flex items-center">
                                     <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +296,7 @@ function getProductImageUrl($product) {
                                     </svg>
                                     <div>
                                         <p class="text-sm font-medium text-green-800"><?= htmlspecialchars($data['appliedCoupon']['code']) ?></p>
-                                        <p class="text-xs text-green-600">Discount: ₹<?= number_format($data['couponDiscount'], 2) ?></p>
+                                        <p class="text-xs text-green-600">Discount: Rs<?= number_format($data['couponDiscount'], 2) ?></p>
                                     </div>
                                 </div>
                                 <button type="button" id="remove-coupon-btn" class="text-red-600 hover:text-red-800 transition-colors">
@@ -293,7 +306,6 @@ function getProductImageUrl($product) {
                                 </button>
                             </div>
                         <?php else: ?>
-                            <!-- Coupon Input Form -->
                             <div id="coupon-form">
                                 <div class="flex space-x-2">
                                     <input type="text" id="coupon-code" placeholder="Enter coupon code" 
@@ -312,16 +324,16 @@ function getProductImageUrl($product) {
                     <div class="border-t border-gray-200 pt-4 space-y-3">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Subtotal (<?= count($data['cartItems']) ?> items)</span>
-                            <span class="font-medium text-gray-900">₹<?= number_format($data['total'], 2) ?></span>
+                            <span class="font-medium text-gray-900">Rs<?= number_format($data['total'], 2) ?></span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Tax (18%)</span>
-                            <span class="font-medium text-gray-900">₹<?= number_format($data['tax'], 2) ?></span>
+                            <span class="font-medium text-gray-900">Rs<?= number_format($data['tax'], 2) ?></span>
                         </div>
                         <?php if (isset($data['couponDiscount']) && $data['couponDiscount'] > 0): ?>
                         <div class="flex justify-between text-sm">
                             <span class="text-green-600">Coupon Discount</span>
-                            <span class="font-medium text-green-600">-₹<?= number_format($data['couponDiscount'], 2) ?></span>
+                            <span class="font-medium text-green-600">-Rs<?= number_format($data['couponDiscount'], 2) ?></span>
                         </div>
                         <?php endif; ?>
                         <div class="flex justify-between text-sm">
@@ -331,12 +343,11 @@ function getProductImageUrl($product) {
                         <div class="border-t border-gray-200 pt-3 mt-3">
                             <div class="flex justify-between">
                                 <span class="text-lg font-semibold text-gray-900">Total</span>
-                                <span id="final-total" class="text-2xl font-bold text-blue-600">₹<?= number_format($data['finalTotal'], 2) ?></span>
+                                <span id="final-total" class="text-2xl font-bold text-blue-600">Rs<?= number_format($data['finalTotal'], 2) ?></span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Security Badge -->
                     <div class="mt-6 p-4 bg-green-50 rounded-lg flex items-center">
                         <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
@@ -353,35 +364,16 @@ function getProductImageUrl($product) {
 </div>
 
 <style>
-    .form-group.error label {
-        color: #ef4444;
-    }
-    
-    .form-group.error input,
-    .form-group.error textarea {
-        border-color: #ef4444;
-        background-color: #fef2f2;
-    }
-    
-    .payment-option.selected {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-        box-shadow: 0 0 0 1px #3b82f6;
-    }
-    
-    .coupon-loading {
-        opacity: 0.6;
-        pointer-events: none;
-    }
+.form-group.error label { color: #ef4444; }
+.form-group.error input, .form-group.error textarea { border-color: #ef4444; background-color: #fef2f2; }
+.payment-option.selected { border-color: #3b82f6; background-color: #eff6ff; box-shadow: 0 0 0 1px #3b82f6; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Checkout page loaded - Traditional form submission with coupon support');
-    
     const checkoutForm = document.getElementById('checkout-form');
     const placeOrderBtn = document.getElementById('place-order-btn');
-    
+
     // Payment method selection
     const paymentMethods = document.querySelectorAll('input[name="payment_method_id"]');
     const bankDetails = document.getElementById('bank-details');
@@ -390,12 +382,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     paymentMethods.forEach(function(method) {
         method.addEventListener('change', function() {
-            // Remove selected class from all options
             document.querySelectorAll('.payment-option').forEach(function(option) {
                 option.classList.remove('selected');
             });
-            
-            // Add selected class to current option
             this.closest('.payment-option').classList.add('selected');
             
             if (this.value === '2') {
@@ -409,21 +398,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Coupon functionality
     const couponCode = document.getElementById('coupon-code');
     const applyCouponBtn = document.getElementById('apply-coupon-btn');
     const removeCouponBtn = document.getElementById('remove-coupon-btn');
     const couponMessage = document.getElementById('coupon-message');
-    const finalTotal = document.getElementById('final-total');
-    
-    // Auto-uppercase coupon code
+
     if (couponCode) {
         couponCode.addEventListener('input', function() {
             this.value = this.value.toUpperCase();
         });
-        
-        // Apply coupon on Enter key
         couponCode.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -431,42 +416,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Apply coupon button
+
     if (applyCouponBtn) {
         applyCouponBtn.addEventListener('click', applyCoupon);
     }
-    
-    // Remove coupon button
+
     if (removeCouponBtn) {
         removeCouponBtn.addEventListener('click', removeCoupon);
     }
-    
+
     function applyCoupon() {
         const code = couponCode.value.trim();
-        
         if (!code) {
             showCouponMessage('Please enter a coupon code', 'error');
             return;
         }
         
-        // Show loading state
         applyCouponBtn.disabled = true;
         applyCouponBtn.textContent = 'Applying...';
         couponCode.disabled = true;
         
-        // Make AJAX request
         fetch('<?= URLROOT ?>/checkout/validateCoupon', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: code })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to show applied coupon
                 location.reload();
             } else {
                 showCouponMessage(data.message, 'error');
@@ -477,29 +454,23 @@ document.addEventListener('DOMContentLoaded', function() {
             showCouponMessage('Failed to apply coupon. Please try again.', 'error');
         })
         .finally(() => {
-            // Reset button state
             applyCouponBtn.disabled = false;
             applyCouponBtn.textContent = 'Apply';
             couponCode.disabled = false;
         });
     }
-    
+
     function removeCoupon() {
-        // Show loading state
         removeCouponBtn.disabled = true;
         removeCouponBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>';
         
-        // Make AJAX request
         fetch('<?= URLROOT ?>/checkout/removeCoupon', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to show updated totals
                 location.reload();
             } else {
                 showCouponMessage(data.message || 'Failed to remove coupon', 'error');
@@ -510,27 +481,23 @@ document.addEventListener('DOMContentLoaded', function() {
             showCouponMessage('Failed to remove coupon. Please try again.', 'error');
         })
         .finally(() => {
-            // Reset button state
             removeCouponBtn.disabled = false;
             removeCouponBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
         });
     }
-    
+
     function showCouponMessage(message, type) {
         couponMessage.textContent = message;
         couponMessage.className = `mt-2 text-sm ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
         couponMessage.classList.remove('hidden');
-        
-        // Hide message after 5 seconds
         setTimeout(() => {
             couponMessage.classList.add('hidden');
         }, 5000);
     }
-    
-    // Form submission with loading state
+
+    // Form submission
     if (checkoutForm) {
         checkoutForm.addEventListener('submit', function(e) {
-            // Show loading state
             placeOrderBtn.disabled = true;
             placeOrderBtn.innerHTML = `
                 <span class="flex items-center">
@@ -538,13 +505,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     Processing Order...
                 </span>
             `;
-            
-            // Let the form submit naturally - no preventDefault
-            console.log('Form submitting...');
         });
     }
-    
-    // Real-time validation
+
+    // Form validation
     const formInputs = document.querySelectorAll('#checkout-form input, #checkout-form textarea');
     formInputs.forEach(function(input) {
         input.addEventListener('blur', function() {

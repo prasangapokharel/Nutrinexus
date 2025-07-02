@@ -42,7 +42,7 @@ ob_start();
                             <?php if ($stats['discount_type'] === 'percentage'): ?>
                                 <?= number_format($stats['discount_value'], 2) ?>%
                             <?php else: ?>
-                                ₹<?= number_format($stats['discount_value'], 2) ?>
+                                Rs<?= number_format($stats['discount_value'], 2) ?>
                             <?php endif; ?>
                         </p>
                     </div>
@@ -115,7 +115,7 @@ ob_start();
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-600">Total Discount</p>
-                        <p class="text-2xl font-semibold text-gray-900">₹<?= number_format($stats['total_discount_given'] ?? 0, 2) ?></p>
+                        <p class="text-2xl font-semibold text-gray-900">Rs<?= number_format($stats['total_discount_given'] ?? 0, 2) ?></p>
                     </div>
                 </div>
             </div>
@@ -130,7 +130,7 @@ ob_start();
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-600">Avg. Discount</p>
-                        <p class="text-2xl font-semibold text-gray-900">₹<?= number_format($stats['avg_discount_per_use'] ?? 0, 2) ?></p>
+                        <p class="text-2xl font-semibold text-gray-900">Rs<?= number_format($stats['avg_discount_per_use'] ?? 0, 2) ?></p>
                     </div>
                 </div>
             </div>
@@ -187,7 +187,7 @@ ob_start();
                         <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Order Amount</label>
                         <p class="text-gray-900">
                             <?php if ($stats['min_order_amount']): ?>
-                                ₹<?= number_format($stats['min_order_amount'], 2) ?>
+                                Rs<?= number_format($stats['min_order_amount'], 2) ?>
                             <?php else: ?>
                                 No minimum
                             <?php endif; ?>
@@ -197,7 +197,7 @@ ob_start();
                         <label class="block text-sm font-medium text-gray-700 mb-1">Maximum Discount Amount</label>
                         <p class="text-gray-900">
                             <?php if ($stats['max_discount_amount']): ?>
-                                ₹<?= number_format($stats['max_discount_amount'], 2) ?>
+                                Rs<?= number_format($stats['max_discount_amount'], 2) ?>
                             <?php else: ?>
                                 No maximum
                             <?php endif; ?>
@@ -269,7 +269,7 @@ ob_start();
                         <div class="text-sm text-gray-600">Total Redemptions</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold text-green-600">₹<?= number_format($stats['total_discount_given'] ?? 0, 0) ?></div>
+                        <div class="text-3xl font-bold text-green-600">Rs<?= number_format($stats['total_discount_given'] ?? 0, 0) ?></div>
                         <div class="text-sm text-gray-600">Total Savings Provided</div>
                     </div>
                     <div class="text-center">
@@ -283,7 +283,7 @@ ob_start();
                     <div class="text-center">
                         <p class="text-sm text-gray-600">
                             This coupon has been successfully used by <strong><?= number_format($stats['unique_users'] ?? 0) ?></strong> customers, 
-                            providing a total discount of <strong>₹<?= number_format($stats['total_discount_given'] ?? 0, 2) ?></strong> 
+                            providing a total discount of <strong>Rs<?= number_format($stats['total_discount_given'] ?? 0, 2) ?></strong> 
                             across <strong><?= number_format($stats['total_uses'] ?? 0) ?></strong> orders.
                         </p>
                     </div>

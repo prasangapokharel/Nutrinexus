@@ -7,6 +7,8 @@ use App\Core\Session;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Order;
+use App\Models\Address;
+use App\Models\OrderItem;
 use App\Models\Coupon;
 use App\Core\Database;
 use Exception;
@@ -16,7 +18,9 @@ class CheckoutController extends Controller
     private $cartModel;
     private $productModel;
     private $orderModel;
+    private $orderItemModel;
     private $couponModel;
+    private $addressModel;
 
     public function __construct()
     {
@@ -24,7 +28,9 @@ class CheckoutController extends Controller
         $this->cartModel = new Cart();
         $this->productModel = new Product();
         $this->orderModel = new Order();
+        $this->orderItemModel = new OrderItem();
         $this->couponModel = new Coupon();
+        $this->addressModel = new Address();
     }
 
     public function index()
@@ -45,6 +51,9 @@ class CheckoutController extends Controller
             return;
         }
 
+        // Get default address for auto-fill
+        $defaultAddress = $this->addressModel->getDefaultAddress(Session::get('user_id'));
+
         // Check for applied coupon
         $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
         $couponDiscount = 0;
@@ -62,8 +71,44 @@ class CheckoutController extends Controller
             'finalTotal' => $finalTotal,
             'appliedCoupon' => $appliedCoupon,
             'couponDiscount' => $couponDiscount,
+            'defaultAddress' => $defaultAddress,
             'title' => 'Checkout'
         ]);
+    }
+
+    /**
+     * Get default address via AJAX
+     */
+    public function getDefaultAddress()
+    {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in
+        if (!Session::get('user_id')) {
+            echo json_encode(['success' => false, 'message' => 'User not logged in']);
+            return;
+        }
+
+        try {
+            $defaultAddress = $this->addressModel->getDefaultAddress(Session::get('user_id'));
+            
+            if ($defaultAddress) {
+                echo json_encode([
+                    'success' => true,
+                    'address' => $defaultAddress
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'No default address found'
+                ]);
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error retrieving default address'
+            ]);
+        }
     }
 
     /**
@@ -243,6 +288,8 @@ class CheckoutController extends Controller
         }
 
         try {
+            error_log('=== CHECKOUT PROCESS START ===');
+            
             // Check if user is logged in
             if (!Session::get('user_id')) {
                 $this->setFlash('error', 'Please login to proceed with checkout');
@@ -260,9 +307,9 @@ class CheckoutController extends Controller
             }
 
             // Validate required fields
-            $requiredFields = ['recipient_name', 'phone', 'address_line1', 'city', 'state', 'postal_code', 'payment_method_id'];
+            $requiredFields = ['recipient_name', 'phone', 'address_line1', 'city', 'state', 'payment_method_id'];
             $errors = [];
-
+            
             foreach ($requiredFields as $field) {
                 if (empty($_POST[$field])) {
                     $errors[] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
@@ -324,10 +371,8 @@ class CheckoutController extends Controller
                 'recipient_name' => $_POST['recipient_name'],
                 'phone' => $_POST['phone'],
                 'address_line1' => $_POST['address_line1'],
-                'address_line2' => $_POST['address_line2'] ?? '',
                 'city' => $_POST['city'],
                 'state' => $_POST['state'],
-                'postal_code' => $_POST['postal_code'],
                 'country' => 'Nepal',
                 'order_notes' => $_POST['order_notes'] ?? '',
                 'transaction_id' => $_POST['transaction_id'] ?? null,
@@ -335,10 +380,14 @@ class CheckoutController extends Controller
                 'coupon_code' => $appliedCoupon ? $appliedCoupon['code'] : null
             ];
 
+            error_log('Order data prepared: ' . json_encode($orderData));
+
             // Create order
             $orderId = $this->orderModel->createOrder($orderData, $cartData['items']);
 
             if ($orderId) {
+                error_log('Order created successfully with ID: ' . $orderId);
+                
                 // Clear cart and applied coupon
                 $this->cartModel->clearCart();
                 if (isset($_SESSION['applied_coupon'])) {
@@ -348,19 +397,22 @@ class CheckoutController extends Controller
                 $this->setFlash('success', 'Order placed successfully! Order ID: #' . $orderId);
                 $this->redirect('checkout/success/' . $orderId);
             } else {
+                error_log('Failed to create order');
                 $this->setFlash('error', 'Failed to place order. Please try again.');
                 $this->redirect('checkout');
             }
 
         } catch (Exception $e) {
+            error_log('=== CHECKOUT PROCESS ERROR ===');
             error_log('Checkout process error: ' . $e->getMessage());
-            $this->setFlash('error', 'An error occurred while processing your order. Please try again.');
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
+            $this->setFlash('error', 'An error occurred while processing your order: ' . $e->getMessage());
             $this->redirect('checkout');
         }
     }
 
     /**
-     * SUCCESS METHOD - THIS WAS MISSING!
      * Success page for completed orders
      */
     public function success($orderId)

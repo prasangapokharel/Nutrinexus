@@ -5,117 +5,212 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Notification - {{site_name}}</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
+            background-color: #f8f9fa;
+            padding: 20px;
         }
-        .container {
+        
+        .email-container {
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
+        
         .header {
-            background: linear-gradient(135deg, #0A3167 0%, #082850 100%);
+            background: linear-gradient(135deg, #0A3167 0%, #1e4a72 100%);
             color: white;
-            padding: 30px 20px;
+            padding: 40px 30px;
             text-align: center;
         }
+        
         .header h1 {
-            margin: 0;
             font-size: 28px;
-            font-weight: 700;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
         .content {
             padding: 40px 30px;
         }
-        .alert-box {
-            background-color: #f8f9fa;
-            border-left: 4px solid #C5A572;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 4px 4px 0;
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2c3e50;
         }
-        .alert-box h3 {
-            margin: 0 0 10px 0;
+        
+        .message {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #555;
+            line-height: 1.7;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 5px solid #C5A572;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .info-card h3 {
             color: #0A3167;
             font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
         }
-        .info-row {
+        
+        .info-item {
             display: flex;
             justify-content: space-between;
-            margin: 8px 0;
+            align-items: center;
             padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #dee2e6;
         }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
         .info-label {
             font-weight: 600;
-            color: #0A3167;
+            color: #495057;
         }
+        
         .info-value {
-            color: #666;
+            color: #0A3167;
+            font-weight: 500;
         }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            border-top: 1px solid #eee;
-        }
+        
         .security-notice {
-            background-color: #fff3cd;
+            background: #fff3cd;
             border: 1px solid #ffeaa7;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
+            color: #856404;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        
+        .security-notice strong {
+            color: #533f03;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .footer h4 {
+            color: #0A3167;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .footer p {
+            color: #6c757d;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .footer .copyright {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #adb5bd;
+        }
+        
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 18px;
+            }
+            
+            .header, .content, .footer {
+                padding: 25px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="email-container">
         <div class="header">
-            <h1>🔐 New Account Login</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Security notification from {{site_name}}</p>
+            <h1>Login Notification</h1>
+            <p>New login to your {{site_name}} account</p>
         </div>
         
         <div class="content">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hello <strong>{{first_name}}</strong>,</p>
+            <div class="greeting">
+                Hello <strong>{{first_name}}</strong>,
+            </div>
             
-            <p>We detected a new login to your {{site_name}} account. Here are the details:</p>
+            <div class="message">
+                We wanted to let you know that someone just logged into your {{site_name}} account. This email is sent as a security measure to keep your account safe.
+            </div>
             
-            <div class="alert-box">
-                <h3>Login Information</h3>
-                <div class="info-row">
-                    <span class="info-label">Date & Time:</span>
+            <div class="info-card">
+                <h3>Login Details</h3>
+                <div class="info-item">
+                    <span class="info-label">🕒 Login Time:</span>
                     <span class="info-value">{{login_time}}</span>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">IP Address:</span>
+                <div class="info-item">
+                    <span class="info-label">🌐 IP Address:</span>
                     <span class="info-value">{{ip_address}}</span>
                 </div>
+            
             </div>
             
             <div class="security-notice">
-                <p style="margin: 0;"><strong>⚠️ Security Notice:</strong></p>
-                <p style="margin: 5px 0 0 0;">If this was you, you can safely ignore this email. If you did not log in recently, please secure your account immediately by changing your password.</p>
+                <strong>Security Notice:</strong> If this was you, you can safely ignore this email. If you didn't log in, please contact our support team immediately and consider changing your password.
             </div>
-            
-            <p>Thank you for using {{site_name}}!</p>
-            
-            <p style="margin-top: 30px;">
-                Best regards,<br>
-                <strong>The {{site_name}} Team</strong>
-            </p>
         </div>
         
         <div class="footer">
-            <p>This is an automated security notification. Please do not reply to this email.</p>
-            <p>© 2025 {{site_name}}. All rights reserved.</p>
+            <h4>{{site_name}}</h4>
+            <p>This is an automated security notification.</p>
+            <p>Please do not reply to this email.</p>
+            <div class="copyright">
+                © 2025 {{site_name}}. All rights reserved.
+            </div>
         </div>
     </div>
 </body>

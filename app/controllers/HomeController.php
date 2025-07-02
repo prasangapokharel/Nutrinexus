@@ -125,7 +125,57 @@ class HomeController extends Controller
             ];
         }, 86400, ['page' => 'about', 'static' => true]);
         
-        $this->view('home/privacy', $viewData);
+        $this->view('pages/privacy', $viewData);
+    }
+
+
+
+       public function faq()
+    {
+        // Try to get data from cache (with Symfony cache if available)
+        $viewData = $this->getFromCache('faq_page_data', function() {
+            return [
+                'title' => 'FAQ',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cache_source' => 'none'
+            ];
+        }, 86400, ['page' => 'about', 'static' => true]);
+        
+        $this->view('pages/faq', $viewData);
+    }
+
+
+
+
+
+       public function terms()
+    {
+        // Try to get data from cache (with Symfony cache if available)
+        $viewData = $this->getFromCache('terms_page_data', function() {
+            return [
+                'title' => 'Terms and Conditions',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cache_source' => 'none'
+            ];
+        }, 86400, ['page' => 'terms', 'static' => true]);
+        
+        $this->view('pages/terms', $viewData);
+    }
+
+
+    
+       public function shipping()
+    {
+        // Try to get data from cache (with Symfony cache if available)
+        $viewData = $this->getFromCache('shipping_page_data', function() {
+            return [
+                'title' => 'Shipping Policy',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cache_source' => 'none'
+            ];
+        }, 86400, ['page' => 'shipping', 'static' => true]);
+        
+        $this->view('pages/shipping', $viewData);
     }
 
     /**

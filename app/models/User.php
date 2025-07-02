@@ -442,25 +442,44 @@ class User extends Model
     }
     
     /**
-     * Generate a unique referral code
-     *
-     * @return string
-     */
-    public function generateReferralCode()
-    {
-        // Generate a random string
-        $code = substr(str_shuffle(md5(time())), 0, 8);
-        
-        // Check if code already exists
+ * Generate a unique referral code based on username
+ *
+ * @return string
+ */
+public function generateReferralCode()
+{
+    // First try to get the username if user is being created
+    $username = $_POST['username'] ?? '';
+    
+    // If username is not available in POST, generate a random one
+    if (empty($username)) {
+        $username = substr(str_shuffle(md5(time())), 0, 5);
+    }
+    
+    // Clean the username to create a valid referral code
+    $code = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $username));
+    
+    // Ensure the code is at least 6 characters long
+    if (strlen($code) < 6) {
+        $code .= substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyz'), 0, 6 - strlen($code));
+    }
+    
+    // Check if code already exists
+    $existingUser = $this->findOneBy('referral_code', $code);
+    
+    // If code exists, append random digits and check again
+    if ($existingUser) {
+        $code .= rand(100, 999);
         $existingUser = $this->findOneBy('referral_code', $code);
         
-        // If code exists, generate a new one
+        // If still exists, generate completely random code
         if ($existingUser) {
-            return $this->generateReferralCode();
+            $code = substr(str_shuffle(md5(time())), 0, 8);
         }
-        
-        return $code;
     }
+    
+    return $code;
+}
     
     /**
      * Find user by referral code

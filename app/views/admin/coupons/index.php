@@ -148,11 +148,11 @@ ob_start();
                                             <?php if ($coupon['discount_type'] === 'percentage'): ?>
                                                 <?= $coupon['discount_value'] ?>%
                                             <?php else: ?>
-                                                ₹<?= number_format($coupon['discount_value'], 2) ?>
+                                                Rs<?= number_format($coupon['discount_value'], 2) ?>
                                             <?php endif; ?>
                                         </div>
                                         <?php if ($coupon['min_order_amount']): ?>
-                                            <div class="text-xs text-gray-500">Min: ₹<?= number_format($coupon['min_order_amount'], 2) ?></div>
+                                            <div class="text-xs text-gray-500">Min: Rs<?= number_format($coupon['min_order_amount'], 2) ?></div>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

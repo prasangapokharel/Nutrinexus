@@ -27,10 +27,13 @@ class App
         $this->router->get('/', 'HomeController@index');
         $this->router->get('home', 'HomeController@index');
         $this->router->get('about', 'HomeController@about');
+        $this->router->get('pages/privacy', 'HomeController@privacy');
         $this->router->get('privacy', 'HomeController@privacy');
-
+        $this->router->get('pages/terms', 'HomeController@terms');
+        $this->router->get('pages/faq', 'HomeController@faq');
+        $this->router->get('pages/returnPolicy', 'HomeController@returnPolicy');
+        $this->router->get('pages/shipping', 'HomeController@shipping');
         $this->router->get('contact', 'HomeController@contact');
-        $this->router->post('contact', 'HomeController@contact');
         
         // Auth routes
         $this->router->get('auth/login', 'AuthController@login');
@@ -122,6 +125,15 @@ class App
         $this->router->get('admin/users', 'AdminController@users');
         $this->router->get('admin/viewUser/{id}', 'AdminController@viewUser');
         $this->router->post('admin/updateUserRole/{id}', 'AdminController@updateUserRole');
+
+// Receipt routes
+        $this->router->get('receipt/downloadReceipt/{id}', 'ReceiptController@downloadReceipt');
+        $this->router->get('receipt/previewReceipt/{id}', 'ReceiptController@previewReceipt');
+        $this->router->get('receipt/download/{id}', 'ReceiptController@downloadReceipt');
+
+        // Admin receipt routes (alternative paths)
+        $this->router->get('admin/receipt/download/{id}', 'ReceiptController@downloadReceipt');
+        $this->router->get('admin/receipt/preview/{id}', 'ReceiptController@previewReceipt');
 
         // Admin Review Management routes
         $this->router->get('admin/reviews', 'AdminController@reviews');
