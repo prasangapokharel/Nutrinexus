@@ -208,6 +208,12 @@
                         <span class="ml-3 sidebar-text font-medium">Users</span>
                     </a>
                     
+                    <!-- Payment Gateways -->
+                    <a href="<?= \App\Core\View::url('admin/payment') ?>" class="nav-item flex items-center p-3 rounded-lg" title="Payment Gateways">
+                        <i class="fas fa-credit-card w-5 text-golden flex-shrink-0"></i>
+                        <span class="ml-3 sidebar-text font-medium">Payment Gateways</span>
+                    </a>
+                    
                     <!-- Coupons Dropdown -->
                     <div class="nav-item">
                         <button onclick="toggleDropdown('couponsDropdown')" class="w-full flex items-center justify-between p-3 rounded-lg" title="Coupons">
@@ -228,12 +234,6 @@
                             </a>
                         </div>
                     </div>
-                    
-                    <!-- Referrals -->
-                    <a href="<?= \App\Core\View::url('admin/referrals') ?>" class="nav-item flex items-center p-3 rounded-lg" title="Referrals">
-                        <i class="fas fa-user-friends w-5 text-golden flex-shrink-0"></i>
-                        <span class="ml-3 sidebar-text font-medium">Referrals</span>
-                    </a>
                     
                     <!-- Withdrawals -->
                     <a href="<?= \App\Core\View::url('admin/withdrawals') ?>" class="nav-item flex items-center p-3 rounded-lg" title="Withdrawals">

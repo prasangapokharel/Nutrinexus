@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -95,7 +96,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Track order
+     * Track order - FIXED: Corrected view path for results
      *
      * @return void
      */
@@ -114,23 +115,57 @@ class OrderController extends Controller
             $order = $this->orderModel->getOrderByInvoice($invoice);
             
             if (!$order) {
-                $this->setFlash('error', 'Order not found.');
+                $this->setFlash('error', 'Order not found. Please check your order number and try again.');
                 $this->redirect('orders/track');
                 return;
             }
             
             $orderItems = $this->orderItemModel->getByOrderId($order['id']);
             
-            $this->view('orders/track-result', [
+            // FIXED: Use the correct view path
+            $this->view('orders/track_result', [
                 'order' => $order,
                 'orderItems' => $orderItems,
-                'title' => 'Order Tracking'
+                'title' => 'Order Tracking Results'
             ]);
         } else {
+            // Show the tracking form
             $this->view('orders/track', [
                 'title' => 'Track Order'
             ]);
         }
+    }
+
+    /**
+     * Show tracking results - Alternative method if needed
+     *
+     * @return void
+     */
+    public function trackResult()
+    {
+        $invoice = $this->get('invoice') ?: $this->post('invoice');
+        
+        if (empty($invoice)) {
+            $this->setFlash('error', 'No order number provided.');
+            $this->redirect('orders/track');
+            return;
+        }
+        
+        $order = $this->orderModel->getOrderByInvoice($invoice);
+        
+        if (!$order) {
+            $this->setFlash('error', 'Order not found.');
+            $this->redirect('orders/track');
+            return;
+        }
+        
+        $orderItems = $this->orderItemModel->getByOrderId($order['id']);
+        
+        $this->view('orders/track_result', [
+            'order' => $order,
+            'orderItems' => $orderItems,
+            'title' => 'Order Tracking Results'
+        ]);
     }
 
     /**

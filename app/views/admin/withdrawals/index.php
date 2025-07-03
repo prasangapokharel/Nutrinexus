@@ -196,27 +196,27 @@
                                         <div class="flex-shrink-0 h-10 w-10">
                                             <div class="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-sm">
                                                 <?php 
-$firstName = $withdrawal['first_name'] ?? '';
-$lastName = $withdrawal['last_name'] ?? '';
-$initials = '';
-if ($firstName) $initials .= strtoupper(substr($firstName, 0, 1));
-if ($lastName) $initials .= strtoupper(substr($lastName, 0, 1));
-if (!$initials && isset($withdrawal['email'])) {
-    $initials = strtoupper(substr($withdrawal['email'], 0, 2));
-}
-?>
-<?= $initials ?: 'U' ?>
+                                                $firstName = $withdrawal['first_name'] ?? '';
+                                                $lastName = $withdrawal['last_name'] ?? '';
+                                                $initials = '';
+                                                if ($firstName) $initials .= strtoupper(substr($firstName, 0, 1));
+                                                if ($lastName) $initials .= strtoupper(substr($lastName, 0, 1));
+                                                if (!$initials && isset($withdrawal['email'])) {
+                                                    $initials = strtoupper(substr($withdrawal['email'], 0, 2));
+                                                }
+                                                ?>
+                                                <?= $initials ?: 'U' ?>
                                             </div>
                                         </div>
                                         <div class="ml-4 min-w-0 flex-1">
                                             <div class="text-sm font-medium text-gray-900 truncate">
                                                 <?php 
-$fullName = trim(($withdrawal['first_name'] ?? '') . ' ' . ($withdrawal['last_name'] ?? ''));
-if (!$fullName && isset($withdrawal['email'])) {
-    $fullName = explode('@', $withdrawal['email'])[0];
-}
-?>
-<?= htmlspecialchars($fullName ?: 'Unknown User') ?>
+                                                $fullName = trim(($withdrawal['first_name'] ?? '') . ' ' . ($withdrawal['last_name'] ?? ''));
+                                                if (!$fullName && isset($withdrawal['email'])) {
+                                                    $fullName = explode('@', $withdrawal['email'])[0];
+                                                }
+                                                ?>
+                                                <?= htmlspecialchars($fullName ?: 'Unknown User') ?>
                                             </div>
                                             <div class="text-xs text-gray-500 truncate">
                                                 <?= htmlspecialchars($withdrawal['email']) ?>
@@ -374,8 +374,7 @@ function openStatusModal(withdrawalId) {
 }
 
 function viewDetails(withdrawalId) {
-    // Implement view details functionality
-    alert('View details functionality will be implemented soon!');
+    window.location.href = '<?= \App\Core\View::url('admin/withdrawal/view/') ?>' + withdrawalId;
 }
 
 function exportWithdrawals() {
@@ -398,7 +397,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         rows.forEach(row => {
             const userData = row.dataset.user;
-            
             const matches = !searchTerm || userData.includes(searchTerm);
             
             if (matches) {
@@ -442,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelStatusBtn.addEventListener('click', function() {
         statusModal.classList.add('hidden');
         currentWithdrawalId = null;
-        // Reset form
         statusForm.reset();
         confirmStatusBtn.disabled = false;
         confirmStatusBtn.innerHTML = 'Update Status';

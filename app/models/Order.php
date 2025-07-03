@@ -59,6 +59,31 @@ class Order extends Model
     }
 
     /**
+     * Get order by invoice number with all details including payment method
+     * This is the missing function that was causing the error
+     */
+    public function getOrderByInvoice($invoice)
+    {
+        $sql = "SELECT o.*, 
+                       CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+                       u.email as customer_email,
+                       u.phone,
+                       pm.name as payment_method,
+                       kp.pidx as khalti_pidx,
+                       kp.transaction_id as khalti_transaction_id,
+                       ep.reference_id as esewa_reference_id,
+                       ep.transaction_id as esewa_transaction_id
+                FROM {$this->table} o
+                LEFT JOIN users u ON o.user_id = u.id
+                LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
+                LEFT JOIN khalti_payments kp ON o.id = kp.order_id
+                LEFT JOIN esewa_payments ep ON o.id = ep.order_id
+                WHERE o.invoice = ?";
+        
+        return $this->db->query($sql)->bind([$invoice])->single();
+    }
+
+    /**
      * Get order with items for success page
      */
     public function getOrderWithItems($id)
@@ -136,10 +161,8 @@ class Order extends Model
             error_log('=== ORDER CREATION START ===');
             error_log('Order data: ' . json_encode($orderData));
             error_log('Cart items count: ' . count($cartItems));
-
             // Start transaction
             $this->db->beginTransaction();
-
             // Generate invoice number
             $invoice = 'NTX' . date('Ymd') . rand(1000, 9999);
             

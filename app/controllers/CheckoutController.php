@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -9,6 +8,7 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\Address;
 use App\Models\OrderItem;
+use App\Models\PaymentGateway;
 use App\Models\Coupon;
 use App\Core\Database;
 use Exception;
@@ -21,6 +21,7 @@ class CheckoutController extends Controller
     private $orderItemModel;
     private $couponModel;
     private $addressModel;
+    private $gatewayModel;
 
     public function __construct()
     {
@@ -31,6 +32,7 @@ class CheckoutController extends Controller
         $this->orderItemModel = new OrderItem();
         $this->couponModel = new Coupon();
         $this->addressModel = new Address();
+        $this->gatewayModel = new PaymentGateway();
     }
 
     public function index()
@@ -50,6 +52,9 @@ class CheckoutController extends Controller
             $this->redirect('cart');
             return;
         }
+
+        // Get active payment gateways
+        $paymentGateways = $this->gatewayModel->getActiveGateways();
 
         // Get default address for auto-fill
         $defaultAddress = $this->addressModel->getDefaultAddress(Session::get('user_id'));
@@ -72,6 +77,7 @@ class CheckoutController extends Controller
             'appliedCoupon' => $appliedCoupon,
             'couponDiscount' => $couponDiscount,
             'defaultAddress' => $defaultAddress,
+            'paymentGateways' => $paymentGateways,
             'title' => 'Checkout'
         ]);
     }
@@ -289,6 +295,7 @@ class CheckoutController extends Controller
 
         try {
             error_log('=== CHECKOUT PROCESS START ===');
+            error_log('POST data: ' . json_encode($_POST));
             
             // Check if user is logged in
             if (!Session::get('user_id')) {
@@ -307,7 +314,7 @@ class CheckoutController extends Controller
             }
 
             // Validate required fields
-            $requiredFields = ['recipient_name', 'phone', 'address_line1', 'city', 'state', 'payment_method_id'];
+            $requiredFields = ['recipient_name', 'phone', 'address_line1', 'city', 'state', 'gateway_id'];
             $errors = [];
             
             foreach ($requiredFields as $field) {
@@ -316,17 +323,69 @@ class CheckoutController extends Controller
                 }
             }
 
-            // Validate payment method specific fields
-            if ($_POST['payment_method_id'] == 2) { // Bank Transfer
-                if (empty($_POST['transaction_id'])) {
-                    $errors[] = 'Transaction ID is required for bank transfer';
+            // Get selected gateway and validate
+            $gatewayId = (int)$_POST['gateway_id'];
+            error_log('Selected gateway ID from form: ' . $gatewayId);
+            
+            // Get gateway details from payment_gateways table
+            $gateway = $this->gatewayModel->getGatewayById($gatewayId);
+            error_log('Gateway found: ' . json_encode($gateway));
+            
+            if (!$gateway) {
+                $errors[] = 'Invalid payment method selected';
+                error_log('Gateway not found for ID: ' . $gatewayId);
+            }
+
+            // Dynamic validation based on gateway requirements
+            if ($gateway) {
+                error_log('Processing payment with gateway: ' . $gateway['name'] . ' (slug: ' . $gateway['slug'] . ')');
+                
+                // Parse gateway parameters for validation
+                $gatewayParams = json_decode($gateway['parameters'], true) ?? [];
+                
+                // Check for required fields based on gateway type
+                if ($gateway['type'] === 'manual') {
+                    // Manual gateways might require transaction ID and screenshot
+                    if (isset($gatewayParams['require_transaction_id']) && $gatewayParams['require_transaction_id']) {
+                        if (empty($_POST['transaction_id'])) {
+                            $errors[] = 'Transaction ID is required for ' . $gateway['name'];
+                        }
+                    }
+                    
+                    if (isset($gatewayParams['require_screenshot']) && $gatewayParams['require_screenshot']) {
+                        if (empty($_FILES['payment_screenshot']['name'])) {
+                            $errors[] = 'Payment screenshot is required for ' . $gateway['name'];
+                        }
+                    }
                 }
-                if (empty($_FILES['payment_screenshot']['name'])) {
-                    $errors[] = 'Payment screenshot is required for bank transfer';
+                
+                // Specific validation for known gateway types
+                switch ($gateway['slug']) {
+                    case 'bank_transfer':
+                        if (empty($_POST['transaction_id'])) {
+                            $errors[] = 'Transaction ID is required for bank transfer';
+                        }
+                        if (empty($_FILES['payment_screenshot']['name'])) {
+                            $errors[] = 'Payment screenshot is required for bank transfer';
+                        }
+                        break;
+                        
+                    case 'khalti':
+                        // Khalti might require specific validation
+                        break;
+                        
+                    case 'mypay':
+                        // MyPay might require specific validation
+                        break;
+                        
+                    case 'cod':
+                        // Cash on delivery doesn't require additional fields
+                        break;
                 }
             }
 
             if (!empty($errors)) {
+                error_log('Validation errors: ' . json_encode($errors));
                 $this->setFlash('error', implode('<br>', $errors));
                 $this->redirect('checkout');
                 return;
@@ -342,9 +401,9 @@ class CheckoutController extends Controller
 
             $finalTotal = $cartData['final_total'] - $couponDiscount;
 
-            // Handle file upload for bank transfer
+            // Handle file upload for manual payment methods
             $paymentScreenshotPath = null;
-            if ($_POST['payment_method_id'] == 2 && !empty($_FILES['payment_screenshot']['name'])) {
+            if ($gateway['type'] === 'manual' && !empty($_FILES['payment_screenshot']['name'])) {
                 $uploadDir = 'uploads/payments/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
@@ -355,18 +414,40 @@ class CheckoutController extends Controller
                 
                 if (move_uploaded_file($_FILES['payment_screenshot']['tmp_name'], $uploadPath)) {
                     $paymentScreenshotPath = $fileName;
+                    error_log('Payment screenshot uploaded: ' . $paymentScreenshotPath);
                 }
             }
 
-            // Prepare order data
+            // Determine payment status based on gateway type
+            $paymentStatus = 'pending';
+            if ($gateway['type'] === 'manual') {
+                $paymentStatus = 'pending_verification';
+            } elseif ($gateway['slug'] === 'cod') {
+                $paymentStatus = 'pending';
+            } elseif ($gateway['type'] === 'digital') {
+                $paymentStatus = 'pending'; // Will be updated by payment processor
+            }
+
+            // CRITICAL FIX: Get the correct payment_method_id that corresponds to this gateway
+            $paymentMethodId = $this->getCorrectPaymentMethodId($gatewayId);
+            
+            error_log('=== PAYMENT METHOD MAPPING ===');
+            error_log('Gateway ID: ' . $gatewayId);
+            error_log('Mapped Payment Method ID: ' . $paymentMethodId);
+            error_log('Gateway Name: ' . $gateway['name']);
+            error_log('Gateway Slug: ' . $gateway['slug']);
+
+            // Prepare order data with correct payment method information
             $orderData = [
                 'user_id' => Session::get('user_id'),
                 'total_amount' => $cartData['total'],
                 'tax_amount' => $cartData['tax'],
                 'discount_amount' => $couponDiscount,
                 'final_amount' => $finalTotal,
-                'payment_method_id' => $_POST['payment_method_id'],
-                'payment_status' => ($_POST['payment_method_id'] == 1) ? 'pending' : 'pending_verification',
+                'payment_method_id' => $paymentMethodId, // CRITICAL: This must be the correct ID
+                'gateway_id' => $gatewayId, // Keep gateway_id for reference
+                'payment_method' => $gateway['name'], // Use gateway name, not hardcoded
+                'payment_status' => $paymentStatus,
                 'order_status' => 'pending',
                 'recipient_name' => $_POST['recipient_name'],
                 'phone' => $_POST['phone'],
@@ -380,7 +461,7 @@ class CheckoutController extends Controller
                 'coupon_code' => $appliedCoupon ? $appliedCoupon['code'] : null
             ];
 
-            error_log('Order data prepared: ' . json_encode($orderData));
+            error_log('Final order data prepared: ' . json_encode($orderData));
 
             // Create order
             $orderId = $this->orderModel->createOrder($orderData, $cartData['items']);
@@ -394,8 +475,15 @@ class CheckoutController extends Controller
                     unset($_SESSION['applied_coupon']);
                 }
 
-                $this->setFlash('success', 'Order placed successfully! Order ID: #' . $orderId);
-                $this->redirect('checkout/success/' . $orderId);
+                // Handle different gateway types after order creation
+                if ($gateway['type'] === 'digital') {
+                    // For digital gateways, redirect to payment processor
+                    $this->handleDigitalPayment($orderId, $gateway, $finalTotal);
+                } else {
+                    // For manual gateways and COD, show success page
+                    $this->setFlash('success', 'Order placed successfully! Order ID: #' . $orderId);
+                    $this->redirect('checkout/success/' . $orderId);
+                }
             } else {
                 error_log('Failed to create order');
                 $this->setFlash('error', 'Failed to place order. Please try again.');
@@ -410,6 +498,140 @@ class CheckoutController extends Controller
             $this->setFlash('error', 'An error occurred while processing your order: ' . $e->getMessage());
             $this->redirect('checkout');
         }
+    }
+
+    /**
+     * Get the correct payment_method_id for the selected gateway
+     * This ensures the right payment method is stored in orders table
+     */
+    private function getCorrectPaymentMethodId($gatewayId)
+    {
+        try {
+            error_log('=== GETTING PAYMENT METHOD ID ===');
+            error_log('Looking for payment method with gateway_id: ' . $gatewayId);
+            
+            // First, try to find payment_method that has this gateway_id
+            $sql = "SELECT id, name, gateway_id FROM payment_methods WHERE gateway_id = ? AND is_active = 1 LIMIT 1";
+            $result = $this->gatewayModel->query($sql, [$gatewayId]);
+            
+            error_log('Payment method query result: ' . json_encode($result));
+            
+            if (is_array($result) && !empty($result)) {
+                $paymentMethod = $result[0];
+                error_log('Found payment method: ' . json_encode($paymentMethod));
+                return (int)$paymentMethod['id'];
+            }
+            
+            // If no direct mapping found, try to match by gateway details
+            $gateway = $this->gatewayModel->getGatewayById($gatewayId);
+            if ($gateway) {
+                error_log('Gateway details: ' . json_encode($gateway));
+                
+                // Try to find payment method by name or slug matching
+                $sql = "SELECT id, name FROM payment_methods WHERE 
+                        (LOWER(name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)) 
+                        AND is_active = 1 LIMIT 1";
+                
+                $searchName1 = '%' . $gateway['name'] . '%';
+                $searchName2 = '%' . $gateway['slug'] . '%';
+                
+                $result = $this->gatewayModel->query($sql, [$searchName1, $searchName2]);
+                error_log('Name-based search result: ' . json_encode($result));
+                
+                if (is_array($result) && !empty($result)) {
+                    return (int)$result[0]['id'];
+                }
+                
+                // Special mapping for known gateways
+                switch ($gateway['slug']) {
+                    case 'cod':
+                        // Find COD payment method
+                        $sql = "SELECT id FROM payment_methods WHERE LOWER(name) LIKE '%cash%' OR LOWER(name) LIKE '%cod%' LIMIT 1";
+                        break;
+                    case 'bank_transfer':
+                        // Find bank transfer payment method
+                        $sql = "SELECT id FROM payment_methods WHERE LOWER(name) LIKE '%bank%' OR LOWER(name) LIKE '%transfer%' LIMIT 1";
+                        break;
+                    case 'khalti':
+                        // Find Khalti payment method
+                        $sql = "SELECT id FROM payment_methods WHERE LOWER(name) LIKE '%khalti%' LIMIT 1";
+                        break;
+                    case 'mypay':
+                        // Find MyPay payment method
+                        $sql = "SELECT id FROM payment_methods WHERE LOWER(name) LIKE '%mypay%' LIMIT 1";
+                        break;
+                    default:
+                        $sql = null;
+                }
+                
+                if ($sql) {
+                    $result = $this->gatewayModel->query($sql);
+                    error_log('Special mapping result: ' . json_encode($result));
+                    
+                    if (is_array($result) && !empty($result)) {
+                        return (int)$result[0]['id'];
+                    }
+                }
+            }
+            
+            // Ultimate fallback: use gateway_id as payment_method_id
+            error_log('No mapping found, using gateway_id as fallback: ' . $gatewayId);
+            return $gatewayId;
+            
+        } catch (Exception $e) {
+            error_log('Error in getCorrectPaymentMethodId: ' . $e->getMessage());
+            return $gatewayId; // Fallback to gateway_id
+        }
+    }
+
+    /**
+     * Handle digital payment gateway processing
+     */
+    private function handleDigitalPayment($orderId, $gateway, $amount)
+    {
+        try {
+            error_log('Processing digital payment for gateway: ' . $gateway['name']);
+            
+            switch ($gateway['slug']) {
+                case 'khalti':
+                    $this->processKhaltiPayment($orderId, $gateway, $amount);
+                    break;
+                    
+                case 'mypay':
+                    $this->processMyPayPayment($orderId, $gateway, $amount);
+                    break;
+                    
+                default:
+                    // Generic digital payment processing
+                    $this->setFlash('info', 'Redirecting to payment gateway...');
+                    $this->redirect('checkout/success/' . $orderId);
+                    break;
+            }
+        } catch (Exception $e) {
+            error_log('Digital payment processing error: ' . $e->getMessage());
+            $this->setFlash('error', 'Payment processing failed. Please try again.');
+            $this->redirect('checkout');
+        }
+    }
+
+    /**
+     * Process Khalti payment
+     */
+    private function processKhaltiPayment($orderId, $gateway, $amount)
+    {
+        // Khalti integration logic would go here
+        $this->setFlash('success', 'Order placed successfully! Redirecting to Khalti...');
+        $this->redirect('checkout/success/' . $orderId);
+    }
+
+    /**
+     * Process MyPay payment
+     */
+    private function processMyPayPayment($orderId, $gateway, $amount)
+    {
+        // MyPay integration logic would go here
+        $this->setFlash('success', 'Order placed successfully! Redirecting to MyPay...');
+        $this->redirect('checkout/success/' . $orderId);
     }
 
     /**

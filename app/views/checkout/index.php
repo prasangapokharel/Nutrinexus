@@ -25,11 +25,11 @@ function getProductImageUrl($product) {
 }
 
 // Get default address values for pre-filling
-$defaultName = $data['defaultAddress']['recipient_name'] ?? '';
-$defaultPhone = $data['defaultAddress']['phone'] ?? '';
-$defaultAddress = $data['defaultAddress']['address_line1'] ?? '';
-$defaultCity = $data['defaultAddress']['city'] ?? '';
-$defaultState = $data['defaultAddress']['state'] ?? '';
+$defaultName = $defaultAddress['recipient_name'] ?? '';
+$defaultPhone = $defaultAddress['phone'] ?? '';
+$defaultAddressLine = $defaultAddress['address_line1'] ?? '';
+$defaultCity = $defaultAddress['city'] ?? '';
+$defaultState = $defaultAddress['state'] ?? '';
 ?>
 
 <div class="bg-gray-50 min-h-screen">
@@ -38,11 +38,10 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
             <h1 class="text-3xl font-bold text-primary mb-2">Checkout</h1>
             <p class="text-gray-600">Complete your order and get your supplements delivered</p>
         </div>
-
         <div class="flex flex-col lg:flex-row gap-8">
             <div class="lg:w-2/3">
                 <div class="bg-white shadow-sm p-8">
-                    <form id="checkout-form" class="space-y-8" method="POST" action="<?= URLROOT ?>/checkout/process" enctype="multipart/form-data">
+                    <form id="checkout-form" class="space-y-8" method="POST" action="<?= \App\Core\View::url('checkout/process') ?>" enctype="multipart/form-data">
                         
                         <!-- Shipping Information -->
                         <div class="form-section">
@@ -56,7 +55,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                                     </div>
                                     <h2 class="text-xl font-semibold text-primary">Shipping Information</h2>
                                 </div>
-                                <?php if ($data['defaultAddress']): ?>
+                                <?php if ($defaultAddress): ?>
                                     <div class="text-sm text-green-600 flex items-center">
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -84,7 +83,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                                 <div class="md:col-span-2 form-group">
                                     <label for="address_line1" class="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                                     <input type="text" name="address_line1" id="address_line1" required 
-                                           value="<?= htmlspecialchars($defaultAddress) ?>"
+                                           value="<?= htmlspecialchars($defaultAddressLine) ?>"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="Street address, P.O. Box, company name">
                                 </div>
@@ -105,8 +104,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                                 <!-- Hidden country field with default Nepal -->
                                 <input type="hidden" name="country" id="country" value="Nepal">
                             </div>
-
-                            <?php if (!$data['defaultAddress']): ?>
+                            <?php if (!$defaultAddress): ?>
                                 <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <div class="flex items-center">
                                         <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,37 +131,48 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                             </div>
                             
                             <div class="space-y-4">
-                                <label class="payment-option flex items-center p-6 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:shadow-sm">
-                                    <input type="radio" name="payment_method_id" value="1" class="mr-4 w-4 h-4 text-blue-600 focus:ring-blue-500" required>
-                                    <div class="flex items-center flex-1">
-                                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                            </svg>
+                                <?php foreach ($paymentGateways as $gateway): ?>
+                                    <label class="payment-option flex items-center p-6 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:shadow-sm">
+                                        <input type="radio" name="gateway_id" value="<?= $gateway['id'] ?>" class="mr-4 w-4 h-4 text-blue-600 focus:ring-blue-500" required>
+                                        <div class="flex items-center flex-1">
+                                            <?php if (!empty($gateway['logo'])): ?>
+                                                <img src="<?= htmlspecialchars($gateway['logo']) ?>" alt="<?= htmlspecialchars($gateway['name']) ?>" class="w-8 h-8 mr-3">
+                                            <?php else: ?>
+                                                <?php if ($gateway['type'] === 'cod'): ?>
+                                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                        </svg>
+                                                    </div>
+                                                <?php elseif ($gateway['type'] === 'manual'): ?>
+                                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                                        </svg>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                        </svg>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                            <div>
+                                                <span class="font-medium text-gray-900"><?= htmlspecialchars($gateway['name']) ?></span>
+                                                <?php if (!empty($gateway['description'])): ?>
+                                                    <p class="text-sm text-gray-600"><?= htmlspecialchars($gateway['description']) ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($gateway['is_test_mode']): ?>
+                                                    <span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full ml-2">Test Mode</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span class="font-medium text-gray-900">Cash on Delivery</span>
-                                            <p class="text-sm text-gray-600">Pay when your order arrives</p>
+                                        <div class="text-green-600 font-medium">
+                                            <?= $gateway['type'] === 'cod' ? 'Free' : 'Secure' ?>
                                         </div>
-                                    </div>
-                                    <div class="text-green-600 font-medium">Free</div>
-                                </label>
-                                
-                                <label class="payment-option flex items-center p-6 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:shadow-sm">
-                                    <input type="radio" name="payment_method_id" value="2" class="mr-4 w-4 h-4 text-blue-600 focus:ring-blue-500" required>
-                                    <div class="flex items-center flex-1">
-                                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <span class="font-medium text-gray-900">Bank Transfer</span>
-                                            <p class="text-sm text-gray-600">Transfer to our bank account</p>
-                                        </div>
-                                    </div>
-                                    <div class="text-blue-600 font-medium">Secure</div>
-                                </label>
+                                    </label>
+                                <?php endforeach; ?>
                             </div>
                         </div>
 
@@ -176,28 +185,52 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                                     </svg>
                                     Bank Transfer Details
                                 </h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800 mb-6">
-                                    <div>
-                                        <p class="font-medium">Bank Name:</p>
-                                        <p>Nabil Bank Limited</p>
+                                <?php 
+                                // Find bank transfer gateway for details
+                                $bankGateway = null;
+                                foreach ($paymentGateways as $gateway) {
+                                    if ($gateway['slug'] === 'bank_transfer') {
+                                        $bankGateway = $gateway;
+                                        break;
+                                    }
+                                }
+                                
+                                if ($bankGateway) {
+                                    $bankParams = json_decode($bankGateway['parameters'], true) ?? [];
+                                ?>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800 mb-6">
+                                        <?php if (!empty($bankParams['bank_name'])): ?>
+                                            <div>
+                                                <p class="font-medium">Bank Name:</p>
+                                                <p><?= htmlspecialchars($bankParams['bank_name']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($bankParams['account_number'])): ?>
+                                            <div>
+                                                <p class="font-medium">Account Number:</p>
+                                                <p><?= htmlspecialchars($bankParams['account_number']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($bankParams['account_name'])): ?>
+                                            <div>
+                                                <p class="font-medium">Account Name:</p>
+                                                <p><?= htmlspecialchars($bankParams['account_name']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($bankParams['branch'])): ?>
+                                            <div>
+                                                <p class="font-medium">Branch:</p>
+                                                <p><?= htmlspecialchars($bankParams['branch']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($bankParams['swift_code'])): ?>
+                                            <div>
+                                                <p class="font-medium">SWIFT Code:</p>
+                                                <p><?= htmlspecialchars($bankParams['swift_code']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-                                    <div>
-                                        <p class="font-medium">Account Number:</p>
-                                        <p>1234567890123456</p>
-                                    </div>
-                                    <div>
-                                        <p class="font-medium">Account Name:</p>
-                                        <p>NutriNexus Pvt. Ltd.</p>
-                                    </div>
-                                    <div>
-                                        <p class="font-medium">Branch:</p>
-                                        <p>New Road, Kathmandu</p>
-                                    </div>
-                                    <div>
-                                        <p class="font-medium">SWIFT Code:</p>
-                                        <p>NARBNPKA</p>
-                                    </div>
-                                </div>
+                                <?php } ?>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="form-group">
@@ -232,7 +265,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
 
                         <!-- Submit Button -->
                         <div class="flex flex-col sm:flex-row justify-between items-center pt-6 space-y-4 sm:space-y-0">
-                            <a href="<?= URLROOT ?>/cart" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200">
+                            <a href="<?= \App\Core\View::url('cart') ?>" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                                 </svg>
@@ -262,7 +295,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                     </h2>
                     
                     <div class="space-y-4 mb-6">
-                        <?php foreach ($data['cartItems'] as $item): ?>
+                        <?php foreach ($cartItems as $item): ?>
                             <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg transition-colors duration-200">
                                 <div class="w-16 h-16 overflow-hidden bg-gray-100 rounded-lg">
                                     <?php $imageUrl = htmlspecialchars(getProductImageUrl($item['product'])); ?>
@@ -272,9 +305,9 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($item['product']['product_name']) ?></p>
-                                    <p class="text-sm text-gray-500">Qty: <?= $item['quantity'] ?> × Rs<?= number_format($item['product']['price'], 2) ?></p>
+                                    <p class="text-sm text-gray-500">Qty: <?= $item['quantity'] ?> × ₹<?= number_format($item['product']['price'], 2) ?></p>
                                 </div>
-                                <p class="text-sm font-medium text-blue-600">Rs<?= number_format($item['subtotal'], 2) ?></p>
+                                <p class="text-sm font-medium text-blue-600">₹<?= number_format($item['subtotal'], 2) ?></p>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -288,15 +321,15 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                             <span class="font-medium text-yellow-800">Have a coupon?</span>
                         </div>
                         
-                        <?php if (isset($data['appliedCoupon']) && $data['appliedCoupon']): ?>
+                        <?php if (isset($appliedCoupon) && $appliedCoupon): ?>
                             <div id="applied-coupon" class="flex items-center justify-between p-3 bg-green-100 border border-green-300 rounded-md">
                                 <div class="flex items-center">
                                     <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
                                     <div>
-                                        <p class="text-sm font-medium text-green-800"><?= htmlspecialchars($data['appliedCoupon']['code']) ?></p>
-                                        <p class="text-xs text-green-600">Discount: Rs<?= number_format($data['couponDiscount'], 2) ?></p>
+                                        <p class="text-sm font-medium text-green-800"><?= htmlspecialchars($appliedCoupon['code']) ?></p>
+                                        <p class="text-xs text-green-600">Discount: ₹<?= number_format($couponDiscount, 2) ?></p>
                                     </div>
                                 </div>
                                 <button type="button" id="remove-coupon-btn" class="text-red-600 hover:text-red-800 transition-colors">
@@ -323,17 +356,17 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
 
                     <div class="border-t border-gray-200 pt-4 space-y-3">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">Subtotal (<?= count($data['cartItems']) ?> items)</span>
-                            <span class="font-medium text-gray-900">Rs<?= number_format($data['total'], 2) ?></span>
+                            <span class="text-gray-600">Subtotal (<?= count($cartItems) ?> items)</span>
+                            <span class="font-medium text-gray-900">₹<?= number_format($total, 2) ?></span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Tax (18%)</span>
-                            <span class="font-medium text-gray-900">Rs<?= number_format($data['tax'], 2) ?></span>
+                            <span class="font-medium text-gray-900">₹<?= number_format($tax, 2) ?></span>
                         </div>
-                        <?php if (isset($data['couponDiscount']) && $data['couponDiscount'] > 0): ?>
+                        <?php if (isset($couponDiscount) && $couponDiscount > 0): ?>
                         <div class="flex justify-between text-sm">
                             <span class="text-green-600">Coupon Discount</span>
-                            <span class="font-medium text-green-600">-Rs<?= number_format($data['couponDiscount'], 2) ?></span>
+                            <span class="font-medium text-green-600">-₹<?= number_format($couponDiscount, 2) ?></span>
                         </div>
                         <?php endif; ?>
                         <div class="flex justify-between text-sm">
@@ -343,7 +376,7 @@ $defaultState = $data['defaultAddress']['state'] ?? '';
                         <div class="border-t border-gray-200 pt-3 mt-3">
                             <div class="flex justify-between">
                                 <span class="text-lg font-semibold text-gray-900">Total</span>
-                                <span id="final-total" class="text-2xl font-bold text-blue-600">Rs<?= number_format($data['finalTotal'], 2) ?></span>
+                                <span id="final-total" class="text-2xl font-bold text-blue-600">₹<?= number_format($finalTotal, 2) ?></span>
                             </div>
                         </div>
                     </div>
@@ -375,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const placeOrderBtn = document.getElementById('place-order-btn');
 
     // Payment method selection
-    const paymentMethods = document.querySelectorAll('input[name="payment_method_id"]');
+    const paymentMethods = document.querySelectorAll('input[name="gateway_id"]');
     const bankDetails = document.getElementById('bank-details');
     const transactionId = document.getElementById('transaction_id');
     const paymentScreenshot = document.getElementById('payment_screenshot');
@@ -387,7 +420,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             this.closest('.payment-option').classList.add('selected');
             
-            if (this.value === '2') {
+            // Check if this is bank transfer (look for "Bank Transfer" in the text)
+            const gatewayName = this.closest('.payment-option').querySelector('span').textContent;
+            if (gatewayName.toLowerCase().includes('bank transfer')) {
                 bankDetails.classList.remove('hidden');
                 transactionId.setAttribute('required', 'required');
                 paymentScreenshot.setAttribute('required', 'required');
@@ -436,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
         applyCouponBtn.textContent = 'Applying...';
         couponCode.disabled = true;
         
-        fetch('<?= URLROOT ?>/checkout/validateCoupon', {
+        fetch('<?= \App\Core\View::url('checkout/validateCoupon') ?>', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: code })
@@ -464,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
         removeCouponBtn.disabled = true;
         removeCouponBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>';
         
-        fetch('<?= URLROOT ?>/checkout/removeCoupon', {
+        fetch('<?= \App\Core\View::url('checkout/removeCoupon') ?>', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
