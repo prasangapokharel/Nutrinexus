@@ -3,7 +3,6 @@ namespace App\Models;
 
 use App\Core\Session;
 use App\Core\Database;
-
 class Cart
 {
     /**
@@ -45,7 +44,7 @@ class Cart
     }
 
     /**
-     * Get cart with product details - FIXED
+     * Get cart with product details - FIXED to use sale price
      *
      * @param \App\Models\Product $productModel
      * @return array
@@ -75,13 +74,18 @@ class Cart
                     $product['images'] = [];
                 }
                 
-                $subtotal = $item['quantity'] * $item['price'];
+                // Use sale price if available, otherwise use regular price
+                $itemPrice = isset($product['sale_price']) && $product['sale_price'] > 0 
+                    ? $product['sale_price'] 
+                    : $item['price'];
+                
+                $subtotal = $item['quantity'] * $itemPrice;
                 $total += $subtotal;
                 
                 $cartItems[] = [
                     'product' => $product,
                     'quantity' => $item['quantity'],
-                    'price' => $item['price'],
+                    'price' => $itemPrice, // Store the actual price being used
                     'subtotal' => $subtotal
                 ];
                 

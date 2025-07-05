@@ -21,57 +21,74 @@ class WishlistController extends Controller
         $this->productImageModel = new ProductImage();
     }
 
- // In WishlistController.php
-public function index()
-{
-    // Check if user is logged in
-    if (!Session::has('user_id')) {
-        $this->setFlash('error', 'Please login to view your wishlist');
-        $this->redirect('auth/login');
+    public function index()
+    {
+        // Check if user is logged in
+        if (!Session::has('user_id')) {
+            $this->setFlash('error', 'Please login to view your wishlist');
+            $this->redirect('auth/login');
+        }
+
+        $userId = Session::get('user_id');
+        $wishlistItems = $this->wishlistModel->getByUserId($userId);
+        
+        // Enhance wishlist items with product images
+        $enhancedItems = [];
+        foreach ($wishlistItems as $item) {
+            $product = $this->productModel->find($item['product_id']);
+            
+            if ($product) {
+                // Get primary image
+                $primaryImage = $this->productImageModel->getPrimaryImage($product['id']);
+                
+                // Add image URL to product data
+                $product['image_url'] = $this->getProductImageUrl($product, $primaryImage);
+                
+                // Combine wishlist item with product data
+                $enhancedItems[] = array_merge($item, [
+                    'product' => $product,
+                    'in_wishlist' => true // Flag for template
+                ]);
+            }
+        }
+        
+        // Update wishlist count in session
+        Session::set('wishlist_count', count($enhancedItems));
+        
+        $this->view('wishlist/index', [
+            'wishlistItems' => $enhancedItems,
+            'title' => 'My Wishlist'
+        ]);
     }
 
-    $userId = Session::get('user_id');
-    $wishlistItems = $this->wishlistModel->getByUserId($userId);
-    
-    // Update wishlist count in session
-    Session::set('wishlist_count', count($wishlistItems));
-    
-    $this->view('wishlist/index', [
-        'wishlistItems' => $wishlistItems,
-        'title' => 'My Wishlist',
-        'getProductImageUrl' => [$this, 'getProductImageUrl'] // Pass the method as callable
-    ]);
-}
-
-/**
- * Get the URL for a product's image with fallback to default
- * 
- * @param array $product The product data array
- * @return string The image URL
- */
-public function getProductImageUrl($product)
-{
-    // First check for direct image in the product array
-    if (!empty($product['image'])) {
-        return $product['image'];
-    }
-    
-    // Then check for product['product']['image'] structure
-    if (!empty($product['product']['image'])) {
-        return $product['product']['image'];
-    }
-    
-    // Check for primary image from product images
-    if (!empty($product['id'])) {
-        $primaryImage = $this->productImageModel->getPrimaryImage($product['id']);
-        if ($primaryImage) {
+    /**
+     * Get the URL for a product's image with proper fallback logic
+     * 
+     * @param array $product The product data
+     * @param array|null $primaryImage The primary image data from product_images
+     * @return string The image URL
+     */
+    private function getProductImageUrl($product, $primaryImage = null)
+    {
+        // 1. Check if product has direct image URL
+        if (!empty($product['image'])) {
+            return $product['image'];
+        }
+        
+        // 2. Check for primary image from product_images table
+        if ($primaryImage && !empty($primaryImage['image_url'])) {
             return $primaryImage['image_url'];
         }
+        
+        // 3. Check for any image from product_images table
+        $images = $this->productImageModel->getByProductId($product['id']);
+        if (!empty($images[0]['image_url'])) {
+            return $images[0]['image_url'];
+        }
+        
+        // 4. Fallback to default image
+        return \App\Core\View::asset('images/products/default.jpg');
     }
-    
-    // Fallback to default image
-    return \App\Core\View::asset('images/products/default.jpg');
-}
 
     /**
      * Add product to wishlist

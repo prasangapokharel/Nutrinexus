@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 02, 2025 at 06:24 PM
+-- Generation Time: Jul 03, 2025 at 05:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -100,8 +100,9 @@ CREATE TABLE `coupons` (
 INSERT INTO `coupons` (`id`, `code`, `description`, `discount_type`, `discount_value`, `min_order_amount`, `max_discount_amount`, `usage_limit_per_user`, `usage_limit_global`, `used_count`, `applicable_products`, `is_active`, `expires_at`, `created_at`, `updated_at`) VALUES
 (1, 'SAVE!)', NULL, 'fixed', 100.00, 1000.00, NULL, 2, 1, 0, '[39]', 1, '2025-06-30 23:02:00', '2025-06-27 13:56:16', '2025-06-27 13:56:16'),
 (2, 'HARI10', NULL, 'percentage', 5.00, 1000.00, NULL, 10, NULL, 0, '[39]', 1, '2025-07-03 22:02:00', '2025-06-27 14:00:38', '2025-06-27 14:00:38'),
-(3, 'NX2025', NULL, 'fixed', 200.00, 1000.00, NULL, 12, 1, 0, '[39]', 1, '2025-06-30 11:01:00', '2025-06-27 15:55:46', '2025-06-27 15:55:46'),
-(4, 'KAPIL10', NULL, 'fixed', 100.00, 1000.00, NULL, 10, 10, 0, '[39]', 1, '2025-07-31 22:53:00', '2025-06-30 17:08:47', '2025-06-30 17:08:47');
+(3, 'NX2025', NULL, 'fixed', 200.00, 1000.00, NULL, 12, 10, 0, '[41,40,39,36,35,34,30]', 1, '2025-08-28 11:01:00', '2025-06-27 15:55:46', '2025-07-03 13:15:31'),
+(4, 'KAPIL10', NULL, 'fixed', 100.00, 1000.00, NULL, 10, 10, 0, '[41,40,39,36,35,34,30]', 1, '2025-08-29 22:53:00', '2025-06-30 17:08:47', '2025-07-03 08:42:28'),
+(5, 'BHAWANA10', NULL, 'fixed', 200.00, 5000.00, NULL, 5, 10, 0, '[41,40,39,36,35,34,30]', 1, '2025-08-27 14:30:00', '2025-07-03 08:46:08', '2025-07-03 08:46:08');
 
 -- --------------------------------------------------------
 
@@ -195,6 +196,35 @@ CREATE TABLE `esewa_payments` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `gateway_currencies`
+--
+
+CREATE TABLE `gateway_currencies` (
+  `id` int(11) NOT NULL,
+  `gateway_id` int(11) NOT NULL,
+  `currency_code` varchar(3) NOT NULL,
+  `currency_symbol` varchar(10) NOT NULL,
+  `conversion_rate` decimal(10,4) NOT NULL DEFAULT 1.0000,
+  `min_limit` decimal(10,2) DEFAULT NULL,
+  `max_limit` decimal(10,2) DEFAULT NULL,
+  `percentage_charge` decimal(5,2) DEFAULT 0.00,
+  `fixed_charge` decimal(10,2) DEFAULT 0.00,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `gateway_currencies`
+--
+
+INSERT INTO `gateway_currencies` (`id`, `gateway_id`, `currency_code`, `currency_symbol`, `conversion_rate`, `min_limit`, `max_limit`, `percentage_charge`, `fixed_charge`, `is_active`) VALUES
+(1, 1, 'NPR', '₹', 1.0000, NULL, NULL, 0.00, 0.00, 1),
+(2, 2, 'NPR', '₹', 1.0000, NULL, NULL, 0.00, 0.00, 1),
+(3, 3, 'NPR', '₹', 1.0000, NULL, NULL, 0.00, 0.00, 1),
+(4, 4, 'NPR', '₹', 1.0000, NULL, NULL, 0.00, 0.00, 1);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `khalti_payments`
 --
 
@@ -237,11 +267,13 @@ INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `refer
 (3, 3, 'New Referral Commission', 'You earned ₹743.40 commission from a referral purchase.', 'referral_earning', 2, 1, '2025-05-08 05:40:51'),
 (4, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹362.00 has been submitted and is being processed.', 'withdrawal_request', 2, 1, '2025-05-08 06:56:21'),
 (5, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹1,000.00 has been submitted and is being processed.', 'withdrawal_request', 3, 1, '2025-05-09 04:29:08'),
-(6, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹445.00 has been submitted and is being processed.', 'withdrawal_request', 4, 0, '2025-07-02 12:30:46'),
-(7, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹120.00 has been submitted and is being processed.', 'withdrawal_request', 5, 0, '2025-07-02 13:24:46'),
-(8, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹220.00 has been submitted and is being processed.', 'withdrawal_request', 6, 0, '2025-07-02 13:29:06'),
-(9, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 7, 0, '2025-07-02 13:31:26'),
-(10, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 8, 0, '2025-07-02 13:52:38');
+(6, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹445.00 has been submitted and is being processed.', 'withdrawal_request', 4, 1, '2025-07-02 12:30:46'),
+(7, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹120.00 has been submitted and is being processed.', 'withdrawal_request', 5, 1, '2025-07-02 13:24:46'),
+(8, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹220.00 has been submitted and is being processed.', 'withdrawal_request', 6, 1, '2025-07-02 13:29:06'),
+(9, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 7, 1, '2025-07-02 13:31:26'),
+(10, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 8, 1, '2025-07-02 13:52:38'),
+(11, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 9, 1, '2025-07-03 07:28:38'),
+(12, 3, 'Withdrawal Request Submitted', 'Your withdrawal request for ₹100.00 has been submitted and is being processed.', 'withdrawal_request', 10, 1, '2025-07-03 08:13:47');
 
 -- --------------------------------------------------------
 
@@ -255,7 +287,7 @@ CREATE TABLE `orders` (
   `user_id` int(11) NOT NULL,
   `customer_name` varchar(255) NOT NULL,
   `contact_no` varchar(20) NOT NULL,
-  `payment_method_id` int(11) NOT NULL,
+  `payment_method_id` int(11) DEFAULT NULL,
   `status` enum('pending','processing','shipped','delivered','cancelled','unpaid','paid') NOT NULL DEFAULT 'pending',
   `address` text NOT NULL,
   `order_notes` text DEFAULT NULL,
@@ -264,51 +296,62 @@ CREATE TABLE `orders` (
   `delivery_fee` decimal(10,2) NOT NULL DEFAULT 0.00,
   `payment_screenshot` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `gateway_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `invoice`, `user_id`, `customer_name`, `contact_no`, `payment_method_id`, `status`, `address`, `order_notes`, `transaction_id`, `total_amount`, `delivery_fee`, `payment_screenshot`, `created_at`, `updated_at`) VALUES
-(19, 'NN202505083038', 3, 'rwerewrew', '3244323432', 1, 'paid', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 17346.00, 0.00, NULL, '2025-05-08 05:00:16', '2025-05-08 05:00:16'),
-(27, 'NN202505082554', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'paid', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', NULL, NULL, 14868.00, 0.00, NULL, '2025-05-08 05:49:55', '2025-05-08 05:40:51'),
-(28, 'NN202505082021', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'processing', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-08 05:56:36', '2025-05-08 05:56:36'),
-(29, 'NN202505083406', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 24780.00, 0.00, NULL, '2025-05-08 06:25:47', '2025-05-08 06:25:47'),
-(30, 'NN202505088831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-08 06:26:31', '2025-05-08 06:26:31'),
-(31, 'NN202505089371', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-08 06:29:27', '2025-05-08 06:29:27'),
-(32, 'NN202505087737', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 42126.00, 0.00, NULL, '2025-05-08 06:55:16', '2025-05-08 06:55:16'),
-(33, 'NN202505084831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 17346.00, 0.00, NULL, '2025-05-08 07:17:47', '2025-05-08 07:17:47'),
-(34, 'NN202505091470', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-09 04:28:06', '2025-05-09 04:28:06'),
-(35, 'NN202505099910', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:28:22', '2025-05-09 05:28:22'),
-(36, 'NN202505091269', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 19824.00, 0.00, NULL, '2025-05-09 05:52:44', '2025-05-09 05:52:44'),
-(37, 'NN202505098051', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 4956.00, 0.00, NULL, '2025-05-09 05:55:22', '2025-05-09 05:55:22'),
-(38, 'NN202505093826', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:57:15', '2025-05-09 05:57:15'),
-(39, 'NN202505097713', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:59:46', '2025-05-09 05:59:46'),
-(40, 'NN202505097597', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-09 15:17:09', '2025-05-09 15:17:09'),
-(41, 'NN202505094713', 5, 'erwerewr', 'rewrewr', 1, 'paid', 'rewrewr, ewrwer, rwerewr, Neyy', NULL, NULL, 13500.14, 0.00, NULL, '2025-05-09 16:16:19', '2025-07-01 04:00:06'),
-(42, 'NN202506233246', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 13367.04, 0.00, NULL, '2025-06-23 05:47:25', '2025-06-23 05:47:25'),
-(43, 'NN202506235573', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 1462.26, 0.00, NULL, '2025-06-23 05:49:19', '2025-06-23 05:49:19'),
-(44, 'NN202506232914', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 1462.26, 0.00, NULL, '2025-06-23 05:50:51', '2025-06-23 05:50:51'),
-(45, 'NN202506233562', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2924.51, 0.00, NULL, '2025-06-23 06:02:42', '2025-06-23 06:02:42'),
-(46, 'NN202506233641', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2924.51, 0.00, NULL, '2025-06-23 06:39:56', '2025-06-23 06:39:56'),
-(47, 'NN202506236885', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2511.04, 0.00, NULL, '2025-06-23 06:48:05', '2025-06-23 06:48:05'),
-(62, 'NN202506231332', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '', 2511.04, 0.00, '', '2025-06-23 10:05:12', '2025-06-23 10:05:12'),
-(63, 'NN202506236670', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'paid', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', 'test', '', 1110.14, 0.00, '', '2025-06-23 10:08:03', '2025-07-01 04:04:52'),
-(64, 'NN202506235259', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'pending', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '434234342', 1110.14, 0.00, 'payment_1750674338_4594.png', '2025-06-23 10:10:38', '2025-06-23 10:10:38'),
-(65, 'NN202506269428', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'shipped', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', 'shop', '', 1110.14, 0.00, '', '2025-06-26 13:49:51', '2025-07-01 04:11:36'),
-(66, 'NN202506271176', 3, 'Prasanga Pokharel', '9765470926', 1, 'cancelled', 'Inaruwa, 1, Inaruwa, 1, Nepal', '', '', 1235.00, 0.00, NULL, '2025-06-27 14:52:06', '2025-07-01 05:01:57'),
-(67, 'NN202506277198', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'cancelled', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '', 1235.00, 0.00, NULL, '2025-06-27 14:56:50', '2025-07-01 05:01:53'),
-(68, 'NN202506273345', 3, 'Prasanga Pokharel', '9765470926', 1, 'paid', 'the , the , the , 1, Nepal', '', '', 1100.00, 0.00, NULL, '2025-06-27 15:50:44', '2025-07-01 04:11:28'),
-(69, 'NTX202507023317', 3, 'Lila Glass', '+1 (547) 137-1217', 1, 'pending', '389 Clarendon Street, Nobis molestias dolo, Laboriosam doloribu, Rerum quos dolores r Ipsum nemo sint nul', 'Commodi sed dolor do', 'Totam id voluptatum ', 2600.00, 0.00, '', '2025-07-02 06:36:37', '2025-07-02 06:36:37'),
-(70, 'NTX202507022411', 3, 'Mary Cruz', '+1 (596) 964-3661', 1, 'pending', '348 West White First Avenue, Officia tempora cupi, Omnis culpa at exerc, Corrupti et ut erro Tempore sint a eaqu', 'Eum similique ea et ', '', 1300.00, 0.00, '', '2025-07-02 06:38:50', '2025-07-02 06:38:50'),
-(71, 'NTX202507026550', 3, 'rwerewrew', '3244323432', 1, 'pending', 'rssfasfs, fafssaf, fasff ', '', '', 1200.00, 0.00, '', '2025-07-02 10:05:08', '2025-07-02 10:05:08'),
-(72, 'NTX202507029514', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '22222', 1300.00, 0.00, '1751450902_bank.png', '2025-07-02 10:08:22', '2025-07-02 11:22:02'),
-(73, 'NTX202507026372', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 1300.00, 0.00, '', '2025-07-02 10:41:43', '2025-07-02 11:21:59'),
-(74, 'NTX202507027866', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 8900.00, 0.00, '', '2025-07-02 12:23:52', '2025-07-02 12:24:57'),
-(75, 'NTX202507024731', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 8900.00, 0.00, '', '2025-07-02 12:30:59', '2025-07-02 12:31:18'),
-(76, 'NTX202507026017', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 1200.00, 0.00, '', '2025-07-02 13:37:11', '2025-07-02 13:38:06');
+INSERT INTO `orders` (`id`, `invoice`, `user_id`, `customer_name`, `contact_no`, `payment_method_id`, `status`, `address`, `order_notes`, `transaction_id`, `total_amount`, `delivery_fee`, `payment_screenshot`, `created_at`, `updated_at`, `gateway_id`) VALUES
+(19, 'NN202505083038', 3, 'rwerewrew', '3244323432', 1, 'paid', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 17346.00, 0.00, NULL, '2025-05-08 05:00:16', '2025-07-03 06:33:44', 1),
+(27, 'NN202505082554', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'paid', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', NULL, NULL, 14868.00, 0.00, NULL, '2025-05-08 05:49:55', '2025-07-03 06:33:44', 1),
+(28, 'NN202505082021', 4, 'Marsden Franklin', '+1 (412) 114-2873', 1, 'processing', '46 Fabien Avenue, Minus nostrum ullam, Ut qui nulla officia, Reprehenderit archit', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-08 05:56:36', '2025-07-03 06:33:44', 1),
+(29, 'NN202505083406', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 24780.00, 0.00, NULL, '2025-05-08 06:25:47', '2025-07-03 06:33:44', 1),
+(30, 'NN202505088831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-08 06:26:31', '2025-07-03 06:33:44', 1),
+(31, 'NN202505089371', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-08 06:29:27', '2025-07-03 06:33:44', 1),
+(32, 'NN202505087737', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 42126.00, 0.00, NULL, '2025-05-08 06:55:16', '2025-07-03 06:33:44', 1),
+(33, 'NN202505084831', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 17346.00, 0.00, NULL, '2025-05-08 07:17:47', '2025-07-03 06:33:44', 1),
+(34, 'NN202505091470', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-09 04:28:06', '2025-07-03 06:33:44', 1),
+(35, 'NN202505099910', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:28:22', '2025-07-03 06:33:44', 1),
+(36, 'NN202505091269', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 19824.00, 0.00, NULL, '2025-05-09 05:52:44', '2025-07-03 06:33:44', 1),
+(37, 'NN202505098051', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 4956.00, 0.00, NULL, '2025-05-09 05:55:22', '2025-07-03 06:33:44', 1),
+(38, 'NN202505093826', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:57:15', '2025-07-03 06:33:44', 1),
+(39, 'NN202505097713', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 2478.00, 0.00, NULL, '2025-05-09 05:59:46', '2025-07-03 06:33:44', 1),
+(40, 'NN202505097597', 3, 'rwerewrew', '3244323432', 1, 'processing', 'rssfasfs, fafssaf, fasff, India', NULL, NULL, 12390.00, 0.00, NULL, '2025-05-09 15:17:09', '2025-07-03 06:33:44', 1),
+(41, 'NN202505094713', 5, 'erwerewr', 'rewrewr', 1, 'paid', 'rewrewr, ewrwer, rwerewr, Neyy', NULL, NULL, 13500.14, 0.00, NULL, '2025-05-09 16:16:19', '2025-07-03 06:33:44', 1),
+(42, 'NN202506233246', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 13367.04, 0.00, NULL, '2025-06-23 05:47:25', '2025-07-03 06:33:44', 1),
+(43, 'NN202506235573', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 1462.26, 0.00, NULL, '2025-06-23 05:49:19', '2025-07-03 06:33:44', 1),
+(44, 'NN202506232914', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 1462.26, 0.00, NULL, '2025-06-23 05:50:51', '2025-07-03 06:33:44', 1),
+(45, 'NN202506233562', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2924.51, 0.00, NULL, '2025-06-23 06:02:42', '2025-07-03 06:33:44', 1),
+(46, 'NN202506233641', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2924.51, 0.00, NULL, '2025-06-23 06:39:56', '2025-07-03 06:33:44', 1),
+(47, 'NN202506236885', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruw1, Near khola, Inaruwa, 1, Nepal', NULL, NULL, 2511.04, 0.00, NULL, '2025-06-23 06:48:05', '2025-07-03 06:33:44', 1),
+(62, 'NN202506231332', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'processing', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '', 2511.04, 0.00, '', '2025-06-23 10:05:12', '2025-07-03 06:33:44', 1),
+(63, 'NN202506236670', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'paid', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', 'test', '', 1110.14, 0.00, '', '2025-06-23 10:08:03', '2025-07-03 06:33:44', 1),
+(64, 'NN202506235259', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'pending', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '434234342', 1110.14, 0.00, 'payment_1750674338_4594.png', '2025-06-23 10:10:38', '2025-07-03 06:33:44', 2),
+(65, 'NN202506269428', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'shipped', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', 'shop', '', 1110.14, 0.00, '', '2025-06-26 13:49:51', '2025-07-03 06:33:44', 1),
+(66, 'NN202506271176', 3, 'Prasanga Pokharel', '9765470926', 1, 'cancelled', 'Inaruwa, 1, Inaruwa, 1, Nepal', '', '', 1235.00, 0.00, NULL, '2025-06-27 14:52:06', '2025-07-03 06:33:44', 1),
+(67, 'NN202506277198', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'cancelled', 'Inaruwa-1, SUnsari, Near khola, Inaruwa, 1, Nepal', '', '', 1235.00, 0.00, NULL, '2025-06-27 14:56:50', '2025-07-03 06:33:44', 1),
+(68, 'NN202506273345', 3, 'Prasanga Pokharel', '9765470926', 1, 'paid', 'the , the , the , 1, Nepal', '', '', 1100.00, 0.00, NULL, '2025-06-27 15:50:44', '2025-07-03 06:33:44', 1),
+(69, 'NTX202507023317', 3, 'Lila Glass', '+1 (547) 137-1217', 1, 'pending', '389 Clarendon Street, Nobis molestias dolo, Laboriosam doloribu, Rerum quos dolores r Ipsum nemo sint nul', 'Commodi sed dolor do', 'Totam id voluptatum ', 2600.00, 0.00, '', '2025-07-02 06:36:37', '2025-07-03 06:33:44', 1),
+(70, 'NTX202507022411', 3, 'Mary Cruz', '+1 (596) 964-3661', 1, 'pending', '348 West White First Avenue, Officia tempora cupi, Omnis culpa at exerc, Corrupti et ut erro Tempore sint a eaqu', 'Eum similique ea et ', '', 1300.00, 0.00, '', '2025-07-02 06:38:50', '2025-07-03 06:33:44', 1),
+(71, 'NTX202507026550', 3, 'rwerewrew', '3244323432', 1, 'pending', 'rssfasfs, fafssaf, fasff ', '', '', 1200.00, 0.00, '', '2025-07-02 10:05:08', '2025-07-03 06:33:44', 1),
+(72, 'NTX202507029514', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '22222', 1300.00, 0.00, '1751450902_bank.png', '2025-07-02 10:08:22', '2025-07-03 06:33:44', 2),
+(73, 'NTX202507026372', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 1300.00, 0.00, '', '2025-07-02 10:41:43', '2025-07-03 06:33:44', 1),
+(74, 'NTX202507027866', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 8900.00, 0.00, '', '2025-07-02 12:23:52', '2025-07-03 06:33:44', 1),
+(75, 'NTX202507024731', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 8900.00, 0.00, '', '2025-07-02 12:30:59', '2025-07-03 06:33:44', 1),
+(76, 'NTX202507026017', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 1200.00, 0.00, '', '2025-07-02 13:37:11', '2025-07-03 06:33:44', 1),
+(77, 'NTX202507031740', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 8800.00, 0.00, '1751520558_Screenshot 2025-06-20 112550.png', '2025-07-03 05:29:18', '2025-07-03 06:33:44', 2),
+(78, 'NTX202507037803', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '443343', 8900.00, 0.00, '', '2025-07-03 05:30:12', '2025-07-03 06:33:44', 2),
+(79, 'NTX202507033724', 3, 'Prasanga Raman Pokharel', '9705470926', 2, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 8900.00, 0.00, '', '2025-07-03 05:36:13', '2025-07-03 06:33:44', 2),
+(80, 'NTX202507036333', 3, 'Prasanga Raman Pokharel', '9705470926', NULL, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 17800.00, 0.00, '', '2025-07-03 06:33:51', '2025-07-03 06:33:51', NULL),
+(81, 'NTX202507034588', 3, 'Prasanga Raman Pokharel', '9705470926', NULL, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 8900.00, 0.00, '1751524654_Screenshot 2025-06-20 124043.png', '2025-07-03 06:37:34', '2025-07-03 06:47:02', NULL),
+(82, 'NTX202507035833', 3, 'Prasanga Raman Pokharel', '9705470926', NULL, 'cancelled', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 1239.20, 0.00, '1751524729_Screenshot 2025-06-20 124043.png', '2025-07-03 06:38:49', '2025-07-03 06:46:49', NULL),
+(83, 'NTX202507034827', 3, 'Prasanga Raman Pokharel', '9705470926', 4, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 2116.80, 0.00, '1751525192_Screenshot 2025-06-20 124043.png', '2025-07-03 06:46:32', '2025-07-03 06:46:32', NULL),
+(84, 'NTX202507033578', 3, 'Prasanga Raman Pokharel', '9705470926', 3, 'paid', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 8900.00, 0.00, '', '2025-07-03 06:53:40', '2025-07-03 11:07:54', NULL),
+(85, 'NTX202507031056', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 1300.00, 0.00, '', '2025-07-03 07:38:33', '2025-07-03 11:46:24', NULL),
+(86, 'NTX202507034186', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 8900.00, 0.00, '', '2025-07-03 13:21:53', '2025-07-03 13:21:53', NULL);
 
 -- --------------------------------------------------------
 
@@ -357,7 +400,50 @@ INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`, 
 (92, 73, 39, 1, 1300.00, 1300.00, 'NTX202507026372'),
 (93, 74, 40, 1, 8900.00, 8900.00, 'NTX202507027866'),
 (94, 75, 40, 1, 8900.00, 8900.00, 'NTX202507024731'),
-(95, 76, 39, 1, 1300.00, 1300.00, 'NTX202507026017');
+(95, 76, 39, 1, 1300.00, 1300.00, 'NTX202507026017'),
+(96, 77, 40, 1, 8900.00, 8900.00, 'NTX202507031740'),
+(97, 78, 40, 1, 8900.00, 8900.00, 'NTX202507037803'),
+(98, 79, 40, 1, 8900.00, 8900.00, 'NTX202507033724'),
+(99, 80, 40, 2, 8900.00, 17800.00, 'NTX202507036333'),
+(100, 81, 40, 1, 8900.00, 8900.00, 'NTX202507034588'),
+(101, 82, 36, 1, 1239.20, 1239.20, 'NTX202507035833'),
+(102, 83, 30, 1, 2116.80, 2116.80, 'NTX202507034827'),
+(103, 84, 40, 1, 8900.00, 8900.00, 'NTX202507033578'),
+(104, 85, 39, 1, 1300.00, 1300.00, 'NTX202507031056'),
+(105, 86, 40, 1, 8900.00, 8900.00, 'NTX202507034186');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_gateways`
+--
+
+CREATE TABLE `payment_gateways` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(50) NOT NULL,
+  `type` enum('manual','digital','cod') NOT NULL DEFAULT 'digital',
+  `description` text DEFAULT NULL,
+  `logo` varchar(255) DEFAULT NULL,
+  `supported_currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`supported_currencies`)),
+  `parameters` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`parameters`)),
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `is_test_mode` tinyint(1) NOT NULL DEFAULT 0,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payment_gateways`
+--
+
+INSERT INTO `payment_gateways` (`id`, `name`, `slug`, `type`, `description`, `logo`, `supported_currencies`, `parameters`, `is_active`, `is_test_mode`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Cash on Delivery', 'cod', 'cod', 'Pay when you receive your order', NULL, NULL, '{\"fee_type\": \"fixed\", \"fee_amount\": 0}', 1, 0, 1, '2025-07-03 05:48:02', '2025-07-03 13:13:51'),
+(2, 'Khalti', 'khalti', 'digital', 'Pay using Khalti digital wallet', NULL, NULL, '{\"public_key\": \"\", \"secret_key\": \"\", \"webhook_url\": \"\"}', 0, 0, 2, '2025-07-03 05:48:02', '2025-07-03 08:22:07'),
+(3, 'MyPay', 'mypay', 'digital', 'Pay using MyPay digital wallet', NULL, NULL, '{\"merchant_username\": \"\", \"merchant_password\": \"\", \"merchant_id\": \"\", \"api_key\": \"\"}', 1, 0, 3, '2025-07-03 05:48:02', '2025-07-03 13:14:43'),
+(4, 'Bank Transfer', 'bank_transfer', 'manual', 'Pay via bank transfer', NULL, NULL, '{\"bank_name\":\"Nabil Bank Limited\",\"account_number\":\"1234567890123455\",\"account_name\":\"NutriNexus Pvt. Ltd.\",\"branch\":\"New Road, Kathmandu\",\"swift_code\":\"\"}', 1, 0, 4, '2025-07-03 05:48:02', '2025-07-03 06:37:20'),
+(6, 'ESEWA', 'esewa', 'digital', 'a test', NULL, NULL, '{\"public_key\":\"\",\"secret_key\":\"8gBm\\/:&EnhH.1\\/q\",\"merchant_id\":\"EPAYTEST\",\"api_key\":\"\",\"webhook_url\":\"http:\\/\\/192.168.1.74:8000\\/esewa\\/webhook\",\"merchant_username\":\"\",\"merchant_password\":\"\"}', 0, 0, 0, '2025-07-03 06:52:54', '2025-07-03 06:53:58');
 
 -- --------------------------------------------------------
 
@@ -372,18 +458,19 @@ CREATE TABLE `payment_methods` (
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `active` tinyint(1) DEFAULT 1
+  `active` tinyint(1) DEFAULT 1,
+  `gateway_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `payment_methods`
 --
 
-INSERT INTO `payment_methods` (`id`, `name`, `description`, `is_active`, `created_at`, `updated_at`, `active`) VALUES
-(1, 'Cash on Delivery', 'Pay when you receive your order', 1, '2025-04-21 01:59:59', '2025-04-21 01:59:59', 1),
-(2, 'Khalti', 'Pay using Khalti digital wallet', 1, '2025-04-21 01:59:59', '2025-04-21 01:59:59', 1),
-(3, 'eSewa', 'Pay using eSewa digital wallet', 1, '2025-04-21 01:59:59', '2025-04-21 01:59:59', 1),
-(4, 'Bank Transfer', 'Pay via bank transfer', 1, '2025-04-21 01:59:59', '2025-04-21 01:59:59', 1);
+INSERT INTO `payment_methods` (`id`, `name`, `description`, `is_active`, `created_at`, `updated_at`, `active`, `gateway_id`) VALUES
+(1, 'Cash on Delivery', 'Pay when you receive your order', 1, '2025-04-21 01:59:59', '2025-07-03 05:48:02', 1, 1),
+(2, 'Khalti', 'Pay using Khalti digital wallet', 1, '2025-04-21 01:59:59', '2025-07-03 05:48:02', 1, 2),
+(3, 'eSewa', 'Pay using eSewa digital wallet', 1, '2025-04-21 01:59:59', '2025-04-21 01:59:59', 1, NULL),
+(4, 'Bank Transfer', 'Pay via bank transfer', 1, '2025-04-21 01:59:59', '2025-07-03 05:48:02', 1, 4);
 
 -- --------------------------------------------------------
 
@@ -421,7 +508,8 @@ INSERT INTO `products` (`id`, `product_name`, `slug`, `description`, `price`, `s
 (35, 'Wellcore Creatine Monohydrate 307g Fruit Fusion', 'wellcore-creatine-monohydrate-307g-fruit-fusion', 'Lab-tested creatine monohydrate to support athletic performance and power. Fruit fusion flavor.', 2128.00, NULL, 97, 'Creatine', '', '', 0, '', 'https://img.drz.lazcdn.com/g/kf/S3b1324339578494d852861d350077c9eg.jpg_720x720q80.jpg', 20, 0, '2025-05-09 16:10:46', '2025-07-02 11:12:27'),
 (36, 'Wellcore Electrolytes Miami Thunder 200g', 'wellcore-electrolytes-miami-thunder-200g-6865411c45983', 'Sugar-free electrolyte drink powder with 5 vital electrolytes (Na, Mg, Ca, K, PO4). Fat-fuel-powered, keto-friendly, Miami Thunder flavor.', 1239.20, NULL, 96, 'Electrolytes', '', '', 0, '', 'https://img.drz.lazcdn.com/static/np/p/33ceb9a8bc153dff89726a0bd0436a9c.jpg_720x720q80.jpg', 0, 0, '2025-05-09 16:10:46', '2025-07-02 14:09:28'),
 (39, 'Myfitness Chocolate Peanut Butter Crunchy  | 23g protein per 100g', 'myfitness-chocolate-peanut-butter-crunchy-23g-protein-per-100g-6863742b3a5eb', 'Brand : MYFITNESS\r\n\r\nProduct dimension : 1250g:Pack Of 1: 15 cm x 13 cm x 14 cm\r\n\r\nFlavour : Chocolate crunchy\r\n\r\nNet weight :1250gm\r\n\r\nGross weight : 1380gm\r\n\r\nNut seed tupe : Peanut\r\n\r\n    High Protein , 95℅ less oil seperation\r\n\r\nMost of us can’t say no to peanut butter. Even more of us can’t say no to chocolate. Put the two together in a single jar, and you get an irresistible creamy treat! That’s exactly what we offer in the chocolatey variant of our famous Original Peanut Butter.\r\n\r\nAND... it’s a chocolate peanut butter spread dedicated to helping you get fit!', 1300.00, 1100.00, 7, 'Peanut', '1.25kg', '30g', 0, 'Chocolate', NULL, 0, 1, '2025-06-26 15:16:31', '2025-07-01 05:22:47'),
-(40, 'Cellucor C4 The Original Explosive Pre-Workout, 360 g (0.80 lb)', 'cellucor-c4-the-original-explosive-pre-workout-360-g-0-80-lb', 'Global C4 Pre-Workout Protein Powder in India is the Global No.1 Brand known to build high energy levels for the next workout sessions to perform exploits. It is India’s one of the most explosive and rich supplement powders that leads to wonderful bodybuilding sessions and gives excellent results for exercise and training levels. It is also used for powerful, healthy physique building and performance. You can now easily depend upon Cellucor C4 Pre-Workout Original Protein Powder.\r\n\r\nThree Things you can Expect From Cellucor4 Supplement Powder and that is -\r\n\r\n1. Rich and High Amount of Energy\r\n2. Muscle Building Support\r\n3. Incredible Work Outs\r\n\r\nImportant Advantages and Benefits of Cellucor 4 Original\r\n\r\nIncreases Muscle and Body Growth in the Body\r\n\r\nCellucor C4 Pre –Workout contains Carnosine, a healthy amount of regulated acid that builds up muscles, it helps to build muscle by strengthening the body fully. Therefore the supplement of Beta-alanine supplements boosts the production of carnosine and gives excellent performance to the body for excellent physical activity.\r\n\r\nGives Excellent Immunity and Stamina for More Physical Exercise\r\n\r\nThe good amount of Creatine Nitrate present in the mix protein powder blend benefits you for high performance with excellent stamina and immunity counts. It removes all fatigue from the body and brings a great number of energy levels for much exercising and relaxation before working out. To keep your muscle growth enduring, you need to eat well and take Cellucor C4 on time before working out. This will surely help you keep weakness away from you!\r\n\r\nRich Amount of Calories\r\n\r\nCalories help you keep your energy level high. Without calories, nobody can survive or have a healthy lifestyle. Without energy levels, your cells in the body will be weak and die easily because of a lack of calories to maintain excellent function and growth of your cells, tissues, organs, and even over body physique. Cellucor C4 has a complete amount of calories which you require for your body.\r\nGood Amount of Carbohydrates\r\n\r\nCarbohydrates are the most important source for your body; whatever you eat or drink that has a healthy amount of food for you, it helps you be full, adds on the best calories, and supports you with high energy levels. And the c4 supplement has all the required amount of carbohydrates for your body that helps you for excessive workouts and builds a unique physique that you have planned for your body weight gains.\r\n\r\nImportant to Note*\r\n\r\nCarbohydrates have enough energy and sources which fuels up your mind, kidneys, heart muscles, and all the nervous system in the body. It keeps your lungs strong for healthy oxygen flow. Cellucor C4 available near you is easy to order and purchase with free delivery online in Mumbai, India. Don’t miss this product for healthiness for your pre-workout.\r\n\r\nVitamin C (Ascorbic Acid)\r\n\r\nThe Cellucor C4 has a good amount of Vitamin C that prevents people from having bad diet structures in the body. Now, if you ask what happens when there is less Vitamin C, it brings weakness. Inflammation of the gums can also cause bad purple marks on body parts like skin, wounds, and the corkscrew hairs. Also, less Vitamin C leads to poor wound healing. So knowing that Vitamin C is loaded in this product, Cellucor c4 is wellness for all the person who is into exercising, etc.\r\n\r\nOther beneficial sources for a healthy body are Niacin, Vitamin B, Folic Acid, Vitamin B 12, and Calcium.\r\n\r\nThe other Three Essential and Most Explosive Energy Sources are –\r\n\r\n· Beta-Alanine: Decreases and Removes Fatigue From the Body.\r\n· Creatinine Nitrate: Overall maintains and gives more strength for excellent performance.\r\n· Arginine AKG: Controls the hormonal balances and lowers the body\'s inflammation and more.\r\nPeople Also Ask Us Questions about CELLUCOR C4 Pre-Workout Original, 0.80 lbs, 360 g, 60 Servings\r\n\r\nQ1. Why is CELLUCOR C4 different From Other Protein Powder?\r\n\r\nCellucor C4 is a very powerful protein powder that contains an excellent and high amount of energy sources for excessive workout sessions. It has the best sources like Vitamins C, Vitamin B 6 and Vitamin B 12 and many more. It also has the three main essential sources like Beta Alanine, Creatine Nitrate and Arginine AKG.\r\n\r\nQ2. Is Cellucor C4 Healthy?\r\n\r\nCellucor C4 has the highest amount of caffeine that is up to 200mg. As long as you drin', 8900.00, 5900.00, 20, 'Pre-Workout', '360 g', '60serving', 0, 'watermelon', NULL, 0, 1, '2025-07-02 11:20:27', '2025-07-02 11:20:27');
+(40, 'Cellucor C4 The Original Explosive Pre-Workout, 360 g (0.80 lb)', 'cellucor-c4-the-original-explosive-pre-workout-360-g-0-80-lb', 'Global C4 Pre-Workout Protein Powder in India is the Global No.1 Brand known to build high energy levels for the next workout sessions to perform exploits. It is India’s one of the most explosive and rich supplement powders that leads to wonderful bodybuilding sessions and gives excellent results for exercise and training levels. It is also used for powerful, healthy physique building and performance. You can now easily depend upon Cellucor C4 Pre-Workout Original Protein Powder.\r\n\r\nThree Things you can Expect From Cellucor4 Supplement Powder and that is -\r\n\r\n1. Rich and High Amount of Energy\r\n2. Muscle Building Support\r\n3. Incredible Work Outs\r\n\r\nImportant Advantages and Benefits of Cellucor 4 Original\r\n\r\nIncreases Muscle and Body Growth in the Body\r\n\r\nCellucor C4 Pre –Workout contains Carnosine, a healthy amount of regulated acid that builds up muscles, it helps to build muscle by strengthening the body fully. Therefore the supplement of Beta-alanine supplements boosts the production of carnosine and gives excellent performance to the body for excellent physical activity.\r\n\r\nGives Excellent Immunity and Stamina for More Physical Exercise\r\n\r\nThe good amount of Creatine Nitrate present in the mix protein powder blend benefits you for high performance with excellent stamina and immunity counts. It removes all fatigue from the body and brings a great number of energy levels for much exercising and relaxation before working out. To keep your muscle growth enduring, you need to eat well and take Cellucor C4 on time before working out. This will surely help you keep weakness away from you!\r\n\r\nRich Amount of Calories\r\n\r\nCalories help you keep your energy level high. Without calories, nobody can survive or have a healthy lifestyle. Without energy levels, your cells in the body will be weak and die easily because of a lack of calories to maintain excellent function and growth of your cells, tissues, organs, and even over body physique. Cellucor C4 has a complete amount of calories which you require for your body.\r\nGood Amount of Carbohydrates\r\n\r\nCarbohydrates are the most important source for your body; whatever you eat or drink that has a healthy amount of food for you, it helps you be full, adds on the best calories, and supports you with high energy levels. And the c4 supplement has all the required amount of carbohydrates for your body that helps you for excessive workouts and builds a unique physique that you have planned for your body weight gains.\r\n\r\nImportant to Note*\r\n\r\nCarbohydrates have enough energy and sources which fuels up your mind, kidneys, heart muscles, and all the nervous system in the body. It keeps your lungs strong for healthy oxygen flow. Cellucor C4 available near you is easy to order and purchase with free delivery online in Mumbai, India. Don’t miss this product for healthiness for your pre-workout.\r\n\r\nVitamin C (Ascorbic Acid)\r\n\r\nThe Cellucor C4 has a good amount of Vitamin C that prevents people from having bad diet structures in the body. Now, if you ask what happens when there is less Vitamin C, it brings weakness. Inflammation of the gums can also cause bad purple marks on body parts like skin, wounds, and the corkscrew hairs. Also, less Vitamin C leads to poor wound healing. So knowing that Vitamin C is loaded in this product, Cellucor c4 is wellness for all the person who is into exercising, etc.\r\n\r\nOther beneficial sources for a healthy body are Niacin, Vitamin B, Folic Acid, Vitamin B 12, and Calcium.\r\n\r\nThe other Three Essential and Most Explosive Energy Sources are –\r\n\r\n· Beta-Alanine: Decreases and Removes Fatigue From the Body.\r\n· Creatinine Nitrate: Overall maintains and gives more strength for excellent performance.\r\n· Arginine AKG: Controls the hormonal balances and lowers the body\'s inflammation and more.\r\nPeople Also Ask Us Questions about CELLUCOR C4 Pre-Workout Original, 0.80 lbs, 360 g, 60 Servings\r\n\r\nQ1. Why is CELLUCOR C4 different From Other Protein Powder?\r\n\r\nCellucor C4 is a very powerful protein powder that contains an excellent and high amount of energy sources for excessive workout sessions. It has the best sources like Vitamins C, Vitamin B 6 and Vitamin B 12 and many more. It also has the three main essential sources like Beta Alanine, Creatine Nitrate and Arginine AKG.\r\n\r\nQ2. Is Cellucor C4 Healthy?\r\n\r\nCellucor C4 has the highest amount of caffeine that is up to 200mg. As long as you drin', 8900.00, 5900.00, 20, 'Pre-Workout', '360 g', '60serving', 0, 'watermelon', NULL, 0, 1, '2025-07-02 11:20:27', '2025-07-02 11:20:27'),
+(41, 'PERFECT SPORTS Ultra Fuel 100% Grass-Fed Wey Protein', 'perfect-sports-ultra-fuel-100-grass-fed-wey-protein', 'WHY ULTRA-FUEL?: We wanted to make your protein choice simple. ULTRA FUEL 100% Grass-Fed Whey Protein delivers a pure protein that checks all the boxes with simple, easy to understand ingredients. With 24 grams of pure protein and less than 2 grams of carbs, you get a pure, concentrated protein without all the carbs and fat normally found in milk.\r\nEVERYTHING GOOD, NOTHING BAD: ULTRA FUEL ensures you get all the natural benefits without the artificial additives or excess processing. It contains no aspartame, artificial colors, or banned substances, making it an excellent choice for athletes and health enthusiasts seeking to fuel their goals with a clean, high-quality protein.\r\nUNDENATURED PROTEIN = MORE PROTEIN: Cold-temperature cross-flow micro-filtration effectively concentrates the protein while maintaining its original native shape and function. These naturally occurring whey protein fractions indicate that it’s in its native form and has not been deformed by excessive processing such as heat, acids or enzymes.\r\nCOMPLETE AMINO PROFILE: Amino Acids are what every protein is made of. ULTRA FUEL protein is a 100% complete protein that is high in EAAs (the essential amino acids), meaning it contains all the essential amino acids that you need to get from your diet. Fuel your gains with 11 g of EAAs in every serving!\r\nOUR STORY: We have been dedicated to providing top pros and athletes with the absolute highest quality nutritional supplements for over 20 years! Since 2003, Perfect Sports has been the choice for the most dedicated and discerning physique transformation athletes who demanded the very best.', 8900.00, 8150.00, 10, 'Protein', '2kg', '80', 0, 'Vanilla', NULL, 0, 0, '2025-07-03 07:40:07', '2025-07-03 07:40:07');
 
 -- --------------------------------------------------------
 
@@ -451,7 +539,11 @@ INSERT INTO `product_images` (`id`, `product_id`, `image_url`, `is_primary`, `so
 (16, 34, 'https://asitisnutrition.com/cdn/shop/files/Mango_Delight.jpg?v=1749638404&width=600', 1, 0, '2025-07-02 11:14:40', '2025-07-02 11:14:40'),
 (17, 30, 'https://img10.hkrtcdn.com/39889/prd_3988809-HK-Vitals-Skin-Radiance-Collagen-Marine-Collagen-200-g-Orange_o.jpg', 1, 0, '2025-07-02 11:15:13', '2025-07-02 11:15:13'),
 (18, 40, 'https://img.drz.lazcdn.com/g/kf/S4761ff3e570b47fa9165a119e37edc2dx.jpg_720x720q80.jpg', 1, 0, '2025-07-02 11:20:28', '2025-07-02 11:20:28'),
-(19, 40, 'https://dukaan.b-cdn.net/2000x2000/webp/media/864ac30f-8e10-4817-bea5-57ab547193ff.jpg', 0, 1, '2025-07-02 11:20:28', '2025-07-02 11:20:28');
+(19, 40, 'https://dukaan.b-cdn.net/2000x2000/webp/media/864ac30f-8e10-4817-bea5-57ab547193ff.jpg', 0, 1, '2025-07-02 11:20:28', '2025-07-02 11:20:28'),
+(20, 41, 'https://m.media-amazon.com/images/I/51gza6tlzfL._AC_SL1000_.jpg', 1, 0, '2025-07-03 07:40:09', '2025-07-03 07:40:09'),
+(21, 41, 'https://m.media-amazon.com/images/I/61GTqRaR+OL._AC_SL1000_.jpg', 0, 1, '2025-07-03 07:40:09', '2025-07-03 07:40:09'),
+(22, 41, 'https://m.media-amazon.com/images/I/61t34xyOasL._AC_SL1000_.jpg', 0, 2, '2025-07-03 07:40:09', '2025-07-03 07:40:09'),
+(23, 41, 'https://m.media-amazon.com/images/I/71I+cdlB3YL._AC_SL1500_.jpg', 0, 3, '2025-07-03 07:40:09', '2025-07-03 07:40:09');
 
 -- --------------------------------------------------------
 
@@ -477,7 +569,8 @@ INSERT INTO `referral_earnings` (`id`, `user_id`, `order_id`, `amount`, `status`
 (2, 3, 27, 743.40, 'paid', '2025-05-08 05:40:51', '2025-07-02 12:19:06'),
 (3, 3, 74, 445.00, 'paid', '2025-07-02 12:09:57', '2025-07-02 12:09:57'),
 (4, 3, 75, 890.00, 'paid', '2025-07-02 12:16:18', '2025-07-02 12:16:18'),
-(5, 3, 76, 120.00, 'paid', '2025-07-02 13:23:06', '2025-07-02 13:23:06');
+(5, 3, 76, 120.00, 'paid', '2025-07-02 13:23:06', '2025-07-02 13:23:06'),
+(6, 3, 85, 130.00, 'paid', '2025-07-03 11:31:24', '2025-07-03 11:31:24');
 
 -- --------------------------------------------------------
 
@@ -559,7 +652,9 @@ INSERT INTO `transactions` (`id`, `user_id`, `amount`, `type`, `reference_id`, `
 (7, 3, -120.00, 'withdrawal', 5, 'withdrawal', 'Withdrawal request #5', -564.10, '2025-07-02 13:24:46'),
 (8, 3, -220.00, 'withdrawal', 6, 'withdrawal', 'Withdrawal request #6', -784.10, '2025-07-02 13:29:06'),
 (9, 3, -100.00, 'withdrawal', 7, 'withdrawal', 'Withdrawal request #7', -884.10, '2025-07-02 13:31:26'),
-(10, 3, -100.00, 'withdrawal', 8, 'withdrawal', 'Withdrawal request #8', -984.10, '2025-07-02 13:52:38');
+(10, 3, -100.00, 'withdrawal', 8, 'withdrawal', 'Withdrawal request #8', -984.10, '2025-07-02 13:52:38'),
+(11, 3, -100.00, 'withdrawal', 9, 'withdrawal', 'Withdrawal request #9', -1084.10, '2025-07-03 07:28:38'),
+(12, 3, -100.00, 'withdrawal', 10, 'withdrawal', 'Withdrawal request #10', -1184.10, '2025-07-03 08:13:47');
 
 -- --------------------------------------------------------
 
@@ -593,11 +688,11 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `full_name`, `phone`, `role`, `referral_code`, `referred_by`, `referral_earnings`, `reset_token`, `reset_expires`, `created_at`, `updated_at`, `first_name`, `last_name`) VALUES
 (1, 'admin', 'admin@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin User', '9876543210', 'customer', 'ADMIN123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-07-02 12:17:48', '', ''),
 (2, 'customer', 'customer@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Test Customer', '9876543211', 'customer', 'CUST123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-05-04 06:30:00', '', ''),
-(3, 'Prasanga741', 'prasangaramanpokharel@gmail.com', '$2y$10$PMW5yaBnJlSDxpTwvdbh7uRtyMMCsoj5AWbNPvA9S3mWCWVxC49HG', NULL, '9765470926', 'admin', '6816dab3e50ac', NULL, 470.90, '21860651dbc5718071151c4a94ac3a3389ee3dac844e5e0c1a1ed762910036fd', '2025-07-01 12:44:01', '2025-05-04 03:10:43', '2025-07-02 13:52:38', 'Prasanga', 'Pokharel'),
+(3, 'Prasanga741', 'prasangaramanpokharel@gmail.com', '$2y$10$PMW5yaBnJlSDxpTwvdbh7uRtyMMCsoj5AWbNPvA9S3mWCWVxC49HG', NULL, '9765470926', 'admin', '6816dab3e50ac', NULL, 400.90, '21860651dbc5718071151c4a94ac3a3389ee3dac844e5e0c1a1ed762910036fd', '2025-07-01 12:44:01', '2025-05-04 03:10:43', '2025-07-03 11:31:24', 'Prasanga', 'Pokharel'),
 (4, 'umesh741', 'incpractical@gmail.com', '$2y$10$y98eHeqK54fKzyQj.lvktOAzmiC.DMfYpdxAD5ASTL0mWjdszJkuS', NULL, NULL, 'customer', '681721245ddb8', 3, 0.00, NULL, NULL, '2025-05-04 08:11:16', '2025-07-01 03:43:11', 'Umesh', 'Pokharel'),
 (5, 'jayapokharel659', 'jaya@gmail.com', '$2y$10$aVbO62KAftm9s6wlFZv5jOddwKCQ6GhA5Gu70GCNlhvvlwtqdEk.2', 'Jaya Pokharel', '981138848', 'customer', '1d1cbbe8', NULL, 0.00, NULL, NULL, '2025-05-09 15:40:06', '2025-05-09 15:40:06', 'Jaya', 'Pokharel'),
 (6, 'prasangapokharel366', 'prasangaraman@gmail.com', '$2y$10$jOzC3E7dx4QVo0y0ISysb..mPCAtnwHuSVEJ67VVt1IhKaztkrDh2', 'Prasanga Pokharel', '9765470926', 'customer', 'a8311d95', NULL, 0.00, NULL, NULL, '2025-06-23 05:06:34', '2025-06-23 10:22:28', 'Prasanga', 'Pokharel'),
-(7, 'jayapokharel151', 'incpractical@gamil.com', '$2y$10$a74hYlh4raDu/bhTn3gh6e1DK6pXhYFC47RmU.tKYvcZDiZvw0P3a', 'Jaya Pokharel', '984212529', 'customer', '5a189707', 3, 0.00, NULL, NULL, '2025-07-02 12:05:27', '2025-07-02 12:05:27', 'Jaya', 'Pokharel'),
+(7, 'jayapokharel151', 'incpractical@gamil.com', '$2y$10$a74hYlh4raDu/bhTn3gh6e1DK6pXhYFC47RmU.tKYvcZDiZvw0P3a', 'Jaya Pokharel', '984212529', 'admin', '5a189707', 3, 0.00, NULL, NULL, '2025-07-02 12:05:27', '2025-07-03 07:48:08', 'Jaya', 'Pokharel'),
 (8, 'umeshpokharel147', 'wizardvictor14@gmail.com', '$2y$10$o.0qr2D.cCAb4rGxbpf0ceG/M8EZa3tR.Dp2qQpMw48C7gdtvQbFS', 'Umesh Pokharel', '9842023379', 'customer', '8cb4di', 7, 0.00, NULL, NULL, '2025-07-02 12:26:18', '2025-07-02 12:26:18', 'Umesh', 'Pokharel'),
 (9, 'prabidhisolution450', 'prashanna787898@gmail.com', '$2y$10$D2MxQzbAodALIXPKAxQzS.wUAbJ0khheKobKwTJfdYsd.X/Mtfqg6', 'Prabidhi Solution', '9842023389', 'customer', '60f744', NULL, 0.00, NULL, NULL, '2025-07-02 12:53:03', '2025-07-02 12:53:03', 'Prabidhi', 'Solution');
 
@@ -652,7 +747,9 @@ INSERT INTO `withdrawals` (`id`, `user_id`, `amount`, `payment_method`, `payment
 (5, 3, 120.00, 'Esewa', '[]', 'completed', '', '2025-07-02 13:24:46', '2025-07-02 13:24:58'),
 (6, 3, 220.00, 'Esewa', '[]', 'completed', '', '2025-07-02 13:29:06', '2025-07-02 13:29:14'),
 (7, 3, 100.00, 'Esewa', '[]', 'completed', '', '2025-07-02 13:31:26', '2025-07-02 13:31:32'),
-(8, 3, 100.00, 'Esewa', '[]', 'completed', '', '2025-07-02 13:52:38', '2025-07-02 13:52:54');
+(8, 3, 100.00, 'Esewa', '[]', 'completed', '', '2025-07-02 13:52:38', '2025-07-02 13:52:54'),
+(9, 3, 100.00, 'Esewa', '[]', 'completed', '', '2025-07-03 07:28:38', '2025-07-03 08:05:42'),
+(10, 3, 100.00, 'bank_transfer', '{\"account_name\":\"Nabil\",\"account_number\":\"64363464\",\"bank_name\":\"NIC\",\"ifsc_code\":\"REstrr\"}', 'completed', '', '2025-07-03 08:13:47', '2025-07-03 08:15:30');
 
 --
 -- Indexes for dumped tables
@@ -717,6 +814,13 @@ ALTER TABLE `esewa_payments`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `gateway_currencies`
+--
+ALTER TABLE `gateway_currencies`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_gateway_currency` (`gateway_id`,`currency_code`);
+
+--
 -- Indexes for table `khalti_payments`
 --
 ALTER TABLE `khalti_payments`
@@ -749,10 +853,20 @@ ALTER TABLE `order_items`
   ADD KEY `product_id` (`product_id`);
 
 --
+-- Indexes for table `payment_gateways`
+--
+ALTER TABLE `payment_gateways`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`),
+  ADD KEY `idx_active` (`is_active`),
+  ADD KEY `idx_type` (`type`);
+
+--
 -- Indexes for table `payment_methods`
 --
 ALTER TABLE `payment_methods`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `gateway_id` (`gateway_id`);
 
 --
 -- Indexes for table `products`
@@ -848,7 +962,7 @@ ALTER TABLE `cart`
 -- AUTO_INCREMENT for table `coupons`
 --
 ALTER TABLE `coupons`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `coupon_usage`
@@ -875,6 +989,12 @@ ALTER TABLE `esewa_payments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `gateway_currencies`
+--
+ALTER TABLE `gateway_currencies`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `khalti_payments`
 --
 ALTER TABLE `khalti_payments`
@@ -884,19 +1004,25 @@ ALTER TABLE `khalti_payments`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=96;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
+
+--
+-- AUTO_INCREMENT for table `payment_gateways`
+--
+ALTER TABLE `payment_gateways`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `payment_methods`
@@ -908,19 +1034,19 @@ ALTER TABLE `payment_methods`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `product_images`
 --
 ALTER TABLE `product_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `referral_earnings`
 --
 ALTER TABLE `referral_earnings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -938,7 +1064,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -956,7 +1082,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `withdrawals`
 --
 ALTER TABLE `withdrawals`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
@@ -991,6 +1117,12 @@ ALTER TABLE `esewa_payments`
   ADD CONSTRAINT `esewa_payments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `gateway_currencies`
+--
+ALTER TABLE `gateway_currencies`
+  ADD CONSTRAINT `gateway_currencies_ibfk_1` FOREIGN KEY (`gateway_id`) REFERENCES `payment_gateways` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `khalti_payments`
 --
 ALTER TABLE `khalti_payments`
@@ -1016,6 +1148,12 @@ ALTER TABLE `orders`
 ALTER TABLE `order_items`
   ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `payment_methods`
+--
+ALTER TABLE `payment_methods`
+  ADD CONSTRAINT `payment_methods_ibfk_1` FOREIGN KEY (`gateway_id`) REFERENCES `payment_gateways` (`id`);
 
 --
 -- Constraints for table `product_images`

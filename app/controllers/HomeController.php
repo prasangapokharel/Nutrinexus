@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Core\Controller;
@@ -6,6 +7,14 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\OrderItem;
 use App\Helpers\CacheHelper;
+
+// Import phpFastCache
+use Phpfastcache\CacheManager;
+use Phpfastcache\Config\ConfigurationOption;
+use Phpfastcache\Drivers\Files\Config as FilesConfig;
+
+// Import Spatie Async
+use Spatie\Async\Pool;
 
 class HomeController extends Controller
 {
@@ -16,6 +25,14 @@ class HomeController extends Controller
     private $hasSymfonyCache = false;
     private $symfonyCache = null;
     private $tagCache = null;
+    
+    // phpFastCache instance
+    private $fastCache = null;
+    private $hasFastCache = false;
+    
+    // Async pool
+    private $asyncPool = null;
+    private $hasAsync = false;
 
     public function __construct()
     {
@@ -24,6 +41,12 @@ class HomeController extends Controller
         $this->productImageModel = new ProductImage();
         $this->orderItemModel = new OrderItem();
         $this->cache = CacheHelper::getInstance();
+        
+        // Initialize phpFastCache
+        $this->initializeFastCache();
+        
+        // Initialize Spatie Async
+        $this->initializeAsync();
         
         // Check if Symfony Cache components are available
         if (class_exists('\\Symfony\\Component\\Cache\\Adapter\\FilesystemAdapter') && 
@@ -51,56 +74,175 @@ class HomeController extends Controller
     }
 
     /**
-     * Display home page with caching
+     * Initialize phpFastCache
+     */
+    private function initializeFastCache()
+    {
+        try {
+            if (class_exists('\\Phpfastcache\\CacheManager')) {
+                // Configure phpFastCache
+                $cacheDir = defined('CACHE_DIR') ? CACHE_DIR : __DIR__ . '/../../storage/cache/phpfastcache';
+                
+                // Ensure cache directory exists
+                if (!is_dir($cacheDir)) {
+                    mkdir($cacheDir, 0755, true);
+                }
+                
+                // Setup configuration
+                CacheManager::setDefaultConfig(new ConfigurationOption([
+                    'path' => $cacheDir,
+                    'itemDetailedDate' => true,
+                    'defaultTtl' => 3600,
+                    'securityKey' => 'nutrinexus_cache_key',
+                    'htaccess' => true,
+                    'defaultKeyHashFunction' => 'md5',
+                    'defaultFileNameHashFunction' => 'md5',
+                ]));
+                
+                // Get Files driver instance
+                $this->fastCache = CacheManager::getInstance('files');
+                $this->hasFastCache = true;
+                
+                error_log('phpFastCache initialized successfully');
+            } else {
+                error_log('phpFastCache not available');
+                $this->hasFastCache = false;
+            }
+        } catch (\Exception $e) {
+            error_log('Failed to initialize phpFastCache: ' . $e->getMessage());
+            $this->hasFastCache = false;
+        }
+    }
+
+    /**
+     * Initialize Spatie Async
+     */
+    private function initializeAsync()
+    {
+        try {
+            if (class_exists('\\Spatie\\Async\\Pool')) {
+                $this->asyncPool = Pool::create();
+                $this->hasAsync = true;
+                error_log('Spatie Async initialized successfully');
+            } else {
+                error_log('Spatie Async not available');
+                $this->hasAsync = false;
+            }
+        } catch (\Exception $e) {
+            error_log('Failed to initialize Spatie Async: ' . $e->getMessage());
+            $this->hasAsync = false;
+        }
+    }
+
+    /**
+     * Display home page with enhanced caching
      */
     public function index()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('home_page_data', function() {
-            // Get featured products with images
-            $featuredProducts = $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
-            
-            // Get best selling products with images
-            $bestSellingProducts = $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
-            
-            // Get all categories
-            $categories = ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
-            
-            // Get all products for latest products section with images
-            $products = $this->getProductsWithImages($this->productModel->getProducts(8, 0));
-            
-            // Get popular products (same as featured for now)
-            $popular_products = $featuredProducts;
-            
-            return [
-                'featuredProducts' => $featuredProducts,
-                'bestSellingProducts' => $bestSellingProducts,
-                'categories' => $categories,
-                'products' => $products,
-                'popular_products' => $popular_products,
-                'title' => 'Nutri Nexas - Premium Supplements',
-                'cached_at' => date('Y-m-d H:i:s'),
-                'cache_source' => 'database'
-            ];
+        // Try to get data from enhanced cache system
+        $viewData = $this->getFromEnhancedCache('home_page_data', function() {
+            if ($this->hasAsync) {
+                return $this->getHomePageDataAsync();
+            } else {
+                return $this->getHomePageDataSync();
+            }
         }, 3600, ['page' => 'home']);
         
         $this->view('home/index', $viewData);
     }
 
     /**
-     * Get products with their images
-     * 
-     * @param array $products
-     * @return array
+     * Get home page data asynchronously
      */
- 
+    private function getHomePageDataAsync()
+    {
+        try {
+            $pool = $this->asyncPool;
+            
+            // Start async tasks
+            $featuredProductsTask = $pool->add(function() {
+                return $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
+            });
+            
+            $bestSellingTask = $pool->add(function() {
+                return $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
+            });
+            
+            $productsTask = $pool->add(function() {
+                return $this->getProductsWithImages($this->productModel->getProducts(8, 0));
+            });
+            
+            $categoriesTask = $pool->add(function() {
+                return ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
+            });
+            
+            // Wait for all tasks to complete
+            $pool->wait();
+            
+            // Get results
+            $featuredProducts = $featuredProductsTask->getOutput();
+            $bestSellingProducts = $bestSellingTask->getOutput();
+            $products = $productsTask->getOutput();
+            $categories = $categoriesTask->getOutput();
+            
+            return [
+                'featuredProducts' => $featuredProducts,
+                'bestSellingProducts' => $bestSellingProducts,
+                'categories' => $categories,
+                'products' => $products,
+                'popular_products' => $featuredProducts,
+                'title' => 'Nutri Nexas - Premium Supplements',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cache_source' => 'async_database',
+                'load_method' => 'async'
+            ];
+            
+        } catch (\Exception $e) {
+            error_log('Async execution failed: ' . $e->getMessage());
+            return $this->getHomePageDataSync();
+        }
+    }
+
+    /**
+     * Get home page data synchronously (fallback)
+     */
+    private function getHomePageDataSync()
+    {
+        // Get featured products with images
+        $featuredProducts = $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
+        
+        // Get best selling products with images
+        $bestSellingProducts = $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
+        
+        // Get all categories
+        $categories = ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
+        
+        // Get all products for latest products section with images
+        $products = $this->getProductsWithImages($this->productModel->getProducts(8, 0));
+        
+        // Get popular products (same as featured for now)
+        $popular_products = $featuredProducts;
+        
+        return [
+            'featuredProducts' => $featuredProducts,
+            'bestSellingProducts' => $bestSellingProducts,
+            'categories' => $categories,
+            'products' => $products,
+            'popular_products' => $popular_products,
+            'title' => 'Nutri Nexas - Premium Supplements',
+            'cached_at' => date('Y-m-d H:i:s'),
+            'cache_source' => 'sync_database',
+            'load_method' => 'sync'
+        ];
+    }
+
     /**
      * Display about page with caching
      */
     public function about()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('about_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $viewData = $this->getFromEnhancedCache('about_page_data', function() {
             return [
                 'title' => 'About Us',
                 'cached_at' => date('Y-m-d H:i:s'),
@@ -111,47 +253,41 @@ class HomeController extends Controller
         $this->view('home/about', $viewData);
     }
 
-      /**
-     * Display about page with caching
+    /**
+     * Display privacy page with caching
      */
     public function privacy()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('privacy_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $viewData = $this->getFromEnhancedCache('privacy_page_data', function() {
             return [
                 'title' => 'Privacy Policy',
                 'cached_at' => date('Y-m-d H:i:s'),
                 'cache_source' => 'none'
             ];
-        }, 86400, ['page' => 'about', 'static' => true]);
+        }, 86400, ['page' => 'privacy', 'static' => true]);
         
         $this->view('pages/privacy', $viewData);
     }
 
-
-
-       public function faq()
+    public function faq()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('faq_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $viewData = $this->getFromEnhancedCache('faq_page_data', function() {
             return [
                 'title' => 'FAQ',
                 'cached_at' => date('Y-m-d H:i:s'),
                 'cache_source' => 'none'
             ];
-        }, 86400, ['page' => 'about', 'static' => true]);
+        }, 86400, ['page' => 'faq', 'static' => true]);
         
         $this->view('pages/faq', $viewData);
     }
 
-
-
-
-
-       public function terms()
+    public function terms()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('terms_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $viewData = $this->getFromEnhancedCache('terms_page_data', function() {
             return [
                 'title' => 'Terms and Conditions',
                 'cached_at' => date('Y-m-d H:i:s'),
@@ -161,13 +297,11 @@ class HomeController extends Controller
         
         $this->view('pages/terms', $viewData);
     }
-
-
     
-       public function shipping()
+    public function shipping()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $viewData = $this->getFromCache('shipping_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $viewData = $this->getFromEnhancedCache('shipping_page_data', function() {
             return [
                 'title' => 'Shipping Policy',
                 'cached_at' => date('Y-m-d H:i:s'),
@@ -183,8 +317,8 @@ class HomeController extends Controller
      */
     public function authenticator()
     {
-        // Try to get data from cache (with Symfony cache if available)
-        $authData = $this->getFromCache('authenticator_page_data', function() {
+        // Try to get data from cache (with enhanced caching)
+        $authData = $this->getFromEnhancedCache('authenticator_page_data', function() {
             return [
                 'title' => 'Authenticaor Wellcore',
                 'cached_at' => date('Y-m-d H:i:s'),
@@ -202,7 +336,7 @@ class HomeController extends Controller
     public function contact()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Process contact form
+            // Process contact form asynchronously if possible
             $name = trim($_POST['name'] ?? '');
             $email = trim($_POST['email'] ?? '');
             $subject = trim($_POST['subject'] ?? '');
@@ -238,22 +372,26 @@ class HomeController extends Controller
                     'message' => $message
                 ];
                 
-                // Send email synchronously
-                $result = $this->sendEmailWithCurl($name, $email, $subject, $message);
-                
-                if ($result['success']) {
-                    $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
-                    $this->redirect('home/contact');
+                // Send email asynchronously if possible
+                if ($this->hasAsync) {
+                    $this->sendEmailAsync($name, $email, $subject, $message);
                 } else {
-                    $this->setFlash('error', 'Failed to send message. Please try again later.');
-                    $this->view('home/contact', [
-                        'errors' => ['form' => 'Failed to send message'],
-                        'name' => $name,
-                        'email' => $email,
-                        'subject' => $subject,
-                        'message' => $message,
-                        'title' => 'Contact Us'
-                    ]);
+                    $result = $this->sendEmailWithCurl($name, $email, $subject, $message);
+                    
+                    if ($result['success']) {
+                        $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
+                        $this->redirect('home/contact');
+                    } else {
+                        $this->setFlash('error', 'Failed to send message. Please try again later.');
+                        $this->view('home/contact', [
+                            'errors' => ['form' => 'Failed to send message'],
+                            'name' => $name,
+                            'email' => $email,
+                            'subject' => $subject,
+                            'message' => $message,
+                            'title' => 'Contact Us'
+                        ]);
+                    }
                 }
             } else {
                 $this->view('home/contact', [
@@ -267,8 +405,8 @@ class HomeController extends Controller
             }
         } else {
             // GET request - show contact form
-            // Try to get template data from cache (with Symfony cache if available)
-            $viewData = $this->getFromCache('contact_page_data', function() {
+            // Try to get template data from cache (with enhanced caching)
+            $viewData = $this->getFromEnhancedCache('contact_page_data', function() {
                 return [
                     'title' => 'Contact Us',
                     'cached_at' => date('Y-m-d H:i:s'),
@@ -277,6 +415,47 @@ class HomeController extends Controller
             }, 86400, ['page' => 'contact', 'static' => true]);
             
             $this->view('home/contact', $viewData);
+        }
+    }
+
+    /**
+     * Send email asynchronously
+     */
+    private function sendEmailAsync($name, $email, $subject, $message)
+    {
+        try {
+            $pool = $this->asyncPool;
+            
+            $emailTask = $pool->add(function() use ($name, $email, $subject, $message) {
+                return $this->sendEmailWithCurl($name, $email, $subject, $message);
+            });
+            
+            // Don't wait for completion - fire and forget
+            // But we can add a callback for when it completes
+            $emailTask->then(function($result) {
+                if ($result['success']) {
+                    error_log('Email sent successfully via async');
+                } else {
+                    error_log('Email failed via async: ' . json_encode($result));
+                }
+            });
+            
+            // Set success message immediately (optimistic)
+            $this->setFlash('success', 'Your message is being sent. We will get back to you soon!');
+            $this->redirect('home/contact');
+            
+        } catch (\Exception $e) {
+            error_log('Async email failed: ' . $e->getMessage());
+            // Fall back to synchronous sending
+            $result = $this->sendEmailWithCurl($name, $email, $subject, $message);
+            
+            if ($result['success']) {
+                $this->setFlash('success', 'Your message has been sent. We will get back to you soon!');
+                $this->redirect('home/contact');
+            } else {
+                $this->setFlash('error', 'Failed to send message. Please try again later.');
+                $this->redirect('home/contact');
+            }
         }
     }
     
@@ -424,7 +603,7 @@ class HomeController extends Controller
     }
     
     /**
-     * Subscribe to newsletter with caching for the form
+     * Subscribe to newsletter with enhanced caching
      */
     public function newsletter()
     {
@@ -437,7 +616,53 @@ class HomeController extends Controller
                 return;
             }
             
-            // Subscribe to newsletter synchronously
+            // Subscribe to newsletter asynchronously if possible
+            if ($this->hasAsync) {
+                $this->subscribeNewsletterAsync($email);
+            } else {
+                $result = $this->subscribeToNewsletterWithCurl($email);
+                
+                if ($result['success']) {
+                    $this->setFlash('success', 'Thank you for subscribing to our newsletter!');
+                } else {
+                    $this->setFlash('error', 'Failed to subscribe. Please try again later.');
+                }
+                
+                $this->redirect('');
+            }
+        } else {
+            $this->redirect('');
+        }
+    }
+
+    /**
+     * Subscribe to newsletter asynchronously
+     */
+    private function subscribeNewsletterAsync($email)
+    {
+        try {
+            $pool = $this->asyncPool;
+            
+            $subscribeTask = $pool->add(function() use ($email) {
+                return $this->subscribeToNewsletterWithCurl($email);
+            });
+            
+            // Don't wait for completion - fire and forget
+            $subscribeTask->then(function($result) {
+                if ($result['success']) {
+                    error_log('Newsletter subscription successful via async');
+                } else {
+                    error_log('Newsletter subscription failed via async: ' . json_encode($result));
+                }
+            });
+            
+            // Set success message immediately (optimistic)
+            $this->setFlash('success', 'Thank you for subscribing to our newsletter!');
+            $this->redirect('');
+            
+        } catch (\Exception $e) {
+            error_log('Async newsletter subscription failed: ' . $e->getMessage());
+            // Fall back to synchronous subscription
             $result = $this->subscribeToNewsletterWithCurl($email);
             
             if ($result['success']) {
@@ -446,8 +671,6 @@ class HomeController extends Controller
                 $this->setFlash('error', 'Failed to subscribe. Please try again later.');
             }
             
-            $this->redirect('');
-        } else {
             $this->redirect('');
         }
     }
@@ -579,7 +802,7 @@ class HomeController extends Controller
     }
     
     /**
-     * Clear all home page caches
+     * Clear all caches (enhanced version)
      * Admin function to manually clear caches
      */
     public function clearCache()
@@ -591,25 +814,39 @@ class HomeController extends Controller
             return;
         }
         
+        $clearedCaches = [];
+        
         // Clear regular cache
         $this->cache->clear();
+        $clearedCaches[] = 'App Cache';
+        
+        // Clear phpFastCache if available
+        if ($this->hasFastCache && $this->fastCache) {
+            try {
+                $this->fastCache->clear();
+                $clearedCaches[] = 'phpFastCache';
+            } catch (\Exception $e) {
+                error_log('Failed to clear phpFastCache: ' . $e->getMessage());
+            }
+        }
         
         // Clear Symfony cache if available
         if ($this->hasSymfonyCache && $this->tagCache) {
             try {
                 // Clear all caches with the 'page' tag
                 $this->tagCache->invalidateTags(['page']);
+                $clearedCaches[] = 'Symfony Cache';
             } catch (\Exception $e) {
                 error_log('Failed to clear Symfony cache: ' . $e->getMessage());
             }
         }
         
-        $this->setFlash('success', 'All caches cleared successfully');
+        $this->setFlash('success', 'Cleared caches: ' . implode(', ', $clearedCaches));
         $this->redirect('admin/dashboard');
     }
     
     /**
-     * Retry failed newsletter subscriptions
+     * Retry failed newsletter subscriptions with async processing
      * Admin function to retry failed subscriptions
      */
     public function retryFailedSubscriptions()
@@ -637,6 +874,78 @@ class HomeController extends Controller
             return;
         }
         
+        if ($this->hasAsync) {
+            $this->retryFailedSubscriptionsAsync($failedSubscriptions, $failedSubscriptionsFile);
+        } else {
+            $this->retryFailedSubscriptionsSync($failedSubscriptions, $failedSubscriptionsFile);
+        }
+    }
+
+    /**
+     * Retry failed subscriptions asynchronously
+     */
+    private function retryFailedSubscriptionsAsync($failedSubscriptions, $failedSubscriptionsFile)
+    {
+        try {
+            $pool = $this->asyncPool;
+            $tasks = [];
+            
+            // Create async tasks for each subscription
+            foreach ($failedSubscriptions as $index => $subscription) {
+                $email = $subscription['email'];
+                $attempts = $subscription['attempts'] + 1;
+                
+                if ($attempts < 5) { // Don't retry more than 5 times
+                    $tasks[$index] = $pool->add(function() use ($email) {
+                        return $this->subscribeToNewsletterWithCurl($email);
+                    });
+                }
+            }
+            
+            // Wait for all tasks to complete
+            $pool->wait();
+            
+            // Process results
+            $successCount = 0;
+            $remainingSubscriptions = [];
+            
+            foreach ($failedSubscriptions as $index => $subscription) {
+                if (isset($tasks[$index])) {
+                    $result = $tasks[$index]->getOutput();
+                    
+                    if ($result['success']) {
+                        $successCount++;
+                    } else {
+                        // Keep it in the list for next retry
+                        $subscription['attempts'] = $subscription['attempts'] + 1;
+                        $subscription['timestamp'] = time();
+                        $subscription['error'] = $result['error'] ?? 'Unknown error';
+                        $remainingSubscriptions[] = $subscription;
+                    }
+                } else {
+                    // Too many attempts, don't include in remaining
+                    continue;
+                }
+            }
+            
+            // Save the updated list
+            file_put_contents($failedSubscriptionsFile, json_encode($remainingSubscriptions, JSON_PRETTY_PRINT));
+            
+            $this->setFlash('success', "Async retry completed: {$successCount} successful, " . count($remainingSubscriptions) . " remaining.");
+            $this->redirect('admin/dashboard');
+            
+        } catch (\Exception $e) {
+            error_log('Async retry failed: ' . $e->getMessage());
+            // Fall back to sync retry
+            $this->retryFailedSubscriptionsSync($failedSubscriptions, $failedSubscriptionsFile);
+        }
+    }
+
+    /**
+     * Retry failed subscriptions synchronously
+     */
+    private function retryFailedSubscriptionsSync($failedSubscriptions, $failedSubscriptionsFile)
+    {
         $successCount = 0;
         $remainingSubscriptions = [];
         
@@ -666,13 +975,12 @@ class HomeController extends Controller
         // Save the updated list
         file_put_contents($failedSubscriptionsFile, json_encode($remainingSubscriptions, JSON_PRETTY_PRINT));
         
-        $this->setFlash('success', "Retried {$successCount} failed subscriptions. " . count($remainingSubscriptions) . " remaining.");
+        $this->setFlash('success', "Sync retry completed: {$successCount} successful, " . count($remainingSubscriptions) . " remaining.");
         $this->redirect('admin/dashboard');
     }
     
     /**
-     * Get data from cache with fallback to callback
-     * Uses Symfony cache if available, otherwise falls back to regular cache
+     * Enhanced cache method with phpFastCache, Symfony Cache, and fallback
      * 
      * @param string $key Cache key
      * @param callable $callback Function to execute on cache miss
@@ -680,9 +988,42 @@ class HomeController extends Controller
      * @param array $tags Tags for cache invalidation (only used with Symfony cache)
      * @return mixed
      */
-    private function getFromCache($key, callable $callback, int $lifetime = 3600, array $tags = [])
+    private function getFromEnhancedCache($key, callable $callback, int $lifetime = 3600, array $tags = [])
     {
-        // Try Symfony cache first if available
+        // Try phpFastCache first if available
+        if ($this->hasFastCache && $this->fastCache) {
+            try {
+                $cacheItem = $this->fastCache->getItem($key);
+                
+                if ($cacheItem->isHit()) {
+                    $data = $cacheItem->get();
+                    if (is_array($data)) {
+                        $data['cache_source'] = 'phpfastcache';
+                        $data['cache_hit'] = true;
+                    }
+                    return $data;
+                }
+                
+                // Cache miss - execute callback
+                $data = $callback();
+                
+                // Store in phpFastCache
+                $cacheItem->set($data)->expiresAfter($lifetime);
+                $this->fastCache->save($cacheItem);
+                
+                if (is_array($data)) {
+                    $data['cache_source'] = 'phpfastcache_new';
+                    $data['cache_hit'] = false;
+                }
+                return $data;
+                
+            } catch (\Exception $e) {
+                error_log('phpFastCache error: ' . $e->getMessage());
+                // Continue to next cache method
+            }
+        }
+        
+        // Try Symfony cache if available
         if ($this->hasSymfonyCache && $this->tagCache) {
             try {
                 // Use Symfony's cache system
@@ -693,6 +1034,7 @@ class HomeController extends Controller
                     $data = $cacheItem->get();
                     if (is_array($data)) {
                         $data['cache_source'] = 'symfony_cache';
+                        $data['cache_hit'] = true;
                     }
                     return $data;
                 }
@@ -719,6 +1061,7 @@ class HomeController extends Controller
                 
                 if (is_array($data)) {
                     $data['cache_source'] = 'symfony_cache_new';
+                    $data['cache_hit'] = false;
                 }
                 return $data;
                 
@@ -740,12 +1083,14 @@ class HomeController extends Controller
             $this->cache->set($key, $data, $lifetime);
             
             if (is_array($data)) {
-                $data['cache_source'] = 'database';
+                $data['cache_source'] = 'app_cache_new';
+                $data['cache_hit'] = false;
             }
         } else {
             // Mark that this came from the regular cache
             if (is_array($data)) {
                 $data['cache_source'] = 'app_cache';
+                $data['cache_hit'] = true;
             }
         }
         
@@ -753,7 +1098,7 @@ class HomeController extends Controller
     }
     
     /**
-     * Warm up the cache for static pages
+     * Warm up the cache for static pages with async processing
      * Admin function to pre-generate cache
      */
     public function warmupCache()
@@ -765,12 +1110,104 @@ class HomeController extends Controller
             return;
         }
         
+        if ($this->hasAsync) {
+            $this->warmupCacheAsync();
+        } else {
+            $this->warmupCacheSync();
+        }
+    }
+
+    /**
+     * Warm up cache asynchronously
+     */
+    private function warmupCacheAsync()
+    {
+        try {
+            $pool = $this->asyncPool;
+            
+            // List of pages to warm up
+            $pages = [
+                'home_page_data' => ['callback' => [$this, 'getHomePageData'], 'tags' => ['page' => 'home'], 'ttl' => 3600],
+                'about_page_data' => ['callback' => [$this, 'getAboutPageData'], 'tags' => ['page' => 'about', 'static' => true], 'ttl' => 86400],
+                'authenticator_page_data' => ['callback' => [$this, 'getAuthenticatorPageData'], 'tags' => ['page' => 'authenticator', 'static' => true], 'ttl' => 86400],
+                'contact_page_data' => ['callback' => [$this, 'getContactPageData'], 'tags' => ['page' => 'contact', 'static' => true], 'ttl' => 86400],
+                'privacy_page_data' => ['callback' => [$this, 'getPrivacyPageData'], 'tags' => ['page' => 'privacy', 'static' => true], 'ttl' => 86400],
+                'faq_page_data' => ['callback' => [$this, 'getFaqPageData'], 'tags' => ['page' => 'faq', 'static' => true], 'ttl' => 86400],
+                'terms_page_data' => ['callback' => [$this, 'getTermsPageData'], 'tags' => ['page' => 'terms', 'static' => true], 'ttl' => 86400],
+                'shipping_page_data' => ['callback' => [$this, 'getShippingPageData'], 'tags' => ['page' => 'shipping', 'static' => true], 'ttl' => 86400]
+            ];
+            
+            $tasks = [];
+            
+            // Create async tasks for each page
+            foreach ($pages as $key => $config) {
+                $tasks[$key] = $pool->add(function() use ($key, $config) {
+                    try {
+                        // Get data using the callback
+                        $data = call_user_func($config['callback']);
+                        
+                        // Store in cache
+                        $this->getFromEnhancedCache($key, function() use ($data) {
+                            return $data;
+                        }, $config['ttl'], $config['tags']);
+                        
+                        return ['success' => true, 'key' => $key];
+                    } catch (\Exception $e) {
+                        return ['success' => false, 'key' => $key, 'error' => $e->getMessage()];
+                    }
+                });
+            }
+            
+            // Wait for all tasks to complete
+            $pool->wait();
+            
+            // Process results
+            $warmedUp = [];
+            $failed = [];
+            
+            foreach ($tasks as $key => $task) {
+                $result = $task->getOutput();
+                if ($result['success']) {
+                    $warmedUp[] = $result['key'];
+                } else {
+                    $failed[] = $result['key'] . ' (' . $result['error'] . ')';
+                    error_log('Failed to warm up cache for ' . $result['key'] . ': ' . $result['error']);
+                }
+            }
+            
+            $message = 'Async cache warmup completed. ';
+            if (!empty($warmedUp)) {
+                $message .= 'Warmed up: ' . implode(', ', $warmedUp) . '. ';
+            }
+            if (!empty($failed)) {
+                $message .= 'Failed: ' . implode(', ', $failed) . '.';
+            }
+            
+            $this->setFlash('success', $message);
+            $this->redirect('admin/dashboard');
+            
+        } catch (\Exception $e) {
+            error_log('Async cache warmup failed: ' . $e->getMessage());
+            // Fall back to sync warmup
+            $this->warmupCacheSync();
+        }
+    }
+
+    /**
+     * Warm up cache synchronously
+     */
+    private function warmupCacheSync()
+    {
         // List of pages to warm up
         $pages = [
             'home_page_data' => ['callback' => [$this, 'getHomePageData'], 'tags' => ['page' => 'home'], 'ttl' => 3600],
             'about_page_data' => ['callback' => [$this, 'getAboutPageData'], 'tags' => ['page' => 'about', 'static' => true], 'ttl' => 86400],
             'authenticator_page_data' => ['callback' => [$this, 'getAuthenticatorPageData'], 'tags' => ['page' => 'authenticator', 'static' => true], 'ttl' => 86400],
-            'contact_page_data' => ['callback' => [$this, 'getContactPageData'], 'tags' => ['page' => 'contact', 'static' => true], 'ttl' => 86400]
+            'contact_page_data' => ['callback' => [$this, 'getContactPageData'], 'tags' => ['page' => 'contact', 'static' => true], 'ttl' => 86400],
+            'privacy_page_data' => ['callback' => [$this, 'getPrivacyPageData'], 'tags' => ['page' => 'privacy', 'static' => true], 'ttl' => 86400],
+            'faq_page_data' => ['callback' => [$this, 'getFaqPageData'], 'tags' => ['page' => 'faq', 'static' => true], 'ttl' => 86400],
+            'terms_page_data' => ['callback' => [$this, 'getTermsPageData'], 'tags' => ['page' => 'terms', 'static' => true], 'ttl' => 86400],
+            'shipping_page_data' => ['callback' => [$this, 'getShippingPageData'], 'tags' => ['page' => 'shipping', 'static' => true], 'ttl' => 86400]
         ];
         
         $warmedUp = [];
@@ -782,7 +1219,7 @@ class HomeController extends Controller
                 $data = call_user_func($config['callback']);
                 
                 // Store in cache
-                $this->getFromCache($key, function() use ($data) {
+                $this->getFromEnhancedCache($key, function() use ($data) {
                     return $data;
                 }, $config['ttl'], $config['tags']);
                 
@@ -792,7 +1229,7 @@ class HomeController extends Controller
             }
         }
         
-        $this->setFlash('success', 'Cache warmed up for: ' . implode(', ', $warmedUp));
+        $this->setFlash('success', 'Sync cache warmed up for: ' . implode(', ', $warmedUp));
         $this->redirect('admin/dashboard');
     }
     
@@ -803,31 +1240,7 @@ class HomeController extends Controller
      */
     public function getHomePageData()
     {
-        // Get featured products with images
-        $featuredProducts = $this->getProductsWithImages($this->productModel->getFeaturedProducts(8));
-        
-        // Get best selling products with images
-        $bestSellingProducts = $this->getProductsWithImages($this->orderItemModel->getBestSellingProducts(4));
-        
-        // Get all categories
-        $categories = ['Protein', 'Creatine', 'Pre-Workout', 'Vitamins'];
-        
-        // Get all products for latest products section with images
-        $products = $this->getProductsWithImages($this->productModel->getProducts(8, 0));
-        
-        // Get popular products (same as featured for now)
-        $popular_products = $featuredProducts;
-        
-        return [
-            'featuredProducts' => $featuredProducts,
-            'bestSellingProducts' => $bestSellingProducts,
-            'categories' => $categories,
-            'products' => $products,
-            'popular_products' => $popular_products,
-            'title' => 'Nutri Nexas - Premium Supplements',
-            'cached_at' => date('Y-m-d H:i:s'),
-            'cache_source' => 'warmup'
-        ];
+        return $this->getHomePageDataSync();
     }
     
     /**
@@ -872,42 +1285,156 @@ class HomeController extends Controller
         ];
     }
 
-    private function getProductsWithImages($products)
-{
-    if (empty($products)) {
-        return [];
+    /**
+     * Get privacy page data for cache warming
+     * 
+     * @return array
+     */
+    public function getPrivacyPageData()
+    {
+        return [
+            'title' => 'Privacy Policy',
+            'cached_at' => date('Y-m-d H:i:s'),
+            'cache_source' => 'warmup'
+        ];
     }
 
-    foreach ($products as &$product) {
-        // Get all images for this product
-        $images = $this->productImageModel->getByProductId($product['id']);
+    /**
+     * Get FAQ page data for cache warming
+     * 
+     * @return array
+     */
+    public function getFaqPageData()
+    {
+        return [
+            'title' => 'FAQ',
+            'cached_at' => date('Y-m-d H:i:s'),
+            'cache_source' => 'warmup'
+        ];
+    }
+
+    /**
+     * Get terms page data for cache warming
+     * 
+     * @return array
+     */
+    public function getTermsPageData()
+    {
+        return [
+            'title' => 'Terms and Conditions',
+            'cached_at' => date('Y-m-d H:i:s'),
+            'cache_source' => 'warmup'
+        ];
+    }
+
+    /**
+     * Get shipping page data for cache warming
+     * 
+     * @return array
+     */
+    public function getShippingPageData()
+    {
+        return [
+            'title' => 'Shipping Policy',
+            'cached_at' => date('Y-m-d H:i:s'),
+            'cache_source' => 'warmup'
+        ];
+    }
+
+    /**
+     * Get cache statistics
+     * Admin function to view cache performance
+     */
+    public function cacheStats()
+    {
+        // Only allow admin users to view cache stats
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+            $this->setFlash('error', 'You do not have permission to perform this action');
+            $this->redirect('');
+            return;
+        }
         
-        // Set default image structure
-        $product['images'] = $images;
-        $product['primary_image'] = null;
+        $stats = [
+            'phpfastcache' => ['available' => $this->hasFastCache, 'stats' => null],
+            'symfony_cache' => ['available' => $this->hasSymfonyCache, 'stats' => null],
+            'spatie_async' => ['available' => $this->hasAsync, 'stats' => null],
+            'app_cache' => ['available' => true, 'stats' => null]
+        ];
         
-        // Find primary image (first check for is_primary flag, then use first image)
-        foreach ($images as $image) {
-            if (!empty($image['is_primary'])) {
-                $product['primary_image'] = $image;
-                break;
+        // Get phpFastCache stats
+        if ($this->hasFastCache && $this->fastCache) {
+            try {
+                $stats['phpfastcache']['stats'] = $this->fastCache->getStats();
+            } catch (\Exception $e) {
+                $stats['phpfastcache']['error'] = $e->getMessage();
             }
         }
         
-        // If no primary image found, use the first image
-        if (empty($product['primary_image']) && !empty($images)) {
-            $product['primary_image'] = $images[0];
+        // Get Symfony cache stats (if available)
+        if ($this->hasSymfonyCache && $this->symfonyCache) {
+            try {
+                // Symfony cache doesn't have built-in stats, so we'll create our own
+                $stats['symfony_cache']['stats'] = [
+                    'adapter' => get_class($this->symfonyCache),
+                    'namespace' => 'app.cache'
+                ];
+            } catch (\Exception $e) {
+                $stats['symfony_cache']['error'] = $e->getMessage();
+            }
         }
         
-        // Fallback to placeholder if no images exist
-        if (empty($product['primary_image'])) {
-            $product['primary_image'] = [
-                'image_path' => '/assets/images/placeholder-product.jpg',
-                'alt_text' => 'Product image placeholder'
+        // Get app cache stats
+        try {
+            $stats['app_cache']['stats'] = [
+                'class' => get_class($this->cache),
+                'available' => true
             ];
+        } catch (\Exception $e) {
+            $stats['app_cache']['error'] = $e->getMessage();
         }
+        
+        $this->view('admin/cache-stats', [
+            'title' => 'Cache Statistics',
+            'stats' => $stats
+        ]);
     }
 
-    return $products;
-}
+    private function getProductsWithImages($products)
+    {
+        if (empty($products)) {
+            return [];
+        }
+        
+        foreach ($products as &$product) {
+            // Get all images for this product
+            $images = $this->productImageModel->getByProductId($product['id']);
+            
+            // Set default image structure
+            $product['images'] = $images;
+            $product['primary_image'] = null;
+            
+            // Find primary image (first check for is_primary flag, then use first image)
+            foreach ($images as $image) {
+                if (!empty($image['is_primary'])) {
+                    $product['primary_image'] = $image;
+                    break;
+                }
+            }
+            
+            // If no primary image found, use the first image
+            if (empty($product['primary_image']) && !empty($images)) {
+                $product['primary_image'] = $images[0];
+            }
+            
+            // Fallback to placeholder if no images exist
+            if (empty($product['primary_image'])) {
+                $product['primary_image'] = [
+                    'image_path' => '/assets/images/placeholder-product.jpg',
+                    'alt_text' => 'Product image placeholder'
+                ];
+            }
+        }
+        
+        return $products;
+    }
 }

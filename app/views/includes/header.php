@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($data['title']) ? $data['title'] . ' - ' : '' ?>Nutri Nexas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+        <script src="<?= URLROOT ?>/assets/js/tailwind.js"></script>
+
+
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="<?= URLROOT ?>/css/icon.allmin.css" rel="stylesheet">
+    <link href="<?= URLROOT ?>/assets/css/icon.allmin.css" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {

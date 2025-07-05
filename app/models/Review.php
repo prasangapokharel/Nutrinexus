@@ -115,46 +115,52 @@ class Review extends Model
      */
     public function create($data)
     {
-        // Validate required fields
-        if (empty($data['review']) || trim($data['review']) === '') {
-            throw new \Exception("Review text is required");
-        }
+        try {
+            // Validate required fields
+            if (empty($data['review']) || trim($data['review']) === '') {
+                throw new \Exception("Review text is required");
+            }
 
-        if (empty($data['rating']) || !is_numeric($data['rating']) || $data['rating'] < 1 || $data['rating'] > 5) {
-            throw new \Exception("Rating must be between 1 and 5");
-        }
+            if (empty($data['rating']) || !is_numeric($data['rating']) || $data['rating'] < 1 || $data['rating'] > 5) {
+                throw new \Exception("Rating must be between 1 and 5");
+            }
 
-        if (empty($data['user_id']) || empty($data['product_id'])) {
-            throw new \Exception("User ID and Product ID are required");
-        }
+            if (empty($data['user_id']) || empty($data['product_id'])) {
+                throw new \Exception("User ID and Product ID are required");
+            }
 
-        // Check if user has already reviewed this product
-        if ($this->hasUserReviewed($data['user_id'], $data['product_id'])) {
-            throw new \Exception("You have already reviewed this product");
-        }
+            // Check if user has already reviewed this product
+            if ($this->hasUserReviewed($data['user_id'], $data['product_id'])) {
+                throw new \Exception("You have already reviewed this product");
+            }
 
-        // Sanitize review text
-        $data['review'] = trim($data['review']);
-        $data['rating'] = (int)$data['rating'];
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = $data['created_at'];
+            // Sanitize review text
+            $data['review'] = trim($data['review']);
+            $data['rating'] = (int)$data['rating'];
+            $data['created_at'] = date('Y-m-d H:i:s');
+            $data['updated_at'] = $data['created_at'];
 
-        $sql = "INSERT INTO {$this->table} (user_id, product_id, rating, review, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?)";
-        
-        $result = $this->db->query($sql)->bind([
-            $data['user_id'],
-            $data['product_id'],
-            $data['rating'],
-            $data['review'],
-            $data['created_at'],
-            $data['updated_at']
-        ])->execute();
-        
-        if ($result) {
-            return $this->db->lastInsertId();
+            $sql = "INSERT INTO {$this->table} (user_id, product_id, rating, review, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?)";
+            
+            $result = $this->db->query($sql)->bind([
+                $data['user_id'],
+                $data['product_id'],
+                $data['rating'],
+                $data['review'],
+                $data['created_at'],
+                $data['updated_at']
+            ])->execute();
+            
+            if ($result) {
+                return $this->db->lastInsertId();
+            }
+            return false;
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            error_log("Review creation failed: " . $e->getMessage());
+            throw $e; // Re-throw to be caught by the caller
         }
-        return false;
     }
 
     /**

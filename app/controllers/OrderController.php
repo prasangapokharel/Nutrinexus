@@ -12,6 +12,7 @@ use App\Models\ReferralEarning;
 use App\Models\Transaction;
 use App\Models\Notification;
 use App\Models\Setting;
+use App\Models\ProductImage;
 
 /**
  * Order Controller
@@ -20,6 +21,7 @@ use App\Models\Setting;
 class OrderController extends Controller
 {
     private $productModel;
+    private $productImageModel;
     private $orderModel;
     private $orderItemModel;
     private $userModel;
@@ -39,6 +41,7 @@ class OrderController extends Controller
         $this->transactionModel = new Transaction();
         $this->notificationModel = new Notification();
         $this->settingModel = new Setting();
+        $this->productImageModel = new ProductImage();
     }
 
     /**
@@ -503,6 +506,26 @@ class OrderController extends Controller
             return false;
         }
     }
+
+
+
+  protected function getProductImageUrl($product)
+{
+    // 1. Check if product has direct image URL
+    if (!empty($product['image'])) {
+        return $product['image'];
+    }
+    
+    // 2. Check for primary image from product_images table
+    $primaryImage = $this->productImageModel->getPrimaryImage($product['product_id']);
+    if ($primaryImage && !empty($primaryImage['image_url'])) {
+        return $primaryImage['image_url'];
+    }
+    
+    // 3. Fallback to default image
+    return \App\Core\View::asset('images/products/default.jpg');
+}
+
 
     /**
      * Reverse referral earnings for a cancelled order
