@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 03, 2025 at 05:11 PM
+-- Generation Time: Jul 06, 2025 at 04:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -351,7 +351,12 @@ INSERT INTO `orders` (`id`, `invoice`, `user_id`, `customer_name`, `contact_no`,
 (83, 'NTX202507034827', 3, 'Prasanga Raman Pokharel', '9705470926', 4, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '34543543', 2116.80, 0.00, '1751525192_Screenshot 2025-06-20 124043.png', '2025-07-03 06:46:32', '2025-07-03 06:46:32', NULL),
 (84, 'NTX202507033578', 3, 'Prasanga Raman Pokharel', '9705470926', 3, 'paid', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 8900.00, 0.00, '', '2025-07-03 06:53:40', '2025-07-03 11:07:54', NULL),
 (85, 'NTX202507031056', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 1300.00, 0.00, '', '2025-07-03 07:38:33', '2025-07-03 11:46:24', NULL),
-(86, 'NTX202507034186', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 8900.00, 0.00, '', '2025-07-03 13:21:53', '2025-07-03 13:21:53', NULL);
+(86, 'NTX202507034186', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 8900.00, 0.00, '', '2025-07-03 13:21:53', '2025-07-03 13:21:53', NULL),
+(87, 'NTX202507058686', 3, 'Prasanga Raman Pokhares', '9705470926', 1, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 1916.80, 0.00, '', '2025-07-05 07:14:49', '2025-07-05 07:14:49', NULL),
+(88, 'NTX202507059208', 3, 'Prasanga Raman Pokharel', '9705470926', 1, 'pending', 'Inaruwa-1, SUnsari, Inaruwa, 1 ', '', '', 1100.00, 0.00, '', '2025-07-05 07:19:00', '2025-07-05 07:19:00', NULL),
+(89, 'NTX202507065674', 8, 'rakesh Niraula', '9899929929', 1, 'paid', 'namuna tole, inaruwa, 1 ', '', '', 5900.00, 0.00, '', '2025-07-06 07:06:32', '2025-07-06 07:07:44', NULL),
+(90, 'NTX202507068308', 5, 'erwerewr', 'rewrewr', 1, 'paid', 'rewrewr, ewrwer, rwerewr ', '', '', 5900.00, 0.00, '', '2025-07-06 07:09:34', '2025-07-06 07:09:50', NULL),
+(91, 'NTX202507061546', 7, 'Stone Hutchinson', '+1 (948) 181-1034', 1, 'paid', '95 East New Court, Aut quae qui quia oc, Asperiores id vero ', '', '', 5900.00, 0.00, '', '2025-07-06 07:11:35', '2025-07-06 07:11:46', NULL);
 
 -- --------------------------------------------------------
 
@@ -410,7 +415,12 @@ INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`, 
 (102, 83, 30, 1, 2116.80, 2116.80, 'NTX202507034827'),
 (103, 84, 40, 1, 8900.00, 8900.00, 'NTX202507033578'),
 (104, 85, 39, 1, 1300.00, 1300.00, 'NTX202507031056'),
-(105, 86, 40, 1, 8900.00, 8900.00, 'NTX202507034186');
+(105, 86, 40, 1, 8900.00, 8900.00, 'NTX202507034186'),
+(106, 87, 30, 1, 2116.80, 2116.80, 'NTX202507058686'),
+(107, 88, 39, 1, 1300.00, 1300.00, 'NTX202507059208'),
+(108, 89, 40, 1, 8900.00, 8900.00, 'NTX202507065674'),
+(109, 90, 40, 1, 8900.00, 8900.00, 'NTX202507068308'),
+(110, 91, 40, 1, 8900.00, 8900.00, 'NTX202507061546');
 
 -- --------------------------------------------------------
 
@@ -441,7 +451,7 @@ CREATE TABLE `payment_gateways` (
 INSERT INTO `payment_gateways` (`id`, `name`, `slug`, `type`, `description`, `logo`, `supported_currencies`, `parameters`, `is_active`, `is_test_mode`, `sort_order`, `created_at`, `updated_at`) VALUES
 (1, 'Cash on Delivery', 'cod', 'cod', 'Pay when you receive your order', NULL, NULL, '{\"fee_type\": \"fixed\", \"fee_amount\": 0}', 1, 0, 1, '2025-07-03 05:48:02', '2025-07-03 13:13:51'),
 (2, 'Khalti', 'khalti', 'digital', 'Pay using Khalti digital wallet', NULL, NULL, '{\"public_key\": \"\", \"secret_key\": \"\", \"webhook_url\": \"\"}', 0, 0, 2, '2025-07-03 05:48:02', '2025-07-03 08:22:07'),
-(3, 'MyPay', 'mypay', 'digital', 'Pay using MyPay digital wallet', NULL, NULL, '{\"merchant_username\": \"\", \"merchant_password\": \"\", \"merchant_id\": \"\", \"api_key\": \"\"}', 1, 0, 3, '2025-07-03 05:48:02', '2025-07-03 13:14:43'),
+(3, 'MyPay', 'mypay', 'digital', 'Pay using MyPay digital wallet', NULL, NULL, '{\"merchant_username\": \"\", \"merchant_password\": \"\", \"merchant_id\": \"\", \"api_key\": \"\"}', 0, 0, 3, '2025-07-03 05:48:02', '2025-07-06 06:45:38'),
 (4, 'Bank Transfer', 'bank_transfer', 'manual', 'Pay via bank transfer', NULL, NULL, '{\"bank_name\":\"Nabil Bank Limited\",\"account_number\":\"1234567890123455\",\"account_name\":\"NutriNexus Pvt. Ltd.\",\"branch\":\"New Road, Kathmandu\",\"swift_code\":\"\"}', 1, 0, 4, '2025-07-03 05:48:02', '2025-07-03 06:37:20'),
 (6, 'ESEWA', 'esewa', 'digital', 'a test', NULL, NULL, '{\"public_key\":\"\",\"secret_key\":\"8gBm\\/:&EnhH.1\\/q\",\"merchant_id\":\"EPAYTEST\",\"api_key\":\"\",\"webhook_url\":\"http:\\/\\/192.168.1.74:8000\\/esewa\\/webhook\",\"merchant_username\":\"\",\"merchant_password\":\"\"}', 0, 0, 0, '2025-07-03 06:52:54', '2025-07-03 06:53:58');
 
@@ -570,7 +580,9 @@ INSERT INTO `referral_earnings` (`id`, `user_id`, `order_id`, `amount`, `status`
 (3, 3, 74, 445.00, 'paid', '2025-07-02 12:09:57', '2025-07-02 12:09:57'),
 (4, 3, 75, 890.00, 'paid', '2025-07-02 12:16:18', '2025-07-02 12:16:18'),
 (5, 3, 76, 120.00, 'paid', '2025-07-02 13:23:06', '2025-07-02 13:23:06'),
-(6, 3, 85, 130.00, 'paid', '2025-07-03 11:31:24', '2025-07-03 11:31:24');
+(6, 3, 85, 130.00, 'paid', '2025-07-03 11:31:24', '2025-07-03 11:31:24'),
+(7, 7, 89, 590.00, 'paid', '2025-07-06 06:52:44', '2025-07-06 06:52:44'),
+(8, 3, 91, 590.00, 'paid', '2025-07-06 06:56:46', '2025-07-06 06:56:46');
 
 -- --------------------------------------------------------
 
@@ -593,10 +605,10 @@ CREATE TABLE `reviews` (
 --
 
 INSERT INTO `reviews` (`id`, `product_id`, `user_id`, `rating`, `review`, `created_at`, `updated_at`) VALUES
-(1, 39, 3, 2, 'Nice Review', '2025-06-26 15:28:47', '2025-06-26 15:28:47'),
-(3, 35, 3, 3, 'Geniun product', '2025-06-26 17:08:20', '2025-06-26 17:08:20'),
-(4, 36, 3, 5, 'Effective product', '2025-06-30 16:17:32', '2025-06-30 16:17:32'),
-(5, 40, 3, 3, 'good product', '2025-07-02 11:22:12', '2025-07-02 11:22:12');
+(8, 41, 3, 2, 'sdsddsdsdsds', '2025-07-04 12:06:14', '2025-07-04 12:06:14'),
+(9, 40, 3, 2, 'testsdsdsdsd', '2025-07-04 12:14:33', '2025-07-04 12:14:33'),
+(10, 34, 3, 1, 'niceeuuuuj', '2025-07-05 06:57:04', '2025-07-05 06:57:04'),
+(11, 39, 3, 2, 'niceeeeeeop', '2025-07-05 15:50:00', '2025-07-05 15:50:00');
 
 -- --------------------------------------------------------
 
@@ -620,6 +632,232 @@ INSERT INTO `settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
 (1, 'commission_rate', '5', '2025-05-08 10:36:07', '2025-05-08 10:36:07'),
 (2, 'min_withdrawal', '100', '2025-05-08 10:36:07', '2025-05-08 10:36:07'),
 (3, 'auto_approve', 'true', '2025-05-08 10:36:07', '2025-05-08 10:36:07');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_ab_tests`
+--
+
+CREATE TABLE `sms_ab_tests` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `campaign_id` int(11) DEFAULT NULL,
+  `template_a_id` int(11) NOT NULL,
+  `template_b_id` int(11) NOT NULL,
+  `traffic_split` int(11) DEFAULT 50,
+  `winner_template_id` int(11) DEFAULT NULL,
+  `status` enum('draft','running','completed','paused') DEFAULT 'draft',
+  `start_date` timestamp NULL DEFAULT NULL,
+  `end_date` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_analytics`
+--
+
+CREATE TABLE `sms_analytics` (
+  `id` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `campaign_id` int(11) DEFAULT NULL,
+  `template_id` int(11) DEFAULT NULL,
+  `total_sent` int(11) DEFAULT 0,
+  `total_delivered` int(11) DEFAULT 0,
+  `total_failed` int(11) DEFAULT 0,
+  `total_bounced` int(11) DEFAULT 0,
+  `total_cost` decimal(10,4) DEFAULT 0.0000,
+  `delivery_rate` decimal(5,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_automation_rules`
+--
+
+CREATE TABLE `sms_automation_rules` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `trigger_event` enum('user_registration','cart_abandoned','order_placed','order_shipped','order_delivered','no_purchase_30_days','birthday','product_viewed','product_restocked','wishlist_added') NOT NULL,
+  `conditions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`conditions`)),
+  `delay_minutes` int(11) DEFAULT 0,
+  `template_id` int(11) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `max_sends_per_user` int(11) DEFAULT 1,
+  `cooldown_hours` int(11) DEFAULT 24,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `sms_automation_rules`
+--
+
+INSERT INTO `sms_automation_rules` (`id`, `name`, `trigger_event`, `conditions`, `delay_minutes`, `template_id`, `is_active`, `max_sends_per_user`, `cooldown_hours`, `created_at`, `updated_at`) VALUES
+(1, 'Welcome New Users', 'user_registration', '{}', 5, 1, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(2, 'Cart Abandonment 15min', 'cart_abandoned', '{\"min_cart_value\": 25}', 15, 2, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(3, 'Cart Abandonment 2hr', 'cart_abandoned', '{\"min_cart_value\": 25}', 120, 3, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(4, 'Cart Abandonment 24hr', 'cart_abandoned', '{\"min_cart_value\": 50}', 1440, 4, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(5, 'Order Confirmation', 'order_placed', '{}', 2, 5, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(6, 'Order Shipped', 'order_shipped', '{}', 0, 6, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(7, 'Order Delivered', 'order_delivered', '{}', 60, 7, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(8, 'Win Back Campaign', 'no_purchase_30_days', '{\"last_order_min_value\": 50}', 0, 8, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(9, 'Birthday Campaign', 'birthday', '{}', 0, 9, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(10, 'Restock Notifications', 'product_restocked', '{}', 0, 10, 1, 1, 24, '2025-07-06 05:33:03', '2025-07-06 05:33:03');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_automation_triggers`
+--
+
+CREATE TABLE `sms_automation_triggers` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `automation_rule_id` int(11) NOT NULL,
+  `trigger_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`trigger_data`)),
+  `triggered_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `processed_at` timestamp NULL DEFAULT NULL,
+  `sms_queue_id` int(11) DEFAULT NULL,
+  `status` enum('pending','processed','skipped','failed') DEFAULT 'pending',
+  `skip_reason` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_blacklist`
+--
+
+CREATE TABLE `sms_blacklist` (
+  `id` int(11) NOT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `reason` enum('user_request','spam_report','invalid_number','carrier_block','compliance') NOT NULL,
+  `added_by` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_campaigns`
+--
+
+CREATE TABLE `sms_campaigns` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `type` enum('blast','automated','triggered','drip') NOT NULL,
+  `target_audience` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`target_audience`)),
+  `template_id` int(11) DEFAULT NULL,
+  `schedule_type` enum('immediate','scheduled','recurring') NOT NULL DEFAULT 'immediate',
+  `scheduled_at` timestamp NULL DEFAULT NULL,
+  `cron_expression` varchar(255) DEFAULT NULL,
+  `status` enum('draft','active','paused','completed','cancelled') NOT NULL DEFAULT 'draft',
+  `total_recipients` int(11) DEFAULT 0,
+  `sent_count` int(11) DEFAULT 0,
+  `delivered_count` int(11) DEFAULT 0,
+  `failed_count` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_logs`
+--
+
+CREATE TABLE `sms_logs` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `template_id` int(11) DEFAULT NULL,
+  `campaign_id` int(11) DEFAULT NULL,
+  `message` text NOT NULL,
+  `status` enum('queued','sent','delivered','failed','bounce','spam') NOT NULL DEFAULT 'queued',
+  `provider_response` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`provider_response`)),
+  `cost` decimal(10,4) DEFAULT 0.0000,
+  `error_message` text DEFAULT NULL,
+  `sent_at` timestamp NULL DEFAULT NULL,
+  `delivered_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `sms_logs`
+--
+
+INSERT INTO `sms_logs` (`id`, `user_id`, `phone_number`, `template_id`, `campaign_id`, `message`, `status`, `provider_response`, `cost`, `error_message`, `sent_at`, `delivered_at`, `created_at`) VALUES
+(1, NULL, '9765470926', 1, NULL, 'Hi Prasanga! Welcome to Nutrinexas! Get 10% off your first order with code WELCOME10. Shop now: http://192.168.1.74:8000', 'failed', NULL, 0.0100, 'Unknown API error', '2025-07-06 05:34:32', NULL, '2025-07-06 05:34:32'),
+(2, NULL, '9765470926', 5, NULL, 'Thanks Prasanga! Your order ##NTX202507059208  has been confirmed. Total: ₹1,300.00. Track: http://192.168.1.74:8000/orders/track', 'failed', '{\"message\":\"ERR: INVALID API KEY\"}', 0.0000, 'ERR: INVALID API KEY', '2025-07-06 06:09:37', NULL, '2025-07-06 06:09:37'),
+(3, NULL, '9765470926', 1, NULL, 'Hi Prasanga! Welcome to Nutrinexas! Get 10% off your first order with code WELCOME10. Shop now: http://192.168.1.74:8000', 'failed', '{\"message\":\"ERR: INVALID API KEY\"}', 0.0000, 'ERR: INVALID API KEY', '2025-07-06 06:10:47', NULL, '2025-07-06 06:10:47'),
+(4, NULL, '9765470926', 1, NULL, 'Hi Prasanga! Welcome to Nutrinexas! Get 10% off your first order with code WELCOME10. Shop now: http://192.168.1.74:8000', 'failed', NULL, 0.0100, 'Unknown API error', '2025-07-06 11:56:21', NULL, '2025-07-06 11:56:21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_queue`
+--
+
+CREATE TABLE `sms_queue` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `template_id` int(11) DEFAULT NULL,
+  `campaign_id` int(11) DEFAULT NULL,
+  `automation_rule_id` int(11) DEFAULT NULL,
+  `variables` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`variables`)),
+  `priority` int(11) DEFAULT 1,
+  `scheduled_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `attempts` int(11) DEFAULT 0,
+  `max_attempts` int(11) DEFAULT 3,
+  `status` enum('pending','processing','completed','failed','cancelled') DEFAULT 'pending',
+  `error_message` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sms_templates`
+--
+
+CREATE TABLE `sms_templates` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `category` enum('welcome','abandoned_cart','order_confirmation','shipping','delivery','review_request','win_back','birthday','promotional','restock','loyalty','upsell','cross_sell') NOT NULL,
+  `content` text NOT NULL,
+  `variables` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`variables`)),
+  `is_active` tinyint(1) DEFAULT 1,
+  `priority` int(11) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `sms_templates`
+--
+
+INSERT INTO `sms_templates` (`id`, `name`, `category`, `content`, `variables`, `is_active`, `priority`, `created_at`, `updated_at`) VALUES
+(1, 'Welcome New User', 'welcome', 'Hi {first_name}! Welcome to {store_name}! Get 10% off your first order with code WELCOME10. Shop now: {shop_url}', '[\"first_name\", \"store_name\", \"shop_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:40'),
+(2, 'Abandoned Cart 15min', 'abandoned_cart', 'Hey {first_name}, you left {item_count} items in your cart! Complete your order now: {cart_url}', '[\"first_name\", \"item_count\", \"cart_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(3, 'Abandoned Cart 2hr', 'abandoned_cart', '{first_name}, still thinking about {product_name}? Here\'s 5% off to complete your order: {cart_url} Code: CART5', '[\"first_name\", \"product_name\", \"cart_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(4, 'Abandoned Cart 24hr', 'abandoned_cart', 'Last chance! Your cart expires soon. Get 15% off: {cart_url} Code: SAVE15', '[\"cart_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(5, 'Order Confirmation', 'order_confirmation', 'Thanks {first_name}! Your order #{order_id} has been confirmed. Total: {total_amount}. Track: {tracking_url}', '[\"first_name\", \"order_id\", \"total_amount\", \"tracking_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(6, 'Shipped Order', 'shipping', 'Great news {first_name}! Your order #{order_id} has shipped. Track: {tracking_url}', '[\"first_name\", \"order_id\", \"tracking_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(7, 'Delivered Order', 'delivery', 'Your order #{order_id} has been delivered! How was your experience? Rate us: {review_url}', '[\"order_id\", \"review_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(8, 'Win Back 30 Days', 'win_back', 'We miss you {first_name}! Come back and get 20% off your next order: {shop_url} Code: COMEBACK20', '[\"first_name\", \"shop_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(9, 'Birthday Offer', 'birthday', 'Happy Birthday {first_name}! 🎉 Here\'s a special 25% off gift: {shop_url} Code: BIRTHDAY25', '[\"first_name\", \"shop_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(10, 'Restock Alert', 'restock', 'Good news {first_name}! {product_name} is back in stock. Get yours now: {product_url}', '[\"first_name\", \"product_name\", \"product_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(11, 'Loyalty Reward', 'loyalty', 'Congratulations {first_name}! You\'ve earned {points} points. Redeem them: {rewards_url}', '[\"first_name\", \"points\", \"rewards_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03'),
+(12, 'Upsell Offer', 'upsell', 'Perfect match for your recent purchase! Get {product_name} at 15% off: {product_url}', '[\"product_name\", \"product_url\"]', 1, 1, '2025-07-06 05:33:03', '2025-07-06 05:33:03');
 
 -- --------------------------------------------------------
 
@@ -688,13 +926,32 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `full_name`, `phone`, `role`, `referral_code`, `referred_by`, `referral_earnings`, `reset_token`, `reset_expires`, `created_at`, `updated_at`, `first_name`, `last_name`) VALUES
 (1, 'admin', 'admin@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin User', '9876543210', 'customer', 'ADMIN123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-07-02 12:17:48', '', ''),
 (2, 'customer', 'customer@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Test Customer', '9876543211', 'customer', 'CUST123', NULL, 0.00, NULL, NULL, '2025-05-04 06:30:00', '2025-05-04 06:30:00', '', ''),
-(3, 'Prasanga741', 'prasangaramanpokharel@gmail.com', '$2y$10$PMW5yaBnJlSDxpTwvdbh7uRtyMMCsoj5AWbNPvA9S3mWCWVxC49HG', NULL, '9765470926', 'admin', '6816dab3e50ac', NULL, 400.90, '21860651dbc5718071151c4a94ac3a3389ee3dac844e5e0c1a1ed762910036fd', '2025-07-01 12:44:01', '2025-05-04 03:10:43', '2025-07-03 11:31:24', 'Prasanga', 'Pokharel'),
+(3, 'Prasanga741', 'prasangaramanpokharel@gmail.com', '$2y$10$PMW5yaBnJlSDxpTwvdbh7uRtyMMCsoj5AWbNPvA9S3mWCWVxC49HG', NULL, '9765470926', 'admin', '6816dab3e50ac', NULL, 990.90, '21860651dbc5718071151c4a94ac3a3389ee3dac844e5e0c1a1ed762910036fd', '2025-07-01 12:44:01', '2025-05-04 03:10:43', '2025-07-06 06:56:46', 'Prasanga', 'Pokharel'),
 (4, 'umesh741', 'incpractical@gmail.com', '$2y$10$y98eHeqK54fKzyQj.lvktOAzmiC.DMfYpdxAD5ASTL0mWjdszJkuS', NULL, NULL, 'customer', '681721245ddb8', 3, 0.00, NULL, NULL, '2025-05-04 08:11:16', '2025-07-01 03:43:11', 'Umesh', 'Pokharel'),
 (5, 'jayapokharel659', 'jaya@gmail.com', '$2y$10$aVbO62KAftm9s6wlFZv5jOddwKCQ6GhA5Gu70GCNlhvvlwtqdEk.2', 'Jaya Pokharel', '981138848', 'customer', '1d1cbbe8', NULL, 0.00, NULL, NULL, '2025-05-09 15:40:06', '2025-05-09 15:40:06', 'Jaya', 'Pokharel'),
 (6, 'prasangapokharel366', 'prasangaraman@gmail.com', '$2y$10$jOzC3E7dx4QVo0y0ISysb..mPCAtnwHuSVEJ67VVt1IhKaztkrDh2', 'Prasanga Pokharel', '9765470926', 'customer', 'a8311d95', NULL, 0.00, NULL, NULL, '2025-06-23 05:06:34', '2025-06-23 10:22:28', 'Prasanga', 'Pokharel'),
-(7, 'jayapokharel151', 'incpractical@gamil.com', '$2y$10$a74hYlh4raDu/bhTn3gh6e1DK6pXhYFC47RmU.tKYvcZDiZvw0P3a', 'Jaya Pokharel', '984212529', 'admin', '5a189707', 3, 0.00, NULL, NULL, '2025-07-02 12:05:27', '2025-07-03 07:48:08', 'Jaya', 'Pokharel'),
+(7, 'jayapokharel151', 'incpractical@gamil.com', '$2y$10$a74hYlh4raDu/bhTn3gh6e1DK6pXhYFC47RmU.tKYvcZDiZvw0P3a', 'Jaya Pokharel', '984212529', 'admin', '5a189707', 3, 590.00, NULL, NULL, '2025-07-02 12:05:27', '2025-07-06 06:52:44', 'Jaya', 'Pokharel'),
 (8, 'umeshpokharel147', 'wizardvictor14@gmail.com', '$2y$10$o.0qr2D.cCAb4rGxbpf0ceG/M8EZa3tR.Dp2qQpMw48C7gdtvQbFS', 'Umesh Pokharel', '9842023379', 'customer', '8cb4di', 7, 0.00, NULL, NULL, '2025-07-02 12:26:18', '2025-07-02 12:26:18', 'Umesh', 'Pokharel'),
 (9, 'prabidhisolution450', 'prashanna787898@gmail.com', '$2y$10$D2MxQzbAodALIXPKAxQzS.wUAbJ0khheKobKwTJfdYsd.X/Mtfqg6', 'Prabidhi Solution', '9842023389', 'customer', '60f744', NULL, 0.00, NULL, NULL, '2025-07-02 12:53:03', '2025-07-02 12:53:03', 'Prabidhi', 'Solution');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_sms_preferences`
+--
+
+CREATE TABLE `user_sms_preferences` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `is_subscribed` tinyint(1) DEFAULT 1,
+  `marketing_consent` tinyint(1) DEFAULT 0,
+  `transactional_consent` tinyint(1) DEFAULT 1,
+  `categories` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`categories`)),
+  `unsubscribed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -714,9 +971,7 @@ CREATE TABLE `wishlist` (
 --
 
 INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `created_at`) VALUES
-(17, 3, 35, '2025-06-26 16:03:53'),
-(18, 3, 34, '2025-06-30 18:27:30'),
-(21, 3, 40, '2025-07-02 14:35:18');
+(24, 3, 40, '2025-07-05 15:15:08');
 
 -- --------------------------------------------------------
 
@@ -911,6 +1166,103 @@ ALTER TABLE `settings`
   ADD UNIQUE KEY `key` (`key`);
 
 --
+-- Indexes for table `sms_ab_tests`
+--
+ALTER TABLE `sms_ab_tests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_campaign_id` (`campaign_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `template_a_id` (`template_a_id`),
+  ADD KEY `template_b_id` (`template_b_id`),
+  ADD KEY `winner_template_id` (`winner_template_id`);
+
+--
+-- Indexes for table `sms_analytics`
+--
+ALTER TABLE `sms_analytics`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_date_campaign` (`date`,`campaign_id`,`template_id`),
+  ADD KEY `idx_date` (`date`),
+  ADD KEY `idx_campaign_id` (`campaign_id`),
+  ADD KEY `idx_template_id` (`template_id`);
+
+--
+-- Indexes for table `sms_automation_rules`
+--
+ALTER TABLE `sms_automation_rules`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_trigger_event` (`trigger_event`),
+  ADD KEY `idx_active` (`is_active`),
+  ADD KEY `template_id` (`template_id`);
+
+--
+-- Indexes for table `sms_automation_triggers`
+--
+ALTER TABLE `sms_automation_triggers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_automation_rule_id` (`automation_rule_id`),
+  ADD KEY `idx_triggered_at` (`triggered_at`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `sms_queue_id` (`sms_queue_id`),
+  ADD KEY `idx_automation_triggers_user_processed` (`user_id`,`processed_at`);
+
+--
+-- Indexes for table `sms_blacklist`
+--
+ALTER TABLE `sms_blacklist`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `phone_number` (`phone_number`),
+  ADD KEY `idx_phone_number` (`phone_number`),
+  ADD KEY `idx_reason` (`reason`);
+
+--
+-- Indexes for table `sms_campaigns`
+--
+ALTER TABLE `sms_campaigns`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_scheduled_at` (`scheduled_at`),
+  ADD KEY `template_id` (`template_id`);
+
+--
+-- Indexes for table `sms_logs`
+--
+ALTER TABLE `sms_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_phone_number` (`phone_number`),
+  ADD KEY `idx_template_id` (`template_id`),
+  ADD KEY `idx_campaign_id` (`campaign_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_sms_logs_user_status` (`user_id`,`status`);
+
+--
+-- Indexes for table `sms_queue`
+--
+ALTER TABLE `sms_queue`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_scheduled_at` (`scheduled_at`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_priority` (`priority`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `template_id` (`template_id`),
+  ADD KEY `campaign_id` (`campaign_id`),
+  ADD KEY `automation_rule_id` (`automation_rule_id`),
+  ADD KEY `idx_sms_queue_scheduled_status` (`scheduled_at`,`status`);
+
+--
+-- Indexes for table `sms_templates`
+--
+ALTER TABLE `sms_templates`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_name` (`name`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_active` (`is_active`);
+
+--
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -926,6 +1278,17 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `username` (`username`),
   ADD KEY `referred_by` (`referred_by`),
   ADD KEY `referred_by_idx` (`referred_by`);
+
+--
+-- Indexes for table `user_sms_preferences`
+--
+ALTER TABLE `user_sms_preferences`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_phone` (`user_id`,`phone_number`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_phone_number` (`phone_number`),
+  ADD KEY `idx_subscribed` (`is_subscribed`),
+  ADD KEY `idx_user_preferences_marketing` (`marketing_consent`,`is_subscribed`);
 
 --
 -- Indexes for table `wishlist`
@@ -1010,13 +1373,13 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=111;
 
 --
 -- AUTO_INCREMENT for table `payment_gateways`
@@ -1046,19 +1409,73 @@ ALTER TABLE `product_images`
 -- AUTO_INCREMENT for table `referral_earnings`
 --
 ALTER TABLE `referral_earnings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `sms_ab_tests`
+--
+ALTER TABLE `sms_ab_tests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_analytics`
+--
+ALTER TABLE `sms_analytics`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_automation_rules`
+--
+ALTER TABLE `sms_automation_rules`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `sms_automation_triggers`
+--
+ALTER TABLE `sms_automation_triggers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_blacklist`
+--
+ALTER TABLE `sms_blacklist`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_campaigns`
+--
+ALTER TABLE `sms_campaigns`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_logs`
+--
+ALTER TABLE `sms_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `sms_queue`
+--
+ALTER TABLE `sms_queue`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sms_templates`
+--
+ALTER TABLE `sms_templates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `transactions`
@@ -1073,10 +1490,16 @@ ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
+-- AUTO_INCREMENT for table `user_sms_preferences`
+--
+ALTER TABLE `user_sms_preferences`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `withdrawals`
@@ -1174,6 +1597,47 @@ ALTER TABLE `referral_earnings`
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sms_ab_tests`
+--
+ALTER TABLE `sms_ab_tests`
+  ADD CONSTRAINT `sms_ab_tests_ibfk_1` FOREIGN KEY (`template_a_id`) REFERENCES `sms_templates` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `sms_ab_tests_ibfk_2` FOREIGN KEY (`template_b_id`) REFERENCES `sms_templates` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `sms_ab_tests_ibfk_3` FOREIGN KEY (`winner_template_id`) REFERENCES `sms_templates` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `sms_automation_rules`
+--
+ALTER TABLE `sms_automation_rules`
+  ADD CONSTRAINT `sms_automation_rules_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `sms_templates` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sms_automation_triggers`
+--
+ALTER TABLE `sms_automation_triggers`
+  ADD CONSTRAINT `sms_automation_triggers_ibfk_1` FOREIGN KEY (`automation_rule_id`) REFERENCES `sms_automation_rules` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `sms_automation_triggers_ibfk_2` FOREIGN KEY (`sms_queue_id`) REFERENCES `sms_queue` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `sms_campaigns`
+--
+ALTER TABLE `sms_campaigns`
+  ADD CONSTRAINT `sms_campaigns_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `sms_templates` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `sms_logs`
+--
+ALTER TABLE `sms_logs`
+  ADD CONSTRAINT `sms_logs_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `sms_templates` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `sms_queue`
+--
+ALTER TABLE `sms_queue`
+  ADD CONSTRAINT `sms_queue_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `sms_templates` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `sms_queue_ibfk_2` FOREIGN KEY (`campaign_id`) REFERENCES `sms_campaigns` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `sms_queue_ibfk_3` FOREIGN KEY (`automation_rule_id`) REFERENCES `sms_automation_rules` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `transactions`
