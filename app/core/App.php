@@ -54,14 +54,14 @@ class App
         $this->router->get('products/category/{category}', 'ProductController@category');
         $this->router->get('products/search', 'ProductController@search');
         
-        // Review routes - FIXED: Added proper review routes
+        // Review routes
         $this->router->post('products/submitReview', 'ProductController@submitReview');
         $this->router->post('reviews/submit', 'ProductController@submitReview');
         $this->router->get('reviews/edit/{id}', 'ProductController@editReview');
         $this->router->post('reviews/update/{id}', 'ProductController@updateReview');
         $this->router->post('reviews/delete/{id}', 'ProductController@deleteReview');
         
-        // Cart routes - FIXED: Added POST routes for remove and clear
+        // Cart routes
         $this->router->get('cart', 'CartController@index');
         $this->router->post('cart/add', 'CartController@add');
         $this->router->post('cart/update', 'CartController@update');
@@ -79,23 +79,21 @@ class App
         $this->router->post('wishlist/moveToCart', 'WishlistController@moveToCart');
         $this->router->get('wishlist/moveToCart/{id}', 'WishlistController@moveToCart');
         
-        // ENHANCED Checkout routes - ADDED MISSING COUPON ROUTES
+        // Checkout routes
         $this->router->get('checkout', 'CheckoutController@index');
         $this->router->post('checkout/process', 'CheckoutController@process');
         $this->router->get('checkout/success/{id}', 'CheckoutController@success');
-        // ADDED: Checkout-specific coupon routes
         $this->router->post('checkout/validateCoupon', 'CheckoutController@validateCoupon');
         $this->router->post('checkout/removeCoupon', 'CheckoutController@removeCoupon');
         
-        // Order routes - FIXED: Corrected order tracking routes
+        // Order routes
         $this->router->get('orders', 'OrderController@index');
         $this->router->get('orders/view/{id}', 'OrderController@viewOrder');
         $this->router->get('orders/success/{id}', 'OrderController@success');
         $this->router->get('orders/track', 'OrderController@track');
-        $this->router->post('orders/track', 'OrderController@track'); // FIXED: Removed {id} parameter
+        $this->router->post('orders/track', 'OrderController@track');
         $this->router->get('orders/cancel/{id}', 'OrderController@cancel');
         $this->router->post('orders/cancel/{id}', 'OrderController@cancel');
-        // ADDED: Admin order status update route
         $this->router->post('orders/updateStatus/{id}', 'OrderController@updateStatus');
         
         // User routes
@@ -115,7 +113,7 @@ class App
         $this->router->get('user/notifications', 'UserController@notifications');
         $this->router->get('user/transactions', 'UserController@transactions');
         
-        // Payment Gateway routes - FIXED: Added missing toggle routes
+        // Payment Gateway routes
         $this->router->get('admin/payment', 'GatewayController@index');
         $this->router->get('admin/payment/manual', 'GatewayController@manual');
         $this->router->get('admin/payment/merchant', 'GatewayController@merchant');
@@ -123,13 +121,10 @@ class App
         $this->router->post('admin/payment/create', 'GatewayController@create');
         $this->router->get('admin/payment/edit/{id}', 'GatewayController@edit');
         $this->router->post('admin/payment/edit/{id}', 'GatewayController@edit');
-        
-        // FIXED: Added missing toggle routes for payment gateways
         $this->router->get('admin/payment/toggle/{id}', 'GatewayController@toggleStatus');
         $this->router->post('admin/payment/toggle/{id}', 'GatewayController@toggleStatus');
         $this->router->post('admin/payment/toggleStatus/{id}', 'GatewayController@toggleStatus');
         $this->router->post('admin/payment/toggleTestMode/{id}', 'GatewayController@toggleTestMode');
-        
         $this->router->get('admin/payment/delete/{id}', 'GatewayController@delete');
         $this->router->post('admin/payment/delete/{id}', 'GatewayController@delete');
         $this->router->get('gateway/active', 'GatewayController@getActiveGateways');
@@ -149,11 +144,24 @@ class App
         $this->router->get('admin/viewUser/{id}', 'AdminController@viewUser');
         $this->router->post('admin/updateUserRole/{id}', 'AdminController@updateUserRole');
         
+// SMS routes
+$this->router->get('admin/sms', 'SMSController@index');
+$this->router->get('admin/sms/logs', 'SMSController@viewLogs');
+$this->router->post('admin/sms/send', 'SMSController@send');
+$this->router->post('admin/sms/create', 'SMSController@createTemplate');
+$this->router->get('admin/sms/update/{id}', 'SMSController@updateTemplate');
+$this->router->post('admin/sms/update/{id}', 'SMSController@updateTemplate');
+$this->router->post('admin/sms/delete/{id}', 'SMSController@deleteTemplate');
+$this->router->post('admin/sms/toggle/{id}', 'SMSController@toggleTemplate');
+$this->router->post('admin/sms/duplicate/{id}', 'SMSController@duplicateTemplate');
+$this->router->get('admin/sms/variables/{id}', 'SMSController@getVariables');
+$this->router->get('admin/sms/marketing', 'SMSController@marketing');
+$this->router->post('admin/sms/marketing', 'SMSController@sendLatestProductMarketing');
+$this->router->post('admin/sms/sendRefillReminders', 'SMSController@sendRefillReminders');
         // Receipt routes
         $this->router->get('receipt/downloadReceipt/{id}', 'ReceiptController@downloadReceipt');
         $this->router->get('receipt/previewReceipt/{id}', 'ReceiptController@previewReceipt');
         $this->router->get('receipt/download/{id}', 'ReceiptController@downloadReceipt');
-        // Admin receipt routes (alternative paths)
         $this->router->get('admin/receipt/download/{id}', 'ReceiptController@downloadReceipt');
         $this->router->get('admin/receipt/preview/{id}', 'ReceiptController@previewReceipt');
         
@@ -167,8 +175,6 @@ class App
         $this->router->post('admin/processMissingReferrals', 'AdminController@processMissingReferrals');
         $this->router->get('admin/withdrawals', 'AdminController@withdrawals');
         $this->router->post('admin/updateWithdrawalStatus/{id}', 'AdminController@updateWithdrawalStatus');
-        
-        // FIXED: Added the missing withdrawal view route
         $this->router->get('admin/withdrawal/view/{id}', 'WithdrawController@details');
         $this->router->get('admin/withdrawal/user/{id}', 'WithdrawController@userWithdrawals');
         
@@ -186,14 +192,14 @@ class App
         $this->router->post('admin/coupons/toggle/{id}', 'AdminController@toggleCoupon');
         $this->router->get('admin/coupons/stats/{id}', 'AdminController@couponStats');
         
-        // ENHANCED Public Coupon routes (for checkout/cart) - ADDED DEBUG ROUTES
+        // Public Coupon routes
         $this->router->post('coupons/validate', 'CouponController@validate');
         $this->router->post('coupons/apply', 'CouponController@apply');
         $this->router->post('coupons/remove', 'CouponController@remove');
         $this->router->post('coupons/debug', 'CouponController@debug');
         $this->router->post('coupons/getCouponDetails', 'CouponController@getCouponDetails');
         
-        // ADDED: API routes for better organization
+        // API routes
         $this->router->post('api/cart/add', 'CartController@add');
         $this->router->post('api/cart/update', 'CartController@update');
         $this->router->post('api/cart/remove', 'CartController@remove');
@@ -201,7 +207,7 @@ class App
         $this->router->post('api/wishlist/add', 'WishlistController@add');
         $this->router->post('api/wishlist/remove', 'WishlistController@remove');
         
-        // ADDED: Payment gateway routes (for future use)
+        // Payment gateway routes
         $this->router->get('payment/esewa/success', 'PaymentController@esewaSuccess');
         $this->router->get('payment/esewa/failure', 'PaymentController@esewaFailure');
         $this->router->get('payment/khalti/success', 'PaymentController@khaltiSuccess');
@@ -209,12 +215,12 @@ class App
         $this->router->post('payment/esewa/webhook', 'PaymentController@esewaWebhook');
         $this->router->post('payment/khalti/webhook', 'PaymentController@khaltiWebhook');
         
-        // ADDED: Additional utility routes
+        // Utility routes
         $this->router->get('sitemap.xml', 'HomeController@sitemap');
         $this->router->get('robots.txt', 'HomeController@robots');
         $this->router->get('health', 'HomeController@health');
         
-        // ADDED: Additional admin routes for better management
+        // Admin utility routes
         $this->router->get('admin/settings', 'AdminController@settings');
         $this->router->post('admin/settings', 'AdminController@updateSettings');
         $this->router->get('admin/analytics', 'AdminController@analytics');
@@ -222,32 +228,32 @@ class App
         $this->router->get('admin/notifications', 'AdminController@notifications');
         $this->router->post('admin/notifications/markRead/{id}', 'AdminController@markNotificationRead');
         
-        // ADDED: Bulk operations routes
+        // Bulk operations routes
         $this->router->post('admin/orders/bulkUpdate', 'AdminController@bulkUpdateOrders');
         $this->router->post('admin/products/bulkUpdate', 'AdminController@bulkUpdateProducts');
         $this->router->post('admin/users/bulkUpdate', 'AdminController@bulkUpdateUsers');
         
-        // ADDED: Export/Import routes
+        // Export/Import routes
         $this->router->get('admin/export/orders', 'AdminController@exportOrders');
         $this->router->get('admin/export/products', 'AdminController@exportProducts');
         $this->router->get('admin/export/users', 'AdminController@exportUsers');
         $this->router->post('admin/import/products', 'AdminController@importProducts');
         
-        // ADDED: Additional order management routes
+        // Additional order management routes
         $this->router->get('admin/orders/search', 'AdminController@searchOrders');
         $this->router->get('admin/orders/filter/{status}', 'AdminController@filterOrdersByStatus');
         $this->router->post('admin/orders/addNote/{id}', 'AdminController@addOrderNote');
         
-        // ADDED: Customer service routes
+        // Customer service routes
         $this->router->get('support', 'SupportController@index');
         $this->router->post('support/ticket', 'SupportController@createTicket');
         $this->router->get('support/ticket/{id}', 'SupportController@viewTicket');
         
-        // ADDED: Newsletter routes
+        // Newsletter routes
         $this->router->post('newsletter/subscribe', 'NewsletterController@subscribe');
         $this->router->get('newsletter/unsubscribe/{token}', 'NewsletterController@unsubscribe');
         
-        // ADDED: Social media integration routes
+        // Social media integration routes
         $this->router->get('auth/google', 'AuthController@googleLogin');
         $this->router->get('auth/google/callback', 'AuthController@googleCallback');
         $this->router->get('auth/facebook', 'AuthController@facebookLogin');

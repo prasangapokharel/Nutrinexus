@@ -267,7 +267,7 @@ ob_start();
                                             </svg>
                                         </button>
                                         <input type="number" id="quantity" name="quantity" value="1" min="1" max="<?= $product['stock_quantity'] ?? 1 ?>" class="w-16 px-3 py-2 text-center border-0 focus:outline-none focus:ring-0">
-                                        <button type="button" id="increase-qty" class="px-3 py-2 text-gray-600 hover:text-primary focus:outline-none">
+                                        <button type="button" id="increase-qty" class="px-3 py-2 text-gray-600 hover:text-primary focus:outline-none  clip ">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                             </svg>
@@ -278,18 +278,18 @@ ob_start();
                                 <!-- Action Buttons -->
                                 <div class="flex flex-col sm:flex-row gap-3">
                                     <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
-                                        <button type="submit" class="flex-1 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-center">
+                                        <button type="submit" class="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-center">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z"></path>
                                             </svg>
                                             Add to Cart
                                         </button>
-                                        <button type="button" class="flex-1 bg-accent text-white px-6 py-3 rounded-xl font-semibold hover:bg-accent-dark transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50 flex items-center justify-center">
+                                        <!-- <button type="button" class="flex-1 bg-accent text-white px-6 py-3 rounded-xl font-semibold hover:bg-accent-dark transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50 flex items-center justify-center">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                             </svg>
                                             Buy Now
-                                        </button>
+                                        </button> -->
                                     <?php else: ?>
                                         <button type="button" disabled class="flex-1 bg-gray-400 text-white px-6 py-3 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -541,7 +541,7 @@ ob_start();
                                                 </svg>
                                                 Your review will be public and help other customers
                                             </div>
-                                            <button type="submit" class="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" id="submitReviewBtn" disabled>
+                                            <button type="submit" class="px-8 py-3 btn-primary disabled:opacity-50 disabled:cursor-not-allowed" id="submitReviewBtn" disabled>
                                                 <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                                                 </svg>

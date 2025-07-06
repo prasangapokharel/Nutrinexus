@@ -54,6 +54,15 @@ define('KHALTI_INITIATE_URL', 'https://dev.khalti.com/api/v2/epayment/initiate/'
 define('KHALTI_LOOKUP_URL', 'https://dev.khalti.com/api/v2/epayment/lookup/');
 define('KHALTI_VERIFY_URL', 'https://dev.khalti.com/api/v2/payment/verify/');
 
+
+// BIR SMS API configuration
+define('ROUTE_ID', 'SI_Alert');
+define('API_URL', 'https://user.birasms.com/api/smsapi');
+define('API_KEYS', '3B853539856F3FD36823E959EF82ABF6');
+define('CAMPAIGN', 'Default');
+
+
+
 // Define ROOT_DIR if not already defined
 if (!defined('ROOT_DIR')) {
     define('ROOT_DIR', dirname(dirname(__DIR__)));

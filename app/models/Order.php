@@ -426,4 +426,55 @@ class Order extends Model
         
         return $this->db->query($sql)->all();
     }
+
+    /**
+ * Get orders by creation date
+ *
+ * @param string $date
+ * @return array
+ */
+public function getOrdersByDate(string $date): array
+{
+    $sql = "SELECT o.*, u.id as user_id, u.phone as contact_no
+            FROM {$this->table} o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE DATE(o.created_at) >= ?
+            ORDER BY o.created_at DESC";
+    return $this->db->query($sql)->bind([$date])->all();
+}
+
+/**
+ * Get the latest product purchased by a user
+ *
+ * @param int $userId
+ * @return array|null
+ */
+public function getLatestProductByUser(int $userId): ?array
+{
+    $sql = "SELECT p.*
+            FROM {$this->table} o
+            INNER JOIN order_items oi ON o.id = oi.order_id
+            INNER JOIN products p ON oi.product_id = p.id
+            WHERE o.user_id = ?
+            ORDER BY o.created_at DESC
+            LIMIT 1";
+    return $this->db->query($sql)->bind([$userId])->single() ?: null;
+}
+
+/**
+ * Get the latest product for a specific order
+ *
+ * @param int $orderId
+ * @return array|null
+ */
+public function getLatestProduct(int $orderId): ?array
+{
+    $sql = "SELECT p.*
+            FROM order_items oi
+            INNER JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+            ORDER BY oi.id DESC
+            LIMIT 1";
+    return $this->db->query($sql)->bind([$orderId])->single() ?: null;
+}
 }

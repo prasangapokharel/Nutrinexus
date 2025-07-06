@@ -69,11 +69,14 @@ function getCategoryImage($category) {
 <script src="https://cdn.jsdelivr.net/npm/notyf/notyf.min.js"></script>
 <script src="https://app.embed.im/whatsapp.js" data-phone="9779811388848" data-theme="3" defer></script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray">
         <script src="<?= URLROOT ?>/assets/js/banner.js"></script>
+        <script src="<?= URLROOT ?>/assets/js/category.js"></script>
 
-<div class="bg-transparent" id="hero-banner"></div>
+<div class="mx-4 mt-4 rounded-xl shadow-sm mb-4" id="hero-banner"></div>
 
+
+<div class=" mx-4 mt-4 rounded-xl shadow-sm mb-4" id="category-grid"></div>
 
 
     <!-- Flash Sale Section -->
@@ -85,7 +88,7 @@ function getCategoryImage($category) {
                     Limited Time
                 </div>
             </div>
-            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">SHOP MORE ></a>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm ">SHOP MORE ></a>
         </div>
         
         <div class="p-4">
@@ -172,7 +175,7 @@ function getCategoryImage($category) {
                                 <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form" onclick="event.stopPropagation()">
                                     <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
                                     <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="w-full py-1 bg-blue-900 text-white text-xs font-medium rounded hover:bg-blue-800 transition-colors add-to-cart-btn">
+                                    <button type="submit" class="w-full py-1 btn-primary text-xs font-medium rounded  add-to-cart-btn">
                                         <span class="btn-text">Add to Cart</span>
                                         <span class="btn-loading hidden">Adding...</span>
                                     </button>
@@ -190,10 +193,14 @@ function getCategoryImage($category) {
     </div>
 
     <!-- Categories Section -->
-    <div class="bg-white mx-4 rounded-xl shadow-sm mb-4">
+
+
+
+    
+    <!-- <div class="bg-white mx-4 rounded-xl shadow-sm mb-4">
         <div class="flex items-center justify-between p-4 border-b border-gray-100">
             <h3 class="text-lg font-bold text-gray-900">Categories</h3>
-            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">Shop More ></a>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm ">Shop More ></a>
         </div>
         
         <div class="p-4">
@@ -211,13 +218,13 @@ function getCategoryImage($category) {
                 <?php endforeach; ?>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Latest Products -->
     <div class="bg-white mx-4 rounded-xl shadow-sm mb-4">
         <div class="flex items-center justify-between p-4 border-b border-gray-100">
             <h3 class="text-lg font-bold text-gray-900">Latest Products</h3>
-            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm hover:text-blue-700 transition-colors">View All ></a>
+            <a href="<?= \App\Core\View::url('products') ?>" class="text-blue-900 font-medium text-sm ">View All ></a>
         </div>
         
         <div class="p-4">
@@ -229,8 +236,8 @@ function getCategoryImage($category) {
                     $originalPrice = $product['price'] ?? 0;
                     $discountPercent = getDiscountPercent($product);
                 ?>
-                    <div class="block bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200 group relative product-card" onclick="redirectToProduct('<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>')">
-                        <div class="relative aspect-square bg-gray-50 p-3">
+                    <div class="block  bg-white border border-gray-100 rounded-lg overflow-hidden  group relative product-card" onclick="redirectToProduct('<?= \App\Core\View::url('products/view/' . ($product['slug'] ?? $product['id'])) ?>')">
+                        <div class="relative aspect-square bg-gray-50 p-3 card">
                             <img src="<?= htmlspecialchars(getProductImageUrl($product)) ?>"
                                  alt="<?= htmlspecialchars($product['product_name'] ?? 'Product') ?>"
                                  class="w-full h-full object-contain transition-transform duration-200"
@@ -266,7 +273,7 @@ function getCategoryImage($category) {
                         </div>
                         
                         <!-- Wishlist Button -->
-                        <div class="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <div class="absolute bottom-2 left-2 opacity-0  z-10">
                             <?php if (isset($product['in_wishlist']) && $product['in_wishlist']): ?>
                                 <button onclick="event.stopPropagation(); removeFromWishlist(<?= $product['id'] ?>)"
                                         class="bg-white p-1.5 rounded-full shadow-md text-red-500 hover:text-red-700 wishlist-btn wishlist-active"
@@ -289,7 +296,7 @@ function getCategoryImage($category) {
                             </div>
                             
                             <!-- Product Name -->
-                            <h4 class="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-900 transition-colors">
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 ">
                                 <?= htmlspecialchars($product['product_name'] ?? 'Product Name') ?>
                             </h4>
                             
@@ -322,7 +329,7 @@ function getCategoryImage($category) {
                                 <form action="<?= \App\Core\View::url('cart/add') ?>" method="post" class="add-to-cart-form" onclick="event.stopPropagation()">
                                     <input type="hidden" name="product_id" value="<?= $product['id'] ?? 0 ?>">
                                     <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="w-full py-2 bg-blue-900 text-white text-xs font-medium rounded hover:bg-blue-800 transition-colors add-to-cart-btn">
+                                    <button type="submit" class="w-full py-2 btn-primary text-xs font-medium rounded  add-to-cart-btn">
                                         <span class="btn-text">Add to Cart</span>
                                         <span class="btn-loading hidden">
                                             <svg class="inline w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -396,6 +403,22 @@ function getCategoryImage($category) {
 </style>
 
 <script>
+const categories = [
+    { name: 'Protein', image: 'https://m.media-amazon.com/images/I/716ruiQM3mL._AC_SL1500_.jpg', description: 'Build muscle' },
+    { name: 'Vitamins', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop', description: 'Stay healthy' },
+    { name: 'Pre-Workout', image: 'https://media.bodyandfit.com/i/bodyandfit/c4-extreme-pre-workout_Image_08?$TTL_PRODUCT_IMAGES$&locale=en-gb,*', badge: 'New' },
+    'Mass Gainer', // Simple string format
+    'Creatine'
+];
+
+const categoryGrid = createCategoryGrid('#category-grid', categories, {
+    title: 'Shop by Category',
+    showMoreLink: '/products',
+    columns: { mobile: 2, tablet: 3, desktop: 4 }
+});
+
+
+
 
 // Initialize the slider
 const bannerImages = [
@@ -405,7 +428,7 @@ const bannerImages = [
 ];
 
 const slider = createBannerSlider('#hero-banner', bannerImages, {
-    height: '400px',
+    height: '250px',
     autoPlay: 5000,
     borderRadius: '16px'
 });

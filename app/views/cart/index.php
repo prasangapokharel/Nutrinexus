@@ -53,7 +53,7 @@ function getProductImageUrl($product) {
                     </svg>
                     <h2 class="text-xl font-semibold text-primary mb-2">Your cart is empty</h2>
                     <p class="text-gray-600 mb-6">Explore our products and start shopping today.</p>
-                    <a href="<?= \App\Core\View::url('products') ?>" class="inline-block bg-accent text-white px-6 py-3 rounded-lg font-medium hover:bg-accent-dark transition-colors duration-300">
+                    <a href="<?= \App\Core\View::url('products') ?>" class="inline-block btn-accent text-white px-6 py-3 rounded-lg font-medium hover:btn-accent-dark transition-colors duration-300">
                         Start Shopping
                     </a>
                 </div>
@@ -79,7 +79,7 @@ function getProductImageUrl($product) {
                                                      onerror="this.src='<?= $defaultImage ?>'; this.onerror=null;" 
                                                      alt="<?= htmlspecialchars($item['product']['product_name']) ?>" 
                                                      class="w-20 h-20 object-cover rounded-lg border border-gray-200">
-                                                <div class="absolute -top-2 -right-2 bg-accent text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-medium">
+                                                <div class="absolute -top-2 -right-2 btn-accent text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-medium">
                                                     <span class="quantity-display" data-product-id="<?= $item['product']['id'] ?>"><?= $item['quantity'] ?></span>
                                                 </div>
                                             </div>
@@ -194,7 +194,7 @@ function getProductImageUrl($product) {
                                 </div>
                                 
                                 <div class="mt-6 space-y-3">
-                                    <a href="<?= \App\Core\View::url('checkout') ?>" class="block w-full bg-accent text-white text-center py-3 rounded-lg font-medium hover:bg-accent-dark transition-colors duration-300">
+                                    <a href="<?= \App\Core\View::url('checkout') ?>" class="block w-full btn-accent text-white text-center py-3 rounded-lg font-medium hover:btn-accent-dark transition-colors duration-300">
                                         Proceed to Checkout
                                     </a>
                                     

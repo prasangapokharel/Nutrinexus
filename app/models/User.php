@@ -581,4 +581,47 @@ public function generateReferralCode()
         // Ensure base_url doesn't have a trailing slash
         return rtrim($base_url, '/');
     }
+
+
+    /**
+ * Get all users with optional filtering
+ *
+ * @param array $filters
+ * @return array
+ */
+/**
+ * Get all users with optional filtering
+ *
+ * @param array $filters
+ * @return array
+ */
+public function getAll(array $filters = []): array
+{
+    $sql = "SELECT u.* FROM {$this->table} u";
+    $params = [];
+
+    // Apply filters if provided
+    if (!empty($filters)) {
+        $conditions = [];
+        
+        if (isset($filters['sms_consent']) && $filters['sms_consent'] === true) {
+            $sql .= " LEFT JOIN user_sms_preferences usp ON u.id = usp.user_id";
+            $conditions[] = "usp.is_subscribed = 1 AND usp.marketing_consent = 1";
+        }
+
+        // Add more filter conditions as needed (e.g., role, phone, etc.)
+        if (!empty($conditions)) {
+            $sql .= " WHERE " . implode(" AND ", $conditions);
+        }
+    }
+
+    // Order by created_at descending by default
+    $sql .= " ORDER BY u.created_at DESC";
+
+    // Execute the query
+    $result = $this->db->query($sql)->bind($params)->all();
+
+    // Ensure result is an array, even if empty
+    return is_array($result) ? $result : [];
+}
 }
